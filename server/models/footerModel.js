@@ -101,9 +101,9 @@ const footerSchema = new mongoose.Schema(
     bottomLinks: {
       type: [linkSchema],
       default: [
-        { label: "Privacy Policy", href: "#", order: 0 },
-        { label: "Terms of Service", href: "#", order: 1 },
-        { label: "Sitemap", href: "#", order: 2 },
+        { label: "Privacy Policy", href: "/privacy-policy", order: 0 },
+        { label: "Terms of Service", href: "/terms-of-service", order: 1 },
+        { label: "Sitemap", href: "/sitemap", order: 2 },
       ],
     },
   },

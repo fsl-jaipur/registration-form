@@ -52,6 +52,9 @@ import AdminFooter from "@/pages/AdminPages/AdminFooter";
 import ResetPassword from "@/pages/ResetPassword";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetStudentPassword from "@/pages/ResetStudentPassword";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsOfService from "@/pages/TermsOfService";
+import SitemapPage from "@/pages/SitemapPage";
 
 import { AdminProvider, useAdminContext } from "@/Context/Admincontext";
 import CreateTestForm from "@/pages/AdminPages/Admin Create test";
@@ -61,6 +64,7 @@ import TestScoresPage from "@/pages/AdminPages/AdminViewResult/testScore/indexVi
 import AdminStudentDetail from "@/pages/AdminPages/AdminStudentDetail";
 import ViewTest from "./pages/AdminPages/AdminHome/ViewTest";
 import UpdateTest from "./pages/AdminPages/AdminHome/updateTest";
+import { getDocumentTitle } from "@/lib/documentTitle";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +86,10 @@ const AppRoutes = () => {
   useEffect(() => {
     console.log("scroll useEffect");
     window.scrollTo(0, 0);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    document.title = getDocumentTitle(location.pathname);
   }, [location.pathname]);
 
   return (
@@ -143,6 +151,9 @@ const AppRoutes = () => {
 
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetStudentPassword />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/sitemap" element={<SitemapPage />} />
 
             <Route path="/student/changepassword" element={<ResetPassword />} />
             <Route

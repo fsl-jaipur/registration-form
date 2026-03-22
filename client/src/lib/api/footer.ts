@@ -24,6 +24,13 @@ export type FooterData = {
 };
 
 const API_BASE = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "";
+const SYSTEM_FOOTER_LINKS: Record<string, string> = {
+  "privacy policy": "/privacy-policy",
+  "terms of service": "/terms-of-service",
+  "terms and conditions": "/terms-of-service",
+  "terms & conditions": "/terms-of-service",
+  sitemap: "/sitemap",
+};
 
 export const FOOTER_QUERY_KEY = ["footer"] as const;
 
@@ -75,14 +82,23 @@ export const fallbackFooter: FooterData = {
     mapLink: "https://maps.app.goo.gl/xbjzCRCa8NAS9YoDA",
   },
   bottomLinks: [
-    { label: "Privacy Policy", href: "#", order: 0 },
-    { label: "Terms of Service", href: "#", order: 1 },
-    { label: "Sitemap", href: "#", order: 2 },
+    { label: "Privacy Policy", href: "/privacy-policy", order: 0 },
+    { label: "Terms of Service", href: "/terms-of-service", order: 1 },
+    { label: "Sitemap", href: "/sitemap", order: 2 },
   ],
 };
 
 const sortByOrder = <T extends { order?: number }>(items: T[]) =>
   [...items].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+const resolveKnownFooterHref = (label: string, href?: string) => {
+  const trimmedHref = href?.trim?.() ?? "";
+  if (trimmedHref && trimmedHref !== "#") {
+    return trimmedHref;
+  }
+
+  return SYSTEM_FOOTER_LINKS[label.trim().toLowerCase()] || trimmedHref;
+};
 
 const normalizeLinks = (value: unknown, fallback: FooterLink[]) => {
   if (!Array.isArray(value)) return fallback;
@@ -90,7 +106,9 @@ const normalizeLinks = (value: unknown, fallback: FooterLink[]) => {
     .map((item) => {
       if (!item || typeof item !== "object") return null;
       const label = (item as FooterLink).label?.trim?.();
-      const href = (item as FooterLink).href?.trim?.();
+      const href = label
+        ? resolveKnownFooterHref(label, (item as FooterLink).href)
+        : "";
       if (!label || !href) return null;
       return {
         _id: typeof (item as FooterLink)._id === "string" ? (item as FooterLink)._id : undefined,
