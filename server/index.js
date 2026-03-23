@@ -17,7 +17,9 @@ import categoryRoutes from "./routes/categoryRoutes.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const PORT = 8085;
+const PORT = process.env.PORT || 3000;
+
+
 const app = express();
 
 app.use(cookieParser());
@@ -35,7 +37,9 @@ app.use("/static", express.static(join(__dirname, "uploads")));
 
 await connectToDB();
 
-app.listen(PORT, () => console.log("Server started at port " + PORT));
+app.listen(PORT, () => {
+  console.log(`Server started at port ${PORT}`);
+});
 
 app.get("/healthCheck", (req, res) => {
   res.send("Backend is working 🚀");
