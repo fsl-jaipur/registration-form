@@ -138,8 +138,8 @@ export const fallbackCareerSection: CareerSectionData = {
   ctaPhoneLabel: "Call +91-8824453320",
   ctaPhoneNumber: "+91-8824453320",
   modalTitle: "Apply for Career",
-  modalDescription: "Fill in your details and upload your resume as a PDF.",
-  resumeHelperText: "Only PDF files are allowed. Image files are not accepted.",
+  modalDescription: "Fill in your details and upload your resume as a PDF, DOC, or DOCX file.",
+  resumeHelperText: "PDF, DOC, and DOCX files are allowed up to 5MB.",
   submitButtonLabel: "Submit Application",
   cancelButtonLabel: "Cancel",
 };

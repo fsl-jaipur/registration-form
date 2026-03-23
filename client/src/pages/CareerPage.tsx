@@ -16,16 +16,18 @@ import {
 } from "@/lib/api/career";
 
 type CareerFormState = {
-  name: string;
-  email: string;
-  position: string;
+  candidateName: string;
+  candidateEmail: string;
+  phone: string;
+  jobTitle: string;
   resume: File | null;
 };
 
 const initialFormState: CareerFormState = {
-  name: "",
-  email: "",
-  position: "",
+  candidateName: "",
+  candidateEmail: "",
+  phone: "",
+  jobTitle: "",
   resume: null,
 };
 
@@ -90,7 +92,7 @@ export default function CareerPage() {
   const handleOpenModal = (position = "") => {
     setError("");
     setSuccess("");
-    setFormState((prev) => ({ ...prev, position }));
+    setFormState((prev) => ({ ...prev, jobTitle: position }));
     setIsApplyOpen(true);
   };
 
@@ -113,13 +115,18 @@ export default function CareerPage() {
       return;
     }
 
-    const isPdf =
+    const fileName = selectedFile.name.toLowerCase();
+    const allowedFile =
       selectedFile.type === "application/pdf" ||
-      selectedFile.name.toLowerCase().endsWith(".pdf");
+      selectedFile.type === "application/msword" ||
+      selectedFile.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      fileName.endsWith(".pdf") ||
+      fileName.endsWith(".doc") ||
+      fileName.endsWith(".docx");
 
-    if (!isPdf) {
+    if (!allowedFile) {
       setFormState((prev) => ({ ...prev, resume: null }));
-      setError("Please upload resume only in PDF format.");
+      setError("Please upload your resume in PDF, DOC, or DOCX format.");
       event.target.value = "";
       return;
     }
@@ -132,7 +139,7 @@ export default function CareerPage() {
     event.preventDefault();
 
     if (!formState.resume) {
-      setError("Please upload your resume in PDF format.");
+      setError("Please upload your resume in PDF, DOC, or DOCX format.");
       setSuccess("");
       return;
     }
@@ -144,12 +151,13 @@ export default function CareerPage() {
 
       const apiBase = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "";
       const payload = new FormData();
-      payload.append("name", formState.name.trim());
-      payload.append("email", formState.email.trim());
-      payload.append("position", formState.position.trim());
+      payload.append("candidateName", formState.candidateName.trim());
+      payload.append("candidateEmail", formState.candidateEmail.trim());
+      payload.append("phone", formState.phone.trim());
+      payload.append("jobTitle", formState.jobTitle.trim());
       payload.append("resume", formState.resume);
 
-      const response = await fetch(`${apiBase}/students/career-apply`, {
+      const response = await fetch(`${apiBase}/apply-job`, {
         method: "POST",
         body: payload,
       });
@@ -370,9 +378,9 @@ export default function CareerPage() {
                   </label>
                   <input
                     id="career-name"
-                    name="name"
+                    name="candidateName"
                     type="text"
-                    value={formState.name}
+                    value={formState.candidateName}
                     onChange={handleInputChange}
                     className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
                     placeholder="Enter your full name"
@@ -387,9 +395,9 @@ export default function CareerPage() {
                   </label>
                   <input
                     id="career-email"
-                    name="email"
+                    name="candidateEmail"
                     type="email"
-                    value={formState.email}
+                    value={formState.candidateEmail}
                     onChange={handleInputChange}
                     className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
                     placeholder="Enter your email"
@@ -399,14 +407,31 @@ export default function CareerPage() {
                 </div>
 
                 <div>
+                  <label htmlFor="career-phone" className="mb-1.5 block text-sm font-medium text-foreground">
+                    Phone
+                  </label>
+                  <input
+                    id="career-phone"
+                    name="phone"
+                    type="tel"
+                    value={formState.phone}
+                    onChange={handleInputChange}
+                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
+                    placeholder="Enter your phone number"
+                    required
+                    disabled={submitting}
+                  />
+                </div>
+
+                <div>
                   <label htmlFor="career-position" className="mb-1.5 block text-sm font-medium text-foreground">
-                    Position
+                    Job Title
                   </label>
                   <input
                     id="career-position"
-                    name="position"
+                    name="jobTitle"
                     type="text"
-                    value={formState.position}
+                    value={formState.jobTitle}
                     className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
                     placeholder="Selected role"
                     required
@@ -424,7 +449,7 @@ export default function CareerPage() {
                     id="career-resume"
                     name="resume"
                     type="file"
-                    accept=".pdf,application/pdf"
+                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     onChange={handleResumeChange}
                     className="block w-full rounded-xl border border-dashed border-border bg-background px-4 py-3 text-sm text-muted-foreground file:mr-4 file:rounded-lg file:border-0 file:bg-brand-blue file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:opacity-90"
                     required

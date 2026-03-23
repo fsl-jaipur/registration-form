@@ -21,11 +21,12 @@ import engineeringTeamRoutes from "./routes/engineeringTeamRoutes.js";
 import getInTouchRoutes from "./routes/getInTouchRoutes.js";
 import footerRoutes from "./routes/footerRoutes.js";
 import careerSectionRoutes from "./routes/careerSectionRoutes.js";
+import jobApplicationRoutes from "./routes/jobApplicationRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const PORT = 8085;
+const PORT = Number(process.env.PORT) || 8085;
 const app = express();
 
 app.use(cookieParser());
@@ -61,3 +62,5 @@ app.use("/api/engineering-team", engineeringTeamRoutes);
 app.use("/api/get-in-touch", getInTouchRoutes);
 app.use("/api/footer", footerRoutes);
 app.use("/api/career-section", careerSectionRoutes);
+app.use("/", jobApplicationRoutes);
+app.use("/api", jobApplicationRoutes);
