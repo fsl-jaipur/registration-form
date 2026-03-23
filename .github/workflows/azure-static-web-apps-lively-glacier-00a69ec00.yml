@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - Azure-deployment
+    paths:
+      - 'client/**'
+      - '.github/workflows/azure-static-web-apps-lively-glacier-00a69ec00.yml'
 jobs:
   build_and_deploy_job:
     if: github.event_name == 'push' 

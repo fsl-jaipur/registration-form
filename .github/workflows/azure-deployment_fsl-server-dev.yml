@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - Azure-deployment
+    paths:
+      - 'server/**'
+      - '.github/workflows/azure-deployment_fsl-server-dev.yml'
   workflow_dispatch:
 
 jobs:
