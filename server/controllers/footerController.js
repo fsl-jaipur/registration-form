@@ -13,6 +13,12 @@ const parseJsonField = (value) => {
   return value;
 };
 
+const numberOrUndefined = (value) => {
+  if (value === undefined || value === null || value === "") return undefined;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : undefined;
+};
+
 const normalizeLinks = (value) => {
   const parsed = parseJsonField(value);
   if (parsed === undefined) return undefined;
@@ -23,11 +29,12 @@ const normalizeLinks = (value) => {
       const label = item.label?.trim?.();
       const href = item.href?.trim?.();
       if (!label || !href) return null;
+      const order = numberOrUndefined(item.order);
       return {
         ...(item._id ? { _id: item._id } : {}),
         label,
         href,
-        order: Number(item.order) || 0,
+        ...(order !== undefined ? { order } : {}),
       };
     })
     .filter(Boolean);
@@ -44,10 +51,11 @@ const normalizeSections = (value) => {
       const title = section.title?.trim?.();
       if (!title) return null;
       const links = normalizeLinks(section.links) || [];
+      const order = numberOrUndefined(section.order);
       return {
         ...(section._id ? { _id: section._id } : {}),
         title,
-        order: Number(section.order) || 0,
+        ...(order !== undefined ? { order } : {}),
         links,
       };
     })
@@ -66,12 +74,13 @@ const normalizeSocials = (value) => {
       const href = item.href?.trim?.();
       const icon = item.icon?.trim?.();
       if (!label || !href || !icon) return null;
+      const order = numberOrUndefined(item.order);
       return {
         ...(item._id ? { _id: item._id } : {}),
         label,
         href,
         icon,
-        order: Number(item.order) || 0,
+        ...(order !== undefined ? { order } : {}),
       };
     })
     .filter(Boolean);

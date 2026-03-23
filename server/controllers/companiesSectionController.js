@@ -14,6 +14,12 @@ const parseJsonField = (value) => {
   return value;
 };
 
+const numberOrUndefined = (value) => {
+  if (value === undefined || value === null || value === "") return undefined;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : undefined;
+};
+
 const sanitizeCompanies = (value, { allowEmpty = false } = {}) => {
   const parsed = parseJsonField(value);
   if (parsed === undefined) return undefined;
@@ -24,12 +30,12 @@ const sanitizeCompanies = (value, { allowEmpty = false } = {}) => {
       if (!item) return null;
       const name = item.name?.trim();
       if (!name) return null;
-      const order = Number(item.order);
+      const order = numberOrUndefined(item.order);
       return {
         ...(item._id ? { _id: item._id } : {}),
         name,
         logo: item.logo?.trim() || "",
-        order: Number.isFinite(order) ? order : 0,
+        ...(order !== undefined ? { order } : {}),
       };
     })
     .filter(Boolean);
@@ -143,10 +149,11 @@ export const addCompany = async (req, res) => {
       return res.status(400).json({ message: "Company name is required." });
     }
 
+    const orderValue = numberOrUndefined(order);
     const company = {
       name: name.trim(),
       logo: logo?.trim() || "",
-      order: Number.isFinite(Number(order)) ? Number(order) : 0,
+      ...(orderValue !== undefined ? { order: orderValue } : {}),
     };
 
     const section = await CompaniesSection.findByIdAndUpdate(

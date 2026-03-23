@@ -1,31 +1,110 @@
+import type { ComponentType, MouseEvent } from "react";
 import { Phone, Mail, MapPin, ArrowRight, Linkedin } from "lucide-react";
-import { SiFacebook, SiX, SiInstagram, SiYoutube } from "@icons-pack/react-simple-icons";
-import { useLocation } from "react-router-dom";
+import { SiFacebook, SiInstagram, SiYoutube } from "@icons-pack/react-simple-icons";
+import { useLocation, useNavigate } from "react-router-dom";
 import bundledLogo from "@/assets/logo.png";
 import { useFooter } from "@/hooks/useFooter";
 import { fallbackFooter } from "@/lib/api/footer";
 
-const logoSrc = "/images/logo.png";
 const logoSrcSet = "/images/logo@2x.png 2x, /images/logo.png 1x";
 
-const iconMap: Record<string, React.ComponentType<{ size?: number }>> = {
+const iconMap: Record<string, ComponentType<{ size?: number }>> = {
   Facebook: SiFacebook,
-  X: SiX,
   Instagram: SiInstagram,
   Youtube: SiYoutube,
   LinkedIn: Linkedin,
   Linkedin: Linkedin,
 };
 
-const scrollTo = (href: string) => {
-  document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
+const shouldRenderSocial = (icon: string, label: string) => {
+  const normalizedIcon = icon.trim().toLowerCase();
+  const normalizedLabel = label.trim().toLowerCase();
+
+  return normalizedIcon !== "x" && normalizedLabel !== "twitter";
+};
+
+const isExternalHref = (href: string) => /^(https?:|mailto:|tel:)/i.test(href);
+
+const normalizeHref = (href: string) =>
+  href.startsWith("/") || href.startsWith("#") ? href : `/${href}`;
+
+const scrollToSection = (href: string) => {
+  if (!href.startsWith("#")) return;
+
+  if (href === "#") {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+
+  requestAnimationFrame(() => {
+    const section = document.querySelector(href);
+    if (section) {
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+};
+
+const openExternalLink = (href: string) => {
+  if (/^(mailto:|tel:)/i.test(href)) {
+    window.location.assign(href);
+    return;
+  }
+
+  window.open(href, "_blank", "noopener,noreferrer");
 };
 
 export default function Footer() {
   const { data: footerData = fallbackFooter } = useFooter();
   const footer = footerData ?? fallbackFooter;
   const location = useLocation();
+  const navigate = useNavigate();
   const isRegistrationPage = location.pathname === "/register";
+
+  const handleFooterNavigation = (href: string) => {
+    const trimmedHref = href.trim();
+    if (!trimmedHref) return;
+
+    if (isExternalHref(trimmedHref)) {
+      openExternalLink(trimmedHref);
+      return;
+    }
+
+    if (trimmedHref.startsWith("#")) {
+      if (trimmedHref === "#") {
+        scrollToSection(trimmedHref);
+        return;
+      }
+
+      if (location.pathname !== "/") {
+        navigate({ pathname: "/", hash: trimmedHref });
+        return;
+      }
+
+      scrollToSection(trimmedHref);
+      return;
+    }
+
+    navigate(normalizeHref(trimmedHref));
+  };
+
+  const handleFooterLinkClick = (
+    event: MouseEvent<HTMLAnchorElement>,
+    href: string,
+  ) => {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    handleFooterNavigation(href);
+  };
 
   return (
     <footer className="bg-foreground text-primary-foreground">
@@ -40,10 +119,7 @@ export default function Footer() {
             </p>
             <a
               href={footer.ctaButtonHref}
-              onClick={(e) => {
-                e.preventDefault();
-                scrollTo(footer.ctaButtonHref);
-              }}
+              onClick={(event) => handleFooterLinkClick(event, footer.ctaButtonHref)}
               className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold bg-primary-foreground text-brand-blue hover:bg-primary-foreground/90 transition-all duration-300 hover:scale-105 shadow-xl"
             >
               {footer.ctaButtonLabel}
@@ -78,14 +154,19 @@ export default function Footer() {
               {footer.description}
             </p>
             <div className="flex items-center gap-3">
-              {footer.socials.map(({ icon, href, label, _id }) => {
+              {footer.socials
+                .filter(({ icon, label }) => shouldRenderSocial(icon, label))
+                .map(({ icon, href, label, _id }) => {
                 const Icon = iconMap[icon] || Linkedin;
                 return (
                   <a
                     key={_id || label}
                     href={href}
+                    onClick={(event) => handleFooterLinkClick(event, href)}
                     aria-label={label}
                     title={label}
+                    target={isExternalHref(href) ? "_blank" : undefined}
+                    rel={isExternalHref(href) ? "noreferrer" : undefined}
                     className="w-9 h-9 rounded-full bg-primary-foreground/10 flex items-center justify-center hover:bg-brand-orange hover:scale-110 transition-all duration-200"
                   >
                     <Icon size={16} />
@@ -105,10 +186,7 @@ export default function Footer() {
                   <li key={_id || label}>
                     <a
                       href={href}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        scrollTo(href);
-                      }}
+                      onClick={(event) => handleFooterLinkClick(event, href)}
                       className="text-primary-foreground/60 text-sm hover:text-brand-orange transition-colors duration-200 flex items-center gap-1 group"
                     >
                       <ArrowRight
@@ -184,6 +262,9 @@ export default function Footer() {
               <a
                 key={_id || label}
                 href={href}
+                onClick={(event) => handleFooterLinkClick(event, href)}
+                target={isExternalHref(href) ? "_blank" : undefined}
+                rel={isExternalHref(href) ? "noreferrer" : undefined}
                 className="hover:text-primary-foreground/70 transition-colors"
               >
                 {label}

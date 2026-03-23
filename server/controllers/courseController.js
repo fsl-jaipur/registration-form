@@ -29,7 +29,7 @@ const buildPayload = (body = {}) => {
     duration: body.duration ?? "",
     students: body.students ?? "",
     rating:
-      body.rating === undefined || body.rating === null
+      body.rating === undefined || body.rating === null || body.rating === ""
         ? undefined
         : Number(body.rating),
     level: body.level ?? "",
@@ -41,7 +41,7 @@ const buildPayload = (body = {}) => {
     tags: normalizeList(body.tags),
     syllabus: normalizeList(body.syllabus ?? body.modules),
     order:
-      body.order === undefined || body.order === null
+      body.order === undefined || body.order === null || body.order === ""
         ? undefined
         : Number(body.order),
     slug: body.slug ? slugify(body.slug) : undefined,
@@ -157,5 +157,20 @@ export const updateCourse = async (req, res) => {
       return res.status(409).json({ message: "Slug already exists" });
     }
     res.status(500).json({ message: "Failed to update course" });
+  }
+};
+
+export const deleteCourse = async (req, res) => {
+  try {
+    const course = await Course.findByIdAndDelete(req.params.id);
+
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    res.status(200).json({ message: "Course deleted" });
+  } catch (error) {
+    console.error("Error deleting course", error);
+    res.status(500).json({ message: "Failed to delete course" });
   }
 };

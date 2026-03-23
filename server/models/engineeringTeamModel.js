@@ -12,7 +12,7 @@ const engineeringTeamSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     title: { type: String, required: true, trim: true },
     photo: { type: String, required: true, trim: true },
-    order: { type: Number, default: 0 },
+    order: { type: Number },
     isVisible: { type: Boolean, default: true },
     social: {
       linkedin: { type: String, trim: true },

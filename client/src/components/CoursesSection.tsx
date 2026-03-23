@@ -11,7 +11,7 @@ import {
 import { useCourses } from "@/hooks/useCourses";
 
 function CourseCard({ course, index }: { course: Course; index: number }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLAnchorElement>(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -31,13 +31,23 @@ function CourseCard({ course, index }: { course: Course; index: number }) {
   const gradient = course.color || "from-brand-blue to-brand-orange";
 
   return (
-    <div
+    <Link
       ref={ref}
+      to={`/courses/${slug}`}
+      aria-label={`Explore ${course.title}`}
       className={`group relative bg-card rounded-2xl overflow-hidden border border-border shadow-md card-hover transition-all duration-500 ${
         visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-      }`}
+      } flex h-full cursor-pointer flex-col hover:-translate-y-1 hover:scale-[1.01] hover:border-brand-blue/30 hover:shadow-xl active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40 focus-visible:ring-offset-2`}
       style={{ transitionDelay: `${index * 100}ms` }}
     >
+      <div
+        className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 transition-opacity duration-300 group-hover:opacity-[0.03]`}
+        aria-hidden="true"
+      />
+      <div
+        className={`absolute inset-0 rounded-2xl ring-1 ring-transparent transition-all duration-300 group-hover:ring-brand-blue/20`}
+        aria-hidden="true"
+      />
       <div className={`h-1.5 w-full bg-gradient-to-r ${gradient}`} />
 
       {course.badge && (
@@ -48,15 +58,15 @@ function CourseCard({ course, index }: { course: Course; index: number }) {
         </div>
       )}
 
-      <div className="p-6">
+      <div className="relative flex h-full flex-col p-6">
         <div
-          className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${gradient} mb-4 group-hover:scale-110 transition-transform duration-300`}
+          className={`inline-flex w-fit p-3 rounded-xl bg-gradient-to-br ${gradient} mb-4 transition-transform duration-300 group-hover:scale-110`}
         >
           <Icon className="text-primary-foreground" size={24} />
         </div>
 
-        <h3 className="text-lg font-bold text-foreground mb-2 group-hover:text-brand-blue transition-colors duration-200">
-          <Link to={`/courses/${slug}`}>{course.title}</Link>
+        <h3 className="text-lg font-bold text-foreground mb-2 transition-colors duration-200 group-hover:text-brand-blue">
+          {course.title}
         </h3>
         <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
           {course.description}
@@ -86,23 +96,20 @@ function CourseCard({ course, index }: { course: Course; index: number }) {
           </span>
         </div>
 
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground border border-border px-2.5 py-1 rounded-full">
+        <div className="mt-auto flex items-center justify-between gap-3 pt-2">
+          <span className="text-xs text-muted-foreground border border-border px-2.5 py-1 rounded-full transition-colors duration-200 group-hover:border-brand-blue/20 group-hover:text-foreground">
             {course.level}
           </span>
-          <Link
-            to={`/courses/${slug}`}
-            className="group/btn flex items-center gap-1.5 text-sm font-semibold text-brand-blue hover:text-brand-orange transition-colors duration-200"
-          >
-            Learn More
+          {/* <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-blue/80 transition-all duration-200 group-hover:text-brand-blue">
+            Click to explore
             <ArrowRight
               size={14}
-              className="group-hover/btn:translate-x-1 transition-transform duration-200"
+              className="transition-transform duration-200 group-hover:translate-x-1"
             />
-          </Link>
+          </span> */}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

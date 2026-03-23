@@ -20,7 +20,7 @@ const navItemSchema = new mongoose.Schema(
   {
     label: { type: String, required: true, trim: true },
     href: { type: String, required: true, trim: true },
-    order: { type: Number, default: 0 },
+    order: { type: Number },
     isExternal: { type: Boolean, default: false },
   },
   { _id: true },
@@ -35,7 +35,7 @@ const buttonSchema = new mongoose.Schema(
       enum: ["primary", "secondary", "outline"],
       default: "primary",
     },
-    order: { type: Number, default: 0 },
+    order: { type: Number },
   },
   { _id: true },
 );

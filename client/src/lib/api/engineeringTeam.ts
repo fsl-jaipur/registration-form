@@ -1,3 +1,5 @@
+import { parseOptionalNumber } from "@/lib/utils";
+
 export type EngineeringMember = {
   _id?: string;
   name: string;
@@ -38,7 +40,7 @@ const normalizeMembers = (members: unknown): EngineeringMember[] => {
         name,
         title,
         photo,
-        order: Number((m as EngineeringMember).order) || 0,
+        order: parseOptionalNumber((m as EngineeringMember).order),
         isVisible: (m as EngineeringMember).isVisible !== false,
         social: (m as EngineeringMember).social || {},
       };

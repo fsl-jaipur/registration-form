@@ -10,6 +10,7 @@ import {
   normalizeHeroSection,
   type HeroSectionData,
 } from "@/lib/api/heroSection";
+import { parseOptionalNumber, toNumberInputValue } from "@/lib/utils";
 
 type HeroButton = {
   _id?: string;
@@ -17,24 +18,24 @@ type HeroButton = {
   href: string;
   style: "primary" | "secondary" | "outline" | "ghost";
   icon: string;
-  order: number;
+  order?: number;
   isExternal: boolean;
 };
 
 type HeroStat = {
   _id?: string;
   label: string;
-  value: number;
+  value?: number;
   suffix: string;
   icon: string;
-  order: number;
+  order?: number;
 };
 
 type HeroImage = {
   _id?: string;
   url: string;
   alt: string;
-  order: number;
+  order?: number;
 };
 
 const emptyButton = (): HeroButton => ({
@@ -42,22 +43,22 @@ const emptyButton = (): HeroButton => ({
   href: "",
   style: "primary",
   icon: "",
-  order: 0,
+  order: undefined,
   isExternal: false,
 });
 
 const emptyStat = (): HeroStat => ({
   label: "",
-  value: 0,
+  value: undefined,
   suffix: "",
   icon: "",
-  order: 0,
+  order: undefined,
 });
 
 const emptyImage = (): HeroImage => ({
   url: "",
   alt: "",
-  order: 0,
+  order: undefined,
 });
 
 const AdminHeroSection = () => {
@@ -78,7 +79,7 @@ const AdminHeroSection = () => {
   const [badgeText, setBadgeText] = useState("");
   const [title, setTitle] = useState("");
   const [highlightPrefix, setHighlightPrefix] = useState("");
-  const [highlightNumber, setHighlightNumber] = useState<number>(6);
+  const [highlightNumber, setHighlightNumber] = useState<number | undefined>(undefined);
   const [highlightSuffix, setHighlightSuffix] = useState("");
   const [description, setDescription] = useState("");
   const [scrollText, setScrollText] = useState("Scroll");
@@ -116,7 +117,7 @@ const AdminHeroSection = () => {
       setBadgeText(hero.badgeText || "");
       setTitle(hero.title || "");
       setHighlightPrefix(hero.highlightPrefix || "");
-      setHighlightNumber(hero.highlightNumber ?? 6);
+      setHighlightNumber(parseOptionalNumber(hero.highlightNumber));
       setHighlightSuffix(hero.highlightSuffix || "");
       setDescription(hero.description || "");
       setScrollText(hero.scrollText || "Scroll");
@@ -152,6 +153,16 @@ const AdminHeroSection = () => {
 
     if (!title.trim()) {
       toast({ title: "Title is required", variant: "destructive" });
+      return;
+    }
+
+    if (highlightNumber === undefined) {
+      toast({ title: "Highlight number is required", variant: "destructive" });
+      return;
+    }
+
+    if (stats.some((stat) => stat.value === undefined || Number.isNaN(stat.value))) {
+      toast({ title: "Each stat needs a numeric value", variant: "destructive" });
       return;
     }
 
@@ -194,7 +205,7 @@ const AdminHeroSection = () => {
       setBadgeText(hero.badgeText || "");
       setTitle(hero.title || "");
       setHighlightPrefix(hero.highlightPrefix || "");
-      setHighlightNumber(hero.highlightNumber ?? 6);
+      setHighlightNumber(parseOptionalNumber(hero.highlightNumber));
       setHighlightSuffix(hero.highlightSuffix || "");
       setDescription(hero.description || "");
       setScrollText(hero.scrollText || "Scroll");
@@ -304,8 +315,8 @@ const AdminHeroSection = () => {
               <label className="text-sm font-medium text-foreground">Highlight Number</label>
               <input
                 type="number"
-                value={highlightNumber}
-                onChange={(e) => setHighlightNumber(Number(e.target.value) || 0)}
+                value={toNumberInputValue(highlightNumber)}
+                onChange={(e) => setHighlightNumber(parseOptionalNumber(e.target.value))}
                 className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
               />
             </div>
@@ -464,8 +475,8 @@ const AdminHeroSection = () => {
                     <label className="text-xs font-semibold text-foreground">Order</label>
                     <input
                       type="number"
-                      value={btn.order}
-                      onChange={(e) => updateButton(index, { order: Number(e.target.value) || 0 })}
+                      value={toNumberInputValue(btn.order)}
+                      onChange={(e) => updateButton(index, { order: parseOptionalNumber(e.target.value) })}
                       className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
                     />
                   </div>
@@ -563,8 +574,8 @@ const AdminHeroSection = () => {
                     <label className="text-xs font-semibold text-foreground">Value</label>
                     <input
                       type="number"
-                      value={stat.value}
-                      onChange={(e) => updateStat(index, { value: Number(e.target.value) || 0 })}
+                      value={toNumberInputValue(stat.value)}
+                      onChange={(e) => updateStat(index, { value: parseOptionalNumber(e.target.value) })}
                       className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
                     />
                   </div>
@@ -597,8 +608,8 @@ const AdminHeroSection = () => {
                   <label className="text-xs font-semibold text-foreground">Order</label>
                   <input
                     type="number"
-                    value={stat.order}
-                    onChange={(e) => updateStat(index, { order: Number(e.target.value) || 0 })}
+                    value={toNumberInputValue(stat.order)}
+                    onChange={(e) => updateStat(index, { order: parseOptionalNumber(e.target.value) })}
                     className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
                   />
                 </div>
@@ -681,8 +692,8 @@ const AdminHeroSection = () => {
                   <label className="text-xs font-semibold text-foreground">Order</label>
                   <input
                     type="number"
-                    value={img.order}
-                    onChange={(e) => updateImage(index, { order: Number(e.target.value) || 0 })}
+                    value={toNumberInputValue(img.order)}
+                    onChange={(e) => updateImage(index, { order: parseOptionalNumber(e.target.value) })}
                     className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
                   />
                 </div>

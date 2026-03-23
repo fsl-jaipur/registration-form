@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ComponentType } from "react";
 import {
   ArrowRight,
@@ -53,7 +53,7 @@ const StatCard = ({ stat, animate }: { stat: HeroStat; animate: boolean }) => {
   const Icon = stat.icon && iconMap[stat.icon] ? iconMap[stat.icon] : Users;
   const count = useCountUp(stat.value, 2000, animate);
   return (
-    <div className="flex flex-col items-center p-4 bg-background/10 backdrop-blur-sm rounded-xl border border-primary-foreground/20 hover:bg-background/20 transition-all duration-300 hover:-translate-y-1">
+    <div className="flex flex-col items-center p-2.5 md:p-3.5 bg-background/10 backdrop-blur-sm rounded-xl border border-primary-foreground/20 hover:bg-background/20 transition-all duration-300 hover:-translate-y-1">
       <Icon className="text-brand-orange mb-2" size={24} />
       <span className="text-2xl md:text-3xl font-bold text-primary-foreground">
         {animate ? count : 0}
@@ -66,13 +66,13 @@ const StatCard = ({ stat, animate }: { stat: HeroStat; animate: boolean }) => {
 
 const buttonClasses = {
   primary:
-    "group inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-primary-foreground bg-brand-orange hover:bg-brand-orange-dark transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-lg",
+    "group inline-flex items-center gap-2 px-6 md:px-7 py-3 md:py-3.5 rounded-xl font-semibold text-primary-foreground bg-brand-orange hover:bg-brand-orange-dark transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-lg",
   secondary:
-    "group inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-primary-foreground bg-brand-blue-light text-brand-blue hover:bg-brand-blue hover:text-white transition-all duration-300 hover:scale-105 hover:shadow-xl shadow-lg",
+    "group inline-flex items-center gap-2 px-6 md:px-7 py-3 md:py-3.5 rounded-xl font-semibold text-primary-foreground bg-brand-blue-light text-brand-blue hover:bg-brand-blue hover:text-white transition-all duration-300 hover:scale-105 hover:shadow-xl shadow-lg",
   outline:
-    "group inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-primary-foreground border-2 border-primary-foreground/50 hover:bg-primary-foreground/10 transition-all duration-300 hover:scale-105 hover:border-primary-foreground",
+    "group inline-flex items-center gap-2 px-6 md:px-7 py-3 md:py-3.5 rounded-xl font-semibold text-primary-foreground border-2 border-primary-foreground/50 hover:bg-primary-foreground/10 transition-all duration-300 hover:scale-105 hover:border-primary-foreground",
   ghost:
-    "group inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-primary-foreground/80 hover:text-primary-foreground transition-all duration-300",
+    "group inline-flex items-center gap-2 px-6 md:px-7 py-3 md:py-3.5 rounded-xl font-semibold text-primary-foreground/80 hover:text-primary-foreground transition-all duration-300",
 };
 
 const getButtonClass = (style: HeroButton["style"]) =>
@@ -91,7 +91,9 @@ export default function HeroSection() {
   const [visible, setVisible] = useState(true);
   const [statsVisible, setStatsVisible] = useState(false);
   const statsRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const [slideIndex, setSlideIndex] = useState(0);
+  const [availableHeight, setAvailableHeight] = useState<number | null>(null);
 
   // Word cycling tied to current words array
   useEffect(() => {
@@ -127,6 +129,40 @@ export default function HeroSection() {
     return () => observer.disconnect();
   }, []);
 
+  useLayoutEffect(() => {
+    const updateAvailableHeight = () => {
+      if (!sectionRef.current) return;
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+      const sectionTop = sectionRef.current.getBoundingClientRect().top + window.scrollY;
+      setAvailableHeight(Math.max(viewportHeight - sectionTop, 0));
+    };
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateAvailableHeight();
+    });
+
+    const headerElement = document.querySelector("header");
+    const topBarElement = headerElement?.previousElementSibling;
+
+    if (headerElement instanceof HTMLElement) {
+      resizeObserver.observe(headerElement);
+    }
+
+    if (topBarElement instanceof HTMLElement) {
+      resizeObserver.observe(topBarElement);
+    }
+
+    updateAvailableHeight();
+    window.addEventListener("resize", updateAvailableHeight);
+    window.visualViewport?.addEventListener("resize", updateAvailableHeight);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateAvailableHeight);
+      window.visualViewport?.removeEventListener("resize", updateAvailableHeight);
+    };
+  }, []);
+
   const handleButtonClick = (btn: HeroButton) => {
     const href = btn.href?.trim();
     if (!href) return;
@@ -149,7 +185,9 @@ export default function HeroSection() {
   return (
     <section
       id="home"
-      className="relative min-h-screen flex flex-col justify-center overflow-hidden"
+      ref={sectionRef}
+      className="relative flex flex-col justify-center overflow-hidden min-h-[calc(100svh-6.5rem)] md:min-h-[calc(100svh-7.5rem)]"
+      style={availableHeight ? { minHeight: `${availableHeight}px` } : undefined}
     >
       <div className="absolute inset-0">
         {images.map((img, i) => (
@@ -165,19 +203,19 @@ export default function HeroSection() {
         <div className="absolute inset-0 bg-gradient-to-r from-brand-blue-dark/90 via-brand-blue/75 to-brand-orange/60" />
       </div>
 
-      <div className="relative container mx-auto px-4 py-24 md:py-32">
+      <div className="relative container mx-auto px-4 pt-8 pb-14 md:pt-10 md:pb-16 lg:pt-12">
         <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-orange/20 border border-brand-orange/40 text-primary-foreground text-sm font-medium mb-6 animate-fade-in">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-orange/20 border border-brand-orange/40 text-primary-foreground text-sm font-medium mb-4 animate-fade-in">
             <span className="w-2 h-2 rounded-full bg-brand-orange animate-pulse" />
             {hero.badgeText}
           </div>
 
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-primary-foreground leading-tight mb-4 animate-slide-up">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-primary-foreground leading-tight mb-2 animate-slide-up">
             {hero.title}
           </h1>
 
           <h1
-            className={`text-4xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6 transition-all duration-400 ${
+            className={`text-4xl md:text-6xl lg:text-7xl font-bold leading-tight mb-4 transition-all duration-400 ${
               visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
             }`}
             style={{ color: "hsl(var(--brand-orange))" }}
@@ -186,7 +224,7 @@ export default function HeroSection() {
           </h1>
 
           <div
-            className="flex items-center gap-3 mb-4 animate-slide-up"
+            className="flex items-center gap-3 mb-2 animate-slide-up"
             style={{ animationDelay: "0.2s" }}
           >
             <div className="h-0.5 w-16 bg-primary-foreground/60" />
@@ -197,14 +235,14 @@ export default function HeroSection() {
             </p>
           </div>
           <p
-            className="text-primary-foreground/70 text-lg mb-10 animate-slide-up"
+            className="text-primary-foreground/70 text-lg mb-6 animate-slide-up"
             style={{ animationDelay: "0.3s" }}
           >
             {hero.description}
           </p>
 
           <div
-            className="flex flex-wrap gap-4 mb-16 animate-slide-up"
+            className="flex flex-wrap gap-4 mb-8 md:mb-10 animate-slide-up"
             style={{ animationDelay: "0.4s" }}
           >
             {buttons.map((btn, idx) => (
@@ -222,7 +260,7 @@ export default function HeroSection() {
 
           <div
             ref={statsRef}
-            className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-slide-up"
+            className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 animate-slide-up"
             style={{ animationDelay: "0.5s" }}
           >
             {stats.map((stat) => (
@@ -233,7 +271,7 @@ export default function HeroSection() {
       </div>
 
       {hero.showScrollIndicator && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-primary-foreground/50 animate-float">
+        <div className="absolute bottom-3 md:bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-primary-foreground/50 animate-float">
           <span className="text-xs tracking-widest uppercase">{hero.scrollText || "Scroll"}</span>
           <div className="w-0.5 h-8 bg-gradient-to-b from-primary-foreground/50 to-transparent" />
         </div>

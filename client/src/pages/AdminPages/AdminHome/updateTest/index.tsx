@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { parseOptionalNumber, toNumberInputValue } from "@/lib/utils";
 
 type QuestionFile = {
   text?: string;
@@ -19,12 +20,17 @@ type Test = {
   questions: Question[];
 };
 
+type EditableTest = Omit<Test, "numQuestions" | "duration"> & {
+  numQuestions?: number;
+  duration?: number;
+};
+
 function UpdateTest(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [test, setTest] = useState<Test | null>(null);
-  const [editableTest, setEditableTest] = useState<Test | null>(null);
+  const [editableTest, setEditableTest] = useState<EditableTest | null>(null);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const apiBase = import.meta.env.VITE_API_URL;
@@ -54,10 +60,18 @@ function UpdateTest(): JSX.Element {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!editableTest) return;
     const { name, value } = e.target;
+    if (name === "numQuestions" || name === "duration") {
+      setEditableTest({
+        ...editableTest,
+        [name]: parseOptionalNumber(value),
+      } as EditableTest);
+      return;
+    }
+
     setEditableTest({
       ...editableTest,
-      [name]: name === "numQuestions" || name === "duration" ? Number(value) : value,
-    });
+      [name]: value,
+    } as EditableTest);
   };
 
   const handleQuestionChange = (index: number, field: string, value: string) => {
@@ -91,14 +105,32 @@ function UpdateTest(): JSX.Element {
 
   const handleSubmit = async () => {
     if (!editableTest) return;
+
+    if (
+      !Number.isInteger(editableTest.numQuestions) ||
+      editableTest.numQuestions <= 0 ||
+      !Number.isInteger(editableTest.duration) ||
+      editableTest.duration <= 0
+    ) {
+      alert("Number of questions and duration must be positive whole numbers.");
+      return;
+    }
+
+    const payload: Test = {
+      ...editableTest,
+      numQuestions: editableTest.numQuestions,
+      duration: editableTest.duration,
+    };
+
     try {
       await fetch(`${apiBase}/test/update/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(editableTest),
+        body: JSON.stringify(payload),
       });
-      setTest(editableTest);
+      setTest(payload);
+      setEditableTest(payload);
       setIsEditing(false);
       navigate("/admin/home");
     } catch (error) {
@@ -161,7 +193,7 @@ function UpdateTest(): JSX.Element {
               <input
                 type="number"
                 name="numQuestions"
-                value={editableTest.numQuestions}
+                value={toNumberInputValue(editableTest.numQuestions)}
                 onChange={handleChange}
                 disabled={!isEditing}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-blue disabled:opacity-60"
@@ -172,7 +204,7 @@ function UpdateTest(): JSX.Element {
               <input
                 type="number"
                 name="duration"
-                value={editableTest.duration}
+                value={toNumberInputValue(editableTest.duration)}
                 onChange={handleChange}
                 disabled={!isEditing}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-blue disabled:opacity-60"

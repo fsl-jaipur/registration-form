@@ -73,13 +73,19 @@ export async function changePassword(req, res) {
       return res.status(400).json({ message: "Old password is incorrect." });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    let isMatch = false;
+    if (user.firstTimesignin) {
+      isMatch = password === user.password;
+    } else {
+      isMatch = await bcrypt.compare(password, user.password);
+    }
     if (!isMatch) {
       return res.status(400).json({ message: "Old password is incorrect." });
     }
 
+      const updatedPassword = await bcrypt.hash(newPassword, 10);
     // Assign plaintext new password; model will hash on save
-    user.password = newPassword;
+    user.password = updatedPassword;
     user.firstTimesignin = false;
     await user.save();
     

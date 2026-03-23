@@ -5,7 +5,8 @@ import { fallbackGetInTouch } from "@/lib/api/getInTouch";
 
 export default function EnquiryForm() {
   const { data: section = fallbackGetInTouch } = useGetInTouch();
-  const courses = section.courses && section.courses.length ? section.courses : fallbackGetInTouch.courses;
+  const courses = section.courses ?? fallbackGetInTouch.courses;
+  const highlights = section.highlights ?? fallbackGetInTouch.highlights;
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -166,23 +167,25 @@ export default function EnquiryForm() {
               </div>
             </div>
 
-            <div className="bg-card rounded-2xl p-6 border border-border shadow-md">
-              <h4 className="font-bold text-foreground mb-3">
-                Why Choose FSL?
-              </h4>
-              {(section.highlights || fallbackGetInTouch.highlights).map((item) => (
-                <div
-                  key={item}
-                  className="flex items-center gap-2 py-1.5 text-sm text-muted-foreground"
-                >
-                  <CheckCircle2
-                    size={15}
-                    className="text-brand-blue flex-shrink-0"
-                  />
-                  {item}
-                </div>
-              ))}
-            </div>
+            {highlights.length > 0 && (
+              <div className="bg-card rounded-2xl p-6 border border-border shadow-md">
+                <h4 className="font-bold text-foreground mb-3">
+                  Why Choose FSL?
+                </h4>
+                {highlights.map((item) => (
+                  <div
+                    key={item}
+                    className="flex items-center gap-2 py-1.5 text-sm text-muted-foreground"
+                  >
+                    <CheckCircle2
+                      size={15}
+                      className="text-brand-blue flex-shrink-0"
+                    />
+                    {item}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Form */}
@@ -257,9 +260,12 @@ export default function EnquiryForm() {
                     value={form.course}
                     onChange={handleChange}
                     required
+                    disabled={courses.length === 0}
                     className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40 focus:border-brand-blue transition-all duration-200"
                   >
-                    <option value="">Select a course</option>
+                    <option value="">
+                      {courses.length === 0 ? "No courses configured" : "Select a course"}
+                    </option>
                     {courses.map((c) => (
                       <option key={c} value={c}>
                         {c}

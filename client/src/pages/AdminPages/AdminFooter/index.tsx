@@ -13,10 +13,11 @@ import {
   type FooterSection,
   type FooterSocial,
 } from "@/lib/api/footer";
+import { parseOptionalNumber, toNumberInputValue } from "@/lib/utils";
 
-const emptyLink = (): FooterLink => ({ label: "", href: "", order: 0 });
-const emptySection = (): FooterSection => ({ title: "", links: [], order: 0 });
-const emptySocial = (): FooterSocial => ({ label: "", href: "", icon: "LinkedIn", order: 0 });
+const emptyLink = (): FooterLink => ({ label: "", href: "", order: undefined });
+const emptySection = (): FooterSection => ({ title: "", links: [], order: undefined });
+const emptySocial = (): FooterSocial => ({ label: "", href: "", icon: "LinkedIn", order: undefined });
 
 export default function AdminFooter() {
   const { isAuthenticated, role, authChecked } = useAdminContext();
@@ -289,10 +290,12 @@ export default function AdminFooter() {
 
                 <input
                   type="number"
-                  value={section.order ?? 0}
+                  value={toNumberInputValue(section.order)}
                   onChange={(e) =>
                     setSections(
-                      footer.sections.map((s, i) => (i === idx ? { ...s, order: Number(e.target.value) || 0 } : s)),
+                      footer.sections.map((s, i) =>
+                        i === idx ? { ...s, order: parseOptionalNumber(e.target.value) } : s,
+                      ),
                     )
                   }
                   className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"

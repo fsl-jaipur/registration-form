@@ -1,12 +1,23 @@
 import GetInTouch from "../models/getInTouchModel.js";
 
+const uniqueItems = (items = []) => {
+  const seen = new Set();
+
+  return items
+    .map((item) => item?.trim?.() || "")
+    .filter(Boolean)
+    .filter((item) => {
+      const normalized = item.toLowerCase();
+      if (seen.has(normalized)) return false;
+      seen.add(normalized);
+      return true;
+    });
+};
+
 const normalizeBodyArray = (value) => {
-  if (Array.isArray(value)) return value.filter(Boolean);
+  if (Array.isArray(value)) return uniqueItems(value);
   if (typeof value === "string") {
-    return value
-      .split(/[\n,]/)
-      .map((s) => s.trim())
-      .filter(Boolean);
+    return uniqueItems(value.split(/[\n,]/));
   }
   return undefined;
 };

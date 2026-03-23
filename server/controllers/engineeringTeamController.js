@@ -2,6 +2,11 @@ import EngineeringTeam, { defaultEngineeringTeam } from "../models/engineeringTe
 import { cloudinaryUpload } from "../middlewares/cloudinaryUpload.js";
 
 const sortByOrder = (items = []) => [...items].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+const numberOrUndefined = (value) => {
+  if (value === undefined || value === null || value === "") return undefined;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : undefined;
+};
 
 export const getTeam = async (_req, res) => {
   try {
@@ -30,7 +35,7 @@ export const createMember = async (req, res) => {
       name: req.body.name?.trim(),
       title: req.body.title?.trim(),
       photo,
-      order: Number(req.body.order) || 0,
+      order: numberOrUndefined(req.body.order),
       isVisible: req.body.isVisible === "false" ? false : true,
       social: {
         linkedin: req.body.linkedin?.trim(),
@@ -67,8 +72,8 @@ export const updateMember = async (req, res) => {
       };
     }
     if (req.body.order !== undefined) {
-      const num = Number(req.body.order);
-      if (!Number.isNaN(num)) member.order = num;
+      const num = numberOrUndefined(req.body.order);
+      member.order = num;
     }
     if (req.body.isVisible !== undefined) {
       const val = String(req.body.isVisible).toLowerCase();

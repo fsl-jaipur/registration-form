@@ -31,6 +31,12 @@ const sanitizeStringArray = (value, { allowEmpty = false } = {}) => {
   return cleaned;
 };
 
+const numberOrUndefined = (value) => {
+  if (value === undefined || value === null || value === "") return undefined;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : undefined;
+};
+
 const allowedButtonStyles = ["primary", "secondary", "outline", "ghost"];
 const sanitizeButtons = (value, { allowEmpty = false } = {}) => {
   const parsed = parseJsonField(value);
@@ -44,7 +50,7 @@ const sanitizeButtons = (value, { allowEmpty = false } = {}) => {
       const href = item.href?.trim();
       if (!label || !href) return null;
       const style = item.style?.trim();
-      const order = Number(item.order);
+      const order = numberOrUndefined(item.order);
       return {
         ...(item._id ? { _id: item._id } : {}),
         label,
@@ -52,7 +58,7 @@ const sanitizeButtons = (value, { allowEmpty = false } = {}) => {
         style: allowedButtonStyles.includes(style) ? style : "primary",
         icon: item.icon?.trim() || "",
         isExternal: Boolean(item.isExternal),
-        order: Number.isFinite(order) ? order : 0,
+        ...(order !== undefined ? { order } : {}),
       };
     })
     .filter(Boolean);
@@ -70,16 +76,16 @@ const sanitizeStats = (value, { allowEmpty = false } = {}) => {
     .map((item) => {
       if (!item) return null;
       const label = item.label?.trim();
-      const numericValue = Number(item.value);
-      if (!label || Number.isNaN(numericValue)) return null;
-      const order = Number(item.order);
+      const numericValue = numberOrUndefined(item.value);
+      if (!label || numericValue === undefined) return null;
+      const order = numberOrUndefined(item.order);
       return {
         ...(item._id ? { _id: item._id } : {}),
         label,
         value: numericValue,
         suffix: item.suffix?.trim() || "",
         icon: item.icon?.trim() || "",
-        order: Number.isFinite(order) ? order : 0,
+        ...(order !== undefined ? { order } : {}),
       };
     })
     .filter(Boolean);
@@ -98,12 +104,12 @@ const sanitizeImages = (value, { allowEmpty = false } = {}) => {
       if (!item) return null;
       const url = item.url?.trim();
       if (!url) return null;
-      const order = Number(item.order);
+      const order = numberOrUndefined(item.order);
       return {
         ...(item._id ? { _id: item._id } : {}),
         url,
         alt: item.alt?.trim() || "",
-        order: Number.isFinite(order) ? order : 0,
+        ...(order !== undefined ? { order } : {}),
       };
     })
     .filter(Boolean);
@@ -111,12 +117,6 @@ const sanitizeImages = (value, { allowEmpty = false } = {}) => {
   if (!cleaned.length && !allowEmpty) return undefined;
   return cleaned;
 };
-
-const numberOrUndefined = (value) => {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : undefined;
-};
-
 const booleanOrUndefined = (value) => {
   if (value === undefined || value === null) return undefined;
   if (typeof value === "boolean") return value;

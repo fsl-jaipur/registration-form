@@ -44,20 +44,34 @@ export const fallbackGetInTouch: GetInTouchData = {
   accessKey: "9896dc59-07e4-4630-9b2d-39348c63866c",
 };
 
-const normalizeArray = (value: unknown, fallback: string[]) => {
-  if (Array.isArray(value)) {
-    const cleaned = value.map((v) => (typeof v === "string" ? v.trim() : "")).filter(Boolean);
-    return cleaned.length ? cleaned : fallback;
-  }
-  if (typeof value === "string") {
-    const cleaned = value
-      .split(/[\n,]/)
-      .map((v) => v.trim())
-      .filter(Boolean);
-    return cleaned.length ? cleaned : fallback;
-  }
-  return fallback;
+const uniqueItems = (items: string[]) => {
+  const seen = new Set<string>();
+
+  return items
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .filter((item) => {
+      const normalized = item.toLowerCase();
+      if (seen.has(normalized)) return false;
+      seen.add(normalized);
+      return true;
+    });
 };
+
+export const normalizeGetInTouchList = (value: unknown) => {
+  if (Array.isArray(value)) {
+    return uniqueItems(value.map((entry) => (typeof entry === "string" ? entry : String(entry ?? ""))));
+  }
+
+  if (typeof value === "string") {
+    return uniqueItems(value.split(/[\n,]/));
+  }
+
+  return [];
+};
+
+const resolveArray = (value: unknown, fallback: string[]) =>
+  value === undefined || value === null ? fallback : normalizeGetInTouchList(value);
 
 export const normalizeGetInTouch = (section?: Partial<GetInTouchData> | null): GetInTouchData => ({
   _id: typeof section?._id === "string" ? section._id : undefined,
@@ -68,8 +82,8 @@ export const normalizeGetInTouch = (section?: Partial<GetInTouchData> | null): G
   phone: section?.phone?.trim() || fallbackGetInTouch.phone,
   email: section?.email?.trim() || fallbackGetInTouch.email,
   mapLink: section?.mapLink?.trim() || fallbackGetInTouch.mapLink,
-  courses: normalizeArray(section?.courses, fallbackGetInTouch.courses),
-  highlights: normalizeArray(section?.highlights, fallbackGetInTouch.highlights),
+  courses: resolveArray(section?.courses, fallbackGetInTouch.courses),
+  highlights: resolveArray(section?.highlights, fallbackGetInTouch.highlights),
   formEndpoint: section?.formEndpoint?.trim() || fallbackGetInTouch.formEndpoint,
   accessKey: section?.accessKey?.trim() || fallbackGetInTouch.accessKey,
 });

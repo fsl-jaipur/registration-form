@@ -16,6 +16,12 @@ const parseJsonField = (value) => {
   return value;
 };
 
+const numberOrUndefined = (value) => {
+  if (value === undefined || value === null || value === "") return undefined;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : undefined;
+};
+
 const sanitizeNavItems = (value, { allowEmpty = false } = {}) => {
   const parsed = parseJsonField(value);
   if (parsed === undefined) return undefined;
@@ -27,12 +33,12 @@ const sanitizeNavItems = (value, { allowEmpty = false } = {}) => {
       const label = item.label?.trim();
       const href = item.href?.trim();
       if (!label || !href) return null;
-      const order = Number(item.order);
+      const order = numberOrUndefined(item.order);
       return {
         ...(item._id ? { _id: item._id } : {}),
         label,
         href,
-        order: Number.isFinite(order) ? order : 0,
+        ...(order !== undefined ? { order } : {}),
         isExternal: Boolean(item.isExternal),
       };
     })
@@ -54,7 +60,7 @@ const sanitizeButtons = (value, { allowEmpty = false } = {}) => {
       const href = item.href?.trim();
       if (!label || !href) return null;
       const style = item.style?.trim();
-      const order = Number(item.order);
+      const order = numberOrUndefined(item.order);
       return {
         ...(item._id ? { _id: item._id } : {}),
         label,
@@ -62,7 +68,7 @@ const sanitizeButtons = (value, { allowEmpty = false } = {}) => {
         style: ["primary", "secondary", "outline"].includes(style)
           ? style
           : "primary",
-        order: Number.isFinite(order) ? order : 0,
+        ...(order !== undefined ? { order } : {}),
       };
     })
     .filter(Boolean);
@@ -202,11 +208,12 @@ export const addNavItem = async (req, res) => {
       return res.status(400).json({ message: "Label and href are required." });
     }
 
+    const orderValue = numberOrUndefined(order);
     const navItem = {
       label: label.trim(),
       href: href.trim(),
-      order: Number.isFinite(Number(order)) ? Number(order) : 0,
       isExternal: Boolean(isExternal),
+      ...(orderValue !== undefined ? { order: orderValue } : {}),
     };
 
     const header = await UniversalHeader.findByIdAndUpdate(
@@ -303,13 +310,14 @@ export const addButton = async (req, res) => {
       return res.status(400).json({ message: "Label and href are required." });
     }
 
+    const orderValue = numberOrUndefined(order);
     const button = {
       label: label.trim(),
       href: href.trim(),
       style: ["primary", "secondary", "outline"].includes(style)
         ? style
         : "primary",
-      order: Number.isFinite(Number(order)) ? Number(order) : 0,
+      ...(orderValue !== undefined ? { order: orderValue } : {}),
     };
 
     const header = await UniversalHeader.findByIdAndUpdate(

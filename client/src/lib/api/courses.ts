@@ -47,6 +47,22 @@ export const fetchCourseBySlug = async (slug: string): Promise<Course | null> =>
   return json?.course ? normalizeCourse(json.course) : null;
 };
 
+const resolveCourseId = async (course: Pick<Course, "_id" | "slug" | "title">) => {
+  if (course._id) return course._id;
+
+  const slug = course.slug || (course.title ? slugify(course.title) : "");
+  if (!slug) {
+    throw new Error("Course id is missing");
+  }
+
+  const existing = await fetchCourseBySlug(slug);
+  if (!existing?._id) {
+    throw new Error("Course not found");
+  }
+
+  return existing._id;
+};
+
 export const saveCourse = async (course: Partial<Course>): Promise<Course> => {
   if (!API_BASE) {
     throw new Error("API base URL is not configured");
@@ -100,4 +116,27 @@ export const saveCourse = async (course: Partial<Course>): Promise<Course> => {
 
   const json = await res.json();
   return normalizeCourse(json?.course ?? payload);
+};
+
+export const deleteCourse = async (course: Pick<Course, "_id" | "slug" | "title">) => {
+  if (!API_BASE) {
+    throw new Error("API base URL is not configured");
+  }
+
+  const courseId = await resolveCourseId(course);
+  const res = await fetch(`${API_BASE}/courses/${courseId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    let message = await res.text();
+    try {
+      const json = JSON.parse(message);
+      message = json?.message || message;
+    } catch {
+      /* keep raw text */
+    }
+    throw new Error(message || "Failed to delete course");
+  }
 };

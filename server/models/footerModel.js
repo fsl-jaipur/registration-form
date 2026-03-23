@@ -4,7 +4,7 @@ const linkSchema = new mongoose.Schema(
   {
     label: { type: String, required: true, trim: true },
     href: { type: String, required: true, trim: true },
-    order: { type: Number, default: 0 },
+    order: { type: Number },
   },
   { _id: true },
 );
@@ -13,7 +13,7 @@ const sectionSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
     links: { type: [linkSchema], default: [] },
-    order: { type: Number, default: 0 },
+    order: { type: Number },
   },
   { _id: true },
 );
@@ -23,7 +23,7 @@ const socialSchema = new mongoose.Schema(
     label: { type: String, required: true, trim: true },
     href: { type: String, required: true, trim: true },
     icon: { type: String, required: true, trim: true },
-    order: { type: Number, default: 0 },
+    order: { type: Number },
   },
   { _id: true },
 );
@@ -101,9 +101,9 @@ const footerSchema = new mongoose.Schema(
     bottomLinks: {
       type: [linkSchema],
       default: [
-        { label: "Privacy Policy", href: "#", order: 0 },
-        { label: "Terms of Service", href: "#", order: 1 },
-        { label: "Sitemap", href: "#", order: 2 },
+        { label: "Privacy Policy", href: "/privacy-policy", order: 0 },
+        { label: "Terms of Service", href: "/terms-of-service", order: 1 },
+        { label: "Sitemap", href: "/sitemap", order: 2 },
       ],
     },
   },

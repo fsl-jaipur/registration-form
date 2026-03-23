@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import {
   ExternalLink,
   Link as LinkIcon,
+  PenSquare,
   Plus,
   Trash2,
   Video,
@@ -321,13 +322,13 @@ const AdminAssignments = (): JSX.Element => {
               Upload once: title, video link, and category. Thumbnails are generated automatically from YouTube links.
             </p>
           </div>
-          <div className="flex items-center gap-2 rounded-full border border-border bg-muted/60 px-4 py-2 text-sm text-muted-foreground">
+          {/* <div className="flex items-center gap-2 rounded-full border border-border bg-muted/60 px-4 py-2 text-sm text-muted-foreground">
             <Video className="h-4 w-4 text-brand-orange" />
             Admin-only for now. Student view will be wired next.
-          </div>
+          </div> */}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr,0.9fr]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
           <form
             onSubmit={handleSubmit}
             className="space-y-4 rounded-xl border border-border bg-white p-5 shadow-sm"
@@ -408,8 +409,8 @@ const AdminAssignments = (): JSX.Element => {
             </div>
           </form>
 
-          <div className="rounded-xl border border-border bg-white p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="space-y-5 rounded-2xl border border-border bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-foreground">All Assignments</h3>
                 <p className="text-xs text-muted-foreground">
@@ -422,44 +423,50 @@ const AdminAssignments = (): JSX.Element => {
             </div>
 
             {loading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Spinner className="h-4 w-4" />
-                  Loading assignments...
-                </div>
+              <div className="flex min-h-[120px] items-center gap-2 rounded-xl border border-dashed border-border bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+                <Spinner className="h-4 w-4" />
+                Loading assignments...
+              </div>
             ) : assignments.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border bg-muted/40 px-4 py-6 text-sm text-muted-foreground">
                 No assignments yet. Add one to populate this list.
               </div>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-4 xl:grid-cols-2">
                 {assignments.map((item) => (
                   <article
                     key={item._id}
-                    className="relative flex gap-3 rounded-lg border border-border bg-muted/30 p-3"
+                    className="overflow-hidden rounded-2xl border border-border bg-muted/20 shadow-sm transition hover:border-brand-blue/30 hover:shadow-md"
                   >
-                    <div className="h-20 w-28 overflow-hidden rounded-md bg-muted flex items-center justify-center">
+                    <div className="aspect-video overflow-hidden bg-muted">
                       {item.thumbnail ? (
                         <img
                           src={resolveThumbnail(item.thumbnail)}
                           alt={`${item.title} thumbnail`}
-                          className="h-full w-full object-cover"
+                          className="h-full w-full object-cover object-center"
                         />
                       ) : (
-                        <Video className="h-5 w-5 text-muted-foreground" />
+                        <div className="flex h-full w-full items-center justify-center">
+                          <Video className="h-6 w-6 text-muted-foreground" />
+                        </div>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <p className="text-sm font-semibold text-foreground truncate" title={item.title}>
-                        {item.title}
-                      </p>
-                      {item.category && (
-                        <span className="inline-flex items-center rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-brand-blue ring-1 ring-brand-blue/20">
-                          {item.category}
-                        </span>
-                      )}
+
+                    <div className="flex min-h-[220px] flex-col gap-3 p-4">
+                      <div className="space-y-2">
+                        <p className="line-clamp-2 text-base font-semibold leading-snug text-foreground" title={item.title}>
+                          {item.title}
+                        </p>
+                        {item.category && (
+                          <span className="inline-flex items-center rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-brand-blue ring-1 ring-brand-blue/20">
+                            {item.category}
+                          </span>
+                        )}
+                      </div>
+
                       <div className="flex flex-wrap items-center gap-2">
                         <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                             item.trelloCardUrl
                               ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
                               : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
@@ -479,36 +486,42 @@ const AdminAssignments = (): JSX.Element => {
                           </a>
                         )}
                       </div>
+
                       <a
                         href={item.videoLink}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-brand-blue hover:underline break-all"
+                        className="inline-flex items-start gap-1 break-all text-xs text-brand-blue hover:underline"
                       >
-                        <ExternalLink className="h-3 w-3" />
-                        {item.videoLink}
+                        <ExternalLink className="mt-0.5 h-3 w-3 flex-shrink-0" />
+                        <span>{item.videoLink}</span>
                       </a>
-                      <p className="text-[11px] text-muted-foreground">
-                        Added {new Date(item.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="absolute top-2 right-2 flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => startEdit(item)}
-                        className="rounded-full bg-white/90 px-2 py-1 text-xs font-semibold text-brand-blue hover:bg-brand-blue/10 border border-border shadow-sm"
-                        aria-label="Edit assignment"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(item._id)}
-                        className="rounded-full bg-white/90 p-1 text-red-600 hover:bg-red-50 border border-red-200 shadow-sm"
-                        aria-label="Delete assignment"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+
+                      <div className="mt-auto flex flex-col gap-3 border-t border-border/80 pt-3">
+                        <p className="text-[11px] text-muted-foreground">
+                          Added {new Date(item.createdAt).toLocaleString()}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => startEdit(item)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-border bg-white px-3 py-2 text-xs font-semibold text-brand-blue shadow-sm transition hover:bg-brand-blue/5"
+                            aria-label="Edit assignment"
+                          >
+                            <PenSquare className="h-3.5 w-3.5" />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(item._id)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 shadow-sm transition hover:bg-red-50"
+                            aria-label="Delete assignment"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </article>
                 ))}

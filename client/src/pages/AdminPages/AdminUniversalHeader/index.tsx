@@ -21,11 +21,12 @@ import {
   type UniversalHeaderNavItem as NavItem,
   UNIVERSAL_HEADER_QUERY_KEY,
 } from "@/lib/api/universalHeader";
+import { parseOptionalNumber, toNumberInputValue } from "@/lib/utils";
 
 const emptyNavItem = (): NavItem => ({
   label: "",
   href: "",
-  order: 0,
+  order: undefined,
   isExternal: false,
 });
 
@@ -33,8 +34,8 @@ const emptyButton = (): Button => ({
   label: "",
   href: "",
   style: "primary",
-  order: 0,
-  });
+  order: undefined,
+});
 
 const AdminUniversalHeader = () => {
   const { isAuthenticated, role, authChecked } = useAdminContext();
@@ -358,9 +359,9 @@ const AdminUniversalHeader = () => {
                       <label className="text-xs font-semibold text-foreground">Order</label>
                       <input
                         type="number"
-                        value={btn.order}
+                        value={toNumberInputValue(btn.order)}
                         onChange={(e) =>
-                          updateButton(index, { order: Number(e.target.value) || 0 })
+                          updateButton(index, { order: parseOptionalNumber(e.target.value) })
                         }
                         className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
                       />
@@ -462,9 +463,9 @@ const AdminUniversalHeader = () => {
                     <label className="text-xs font-semibold text-foreground">Order</label>
                     <input
                       type="number"
-                      value={item.order}
+                      value={toNumberInputValue(item.order)}
                       onChange={(e) =>
-                        updateNavItem(index, { order: Number(e.target.value) || 0 })
+                        updateNavItem(index, { order: parseOptionalNumber(e.target.value) })
                       }
                       className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
                     />

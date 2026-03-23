@@ -1,4 +1,4 @@
-import type { Icon as LucideIcon } from "lucide-react";
+import { parseOptionalNumber } from "@/lib/utils";
 
 export type HeroImage = {
   _id?: string;
@@ -68,7 +68,7 @@ const normalizeImages = (images: unknown): HeroImage[] => {
         _id: typeof (img as HeroImage)._id === "string" ? (img as HeroImage)._id : undefined,
         url: normalizePath(url),
         alt: (img as HeroImage).alt?.trim?.() || "",
-        order: Number((img as HeroImage).order) || 0,
+        order: parseOptionalNumber((img as HeroImage).order),
       };
     })
     .filter(Boolean) as HeroImage[];
@@ -91,7 +91,7 @@ const normalizeButtons = (buttons: unknown): HeroButton[] => {
         style: style === "secondary" || style === "outline" || style === "ghost" ? style : "primary",
         icon: (btn as HeroButton).icon || "",
         isExternal: Boolean((btn as HeroButton).isExternal),
-        order: Number((btn as HeroButton).order) || 0,
+        order: parseOptionalNumber((btn as HeroButton).order),
       };
     })
     .filter(Boolean) as HeroButton[];
@@ -112,7 +112,7 @@ const normalizeStats = (stats: unknown): HeroStat[] => {
         value,
         suffix: (stat as HeroStat).suffix?.trim?.() || "",
         icon: (stat as HeroStat).icon || "",
-        order: Number((stat as HeroStat).order) || 0,
+        order: parseOptionalNumber((stat as HeroStat).order),
       };
     })
     .filter(Boolean) as HeroStat[];

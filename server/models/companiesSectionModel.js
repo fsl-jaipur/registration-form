@@ -18,7 +18,7 @@ const companySchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     logo: { type: String, trim: true, default: "" },
-    order: { type: Number, default: 0 },
+    order: { type: Number },
   },
   { _id: true },
 );

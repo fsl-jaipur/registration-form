@@ -3,12 +3,13 @@ import { Plus, RefreshCw, Save, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminContext } from "@/Context/Admincontext";
 import { useNavigate } from "react-router-dom";
+import { parseOptionalNumber, toNumberInputValue } from "@/lib/utils";
 
 type Company = {
   _id?: string;
   name: string;
   logo?: string;
-  order: number;
+  order?: number;
 };
 
 type CompaniesSectionResponse = {
@@ -22,7 +23,7 @@ type CompaniesSectionResponse = {
 const emptyCompany = (): Company => ({
   name: "",
   logo: "",
-  order: 0,
+  order: undefined,
 });
 
 const AdminCompanies = () => {
@@ -287,8 +288,8 @@ const AdminCompanies = () => {
                   <label className="text-xs font-semibold text-foreground">Order</label>
                   <input
                     type="number"
-                    value={company.order}
-                    onChange={(e) => updateCompany(index, { order: Number(e.target.value) || 0 })}
+                    value={toNumberInputValue(company.order)}
+                    onChange={(e) => updateCompany(index, { order: parseOptionalNumber(e.target.value) })}
                     className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
                   />
                 </div>

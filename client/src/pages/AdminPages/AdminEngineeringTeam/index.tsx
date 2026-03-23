@@ -10,12 +10,13 @@ import {
   type EngineeringMember,
   fetchEngineeringTeam,
 } from "@/lib/api/engineeringTeam";
+import { parseOptionalNumber, toNumberInputValue } from "@/lib/utils";
 
 const emptyMember = (): EngineeringMember => ({
   name: "",
   title: "",
   photo: "",
-  order: 0,
+  order: undefined,
 });
 
 export default function AdminEngineeringTeam() {
@@ -85,7 +86,7 @@ export default function AdminEngineeringTeam() {
       } else {
         form.append("photo", draft.photo);
       }
-      form.append("order", String(draft.order ?? 0));
+      form.append("order", draft.order === undefined ? "" : String(draft.order));
       if (draft._id) {
         const res = await fetch(`${apiBase}/engineering-team/${draft._id}`, {
           method: "PUT",
@@ -230,8 +231,8 @@ export default function AdminEngineeringTeam() {
               <label className="text-sm font-medium text-foreground">Order</label>
               <input
                 type="number"
-                value={draft.order ?? 0}
-                onChange={(e) => setDraft({ ...draft, order: Number(e.target.value) || 0 })}
+                value={toNumberInputValue(draft.order)}
+                onChange={(e) => setDraft({ ...draft, order: parseOptionalNumber(e.target.value) })}
                 className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
               />
             </div>

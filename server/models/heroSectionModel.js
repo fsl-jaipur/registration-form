@@ -36,7 +36,7 @@ const imageSchema = new mongoose.Schema(
   {
     url: { type: String, required: true, trim: true },
     alt: { type: String, trim: true, default: "" },
-    order: { type: Number, default: 0 },
+    order: { type: Number },
   },
   { _id: true },
 );
@@ -51,7 +51,7 @@ const buttonSchema = new mongoose.Schema(
       default: "primary",
     },
     icon: { type: String, trim: true, default: "" },
-    order: { type: Number, default: 0 },
+    order: { type: Number },
     isExternal: { type: Boolean, default: false },
   },
   { _id: true },
@@ -63,7 +63,7 @@ const statSchema = new mongoose.Schema(
     value: { type: Number, required: true },
     suffix: { type: String, trim: true, default: "" },
     icon: { type: String, trim: true, default: "" },
-    order: { type: Number, default: 0 },
+    order: { type: Number },
   },
   { _id: true },
 );

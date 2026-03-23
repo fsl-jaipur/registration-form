@@ -1,8 +1,10 @@
+import { parseOptionalNumber } from "@/lib/utils";
+
 export type UniversalHeaderNavItem = {
   _id?: string;
   label: string;
   href: string;
-  order: number;
+  order?: number;
   isExternal: boolean;
 };
 
@@ -13,7 +15,7 @@ export type UniversalHeaderButton = {
   label: string;
   href: string;
   style: UniversalHeaderButtonStyle;
-  order: number;
+  order?: number;
 };
 
 export type UniversalHeaderData = {
@@ -97,7 +99,7 @@ const normalizeNavItems = (
             : undefined,
         label,
         href,
-        order: Number((item as UniversalHeaderNavItem).order) || 0,
+        order: parseOptionalNumber((item as UniversalHeaderNavItem).order),
         isExternal: Boolean((item as UniversalHeaderNavItem).isExternal),
       };
     })
@@ -137,7 +139,7 @@ const normalizeButtons = (
         label,
         href,
         style: style === "secondary" || style === "outline" ? style : "primary",
-        order: Number((item as UniversalHeaderButton).order) || 0,
+        order: parseOptionalNumber((item as UniversalHeaderButton).order),
       };
     })
     .filter((item): item is UniversalHeaderButton => Boolean(item));
