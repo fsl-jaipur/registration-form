@@ -27,24 +27,15 @@ export async function studentlogin(req, res) {
       });
     }
 
-    
     if (!user) {
       return res.status(404).json({ message: "Invalid email or password." });
     }
-    
-    let isMatch = false;
-    if (user.firstTimesignin) {
-      isMatch = password === user.password;
-    } else {
-      isMatch = await bcrypt.compare(password, user.password);
-    }
-    console.log(isMatch); 
+
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid email or password." });
     }
-    
-    
-    
+
     const token = jwt.sign(
       { id: user._id, role: "student", loginStatus:user.firstTimesignin},
       process.env.JWT_SECRET,
