@@ -18,12 +18,14 @@ import {
 type CareerFormState = {
   name: string;
   email: string;
+  position: string;
   resume: File | null;
 };
 
 const initialFormState: CareerFormState = {
   name: "",
   email: "",
+  position: "",
   resume: null,
 };
 
@@ -85,9 +87,10 @@ export default function CareerPage() {
     };
   }, [isApplyOpen, submitting]);
 
-  const handleOpenModal = () => {
+  const handleOpenModal = (position = "") => {
     setError("");
     setSuccess("");
+    setFormState((prev) => ({ ...prev, position }));
     setIsApplyOpen(true);
   };
 
@@ -139,10 +142,11 @@ export default function CareerPage() {
       setError("");
       setSuccess("");
 
-      const apiBase = import.meta.env.VITE_API_URL;
+      const apiBase = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "";
       const payload = new FormData();
       payload.append("name", formState.name.trim());
       payload.append("email", formState.email.trim());
+      payload.append("position", formState.position.trim());
       payload.append("resume", formState.resume);
 
       const response = await fetch(`${apiBase}/students/career-apply`, {
@@ -204,19 +208,12 @@ export default function CareerPage() {
                 </p>
 
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={handleOpenModal}
+                  <a
+                    href="#open-roles"
                     className="inline-flex items-center justify-center gap-2 rounded-lg gradient-brand px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:opacity-90"
                   >
                     {content.applyButtonLabel}
                     <ArrowRight size={16} />
-                  </button>
-                  <a
-                    href="#open-roles"
-                    className="inline-flex items-center justify-center rounded-lg border border-brand-blue px-6 py-3 text-sm font-semibold text-brand-blue transition-all duration-200 hover:bg-brand-blue hover:text-white"
-                  >
-                    {content.rolesButtonLabel}
                   </a>
                 </div>
               </div>
@@ -270,7 +267,7 @@ export default function CareerPage() {
                 <p className="mt-4 flex-1 text-sm leading-6 text-muted-foreground">{opening.summary}</p>
                 <button
                   type="button"
-                  onClick={handleOpenModal}
+                  onClick={() => handleOpenModal(opening.title)}
                   className="mt-6 inline-flex items-center gap-2 text-left text-sm font-semibold text-brand-blue transition-opacity duration-200 hover:opacity-80"
                 >
                   Apply for this role
@@ -397,6 +394,23 @@ export default function CareerPage() {
                     className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
                     placeholder="Enter your email"
                     required
+                    disabled={submitting}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="career-position" className="mb-1.5 block text-sm font-medium text-foreground">
+                    Position
+                  </label>
+                  <input
+                    id="career-position"
+                    name="position"
+                    type="text"
+                    value={formState.position}
+                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
+                    placeholder="Selected role"
+                    required
+                    readOnly
                     disabled={submitting}
                   />
                 </div>

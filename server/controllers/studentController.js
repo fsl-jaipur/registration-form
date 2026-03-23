@@ -118,10 +118,11 @@ export async function createCareerApplication(req, res) {
   try {
     const name = typeof req.body.name === "string" ? req.body.name.trim() : "";
     const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    const position = typeof req.body.position === "string" ? req.body.position.trim() : "";
     const resumeFile = req.file;
 
-    if (!name || !email) {
-      return res.status(400).json({ message: "Name and email are required." });
+    if (!name || !email || !position) {
+      return res.status(400).json({ message: "Name, email, and position are required." });
     }
 
     if (!resumeFile) {
@@ -136,10 +137,22 @@ export async function createCareerApplication(req, res) {
       return res.status(400).json({ message: "Only PDF resumes are allowed." });
     }
 
+    const [resumeUpload] = await cloudinaryUpload([
+      {
+        ...resumeFile,
+        fieldname: "resume",
+      },
+    ]);
+
+    if (!resumeUpload?.secure_url) {
+      return res.status(500).json({ message: "Failed to upload resume." });
+    }
+
     const application = await careerApplicationModel.create({
       name,
       email,
-      resumeUrl: resumeFile.buffer,
+      position,
+      resumeUrl: resumeUpload.secure_url,
       resumeOriginalName: resumeFile.originalname,
       resumeMimeType: resumeFile.mimetype,
       resumeSize: resumeFile.size,

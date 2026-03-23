@@ -13,9 +13,15 @@ const careerApplicationSchema = new Schema(
       trim: true,
       lowercase: true,
     },
-    resumeUrl: {
-      type: Buffer,
+    position: {
+      type: String,
       required: true,
+      trim: true,
+    },
+    resumeUrl: {
+      type: String,
+      required: true,
+      trim: true,
     },
     resumeOriginalName: {
       type: String,
