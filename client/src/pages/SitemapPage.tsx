@@ -102,48 +102,48 @@ const sitemapGroups: SitemapGroup[] = [
       },
     ],
   },
-  {
-    title: "Admin Access",
-    description:
-      "Operational pages used by authorized team members to manage platform content and learner-facing sections.",
-    links: [
-      {
-        label: "Admin Login",
-        description: "Secure login for authorized administrators.",
-        to: "/admin/login",
-      },
-      {
-        label: "Admin Home",
-        description: "Dashboard and internal overview for administrative activity.",
-        to: "/admin/home",
-        badge: "Admin only",
-      },
-      {
-        label: "Courses Management",
-        description: "Manage program and course-related information.",
-        to: "/admin/courses",
-        badge: "Admin only",
-      },
-      {
-        label: "Assignments Management",
-        description: "Create and review assignment-related admin content.",
-        to: "/admin/assignments",
-        badge: "Admin only",
-      },
-      {
-        label: "Tests and Results",
-        description: "Manage tests, result views, and scoring workflows.",
-        to: "/admin/tests",
-        badge: "Admin only",
-      },
-      {
-        label: "Footer Settings",
-        description: "Edit footer content, social links, and legal links.",
-        to: "/admin/footer",
-        badge: "Admin only",
-      },
-    ],
-  },
+  // {
+  //   title: "Admin Access",
+  //   description:
+  //     "Operational pages used by authorized team members to manage platform content and learner-facing sections.",
+  //   links: [
+  //     {
+  //       label: "Admin Login",
+  //       description: "Secure login for authorized administrators.",
+  //       to: "/admin/login",
+  //     },
+  //     {
+  //       label: "Admin Home",
+  //       description: "Dashboard and internal overview for administrative activity.",
+  //       to: "/admin/home",
+  //       badge: "Admin only",
+  //     },
+  //     {
+  //       label: "Courses Management",
+  //       description: "Manage program and course-related information.",
+  //       to: "/admin/courses",
+  //       badge: "Admin only",
+  //     },
+  //     {
+  //       label: "Assignments Management",
+  //       description: "Create and review assignment-related admin content.",
+  //       to: "/admin/assignments",
+  //       badge: "Admin only",
+  //     },
+  //     {
+  //       label: "Tests and Results",
+  //       description: "Manage tests, result views, and scoring workflows.",
+  //       to: "/admin/tests",
+  //       badge: "Admin only",
+  //     },
+  //     {
+  //       label: "Footer Settings",
+  //       description: "Edit footer content, social links, and legal links.",
+  //       to: "/admin/footer",
+  //       badge: "Admin only",
+  //     },
+  //   ],
+  // },
   {
     title: "Homepage Sections",
     description:

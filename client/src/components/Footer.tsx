@@ -24,9 +24,24 @@ const shouldRenderSocial = (icon: string, label: string) => {
 };
 
 const isExternalHref = (href: string) => /^(https?:|mailto:|tel:)/i.test(href);
+const FOOTER_NEW_TAB_HREFS = new Set([
+  "/privacy-policy",
+  "/terms-of-service",
+  "/sitemap",
+]);
 
 const normalizeHref = (href: string) =>
   href.startsWith("/") || href.startsWith("#") ? href : `/${href}`;
+
+const shouldOpenFooterLinkInNewTab = (href: string) => {
+  const trimmedHref = href.trim();
+
+  if (!trimmedHref || trimmedHref.startsWith("#")) {
+    return false;
+  }
+
+  return FOOTER_NEW_TAB_HREFS.has(normalizeHref(trimmedHref));
+};
 
 const scrollToSection = (href: string) => {
   if (!href.startsWith("#")) return;
@@ -99,6 +114,10 @@ export default function Footer() {
       event.shiftKey ||
       event.altKey
     ) {
+      return;
+    }
+
+    if (event.currentTarget.target === "_blank") {
       return;
     }
 
@@ -258,18 +277,22 @@ export default function Footer() {
             reserved.
           </span>
           <div className="flex items-center gap-4">
-            {footer.bottomLinks.map(({ label, href, _id }) => (
-              <a
-                key={_id || label}
-                href={href}
-                onClick={(event) => handleFooterLinkClick(event, href)}
-                target={isExternalHref(href) ? "_blank" : undefined}
-                rel={isExternalHref(href) ? "noreferrer" : undefined}
-                className="hover:text-primary-foreground/70 transition-colors"
-              >
-                {label}
-              </a>
-            ))}
+            {footer.bottomLinks.map(({ label, href, _id }) => {
+              const openInNewTab = shouldOpenFooterLinkInNewTab(href);
+
+              return (
+                <a
+                  key={_id || label}
+                  href={href}
+                  onClick={(event) => handleFooterLinkClick(event, href)}
+                  target={openInNewTab ? "_blank" : undefined}
+                  rel={openInNewTab ? "noopener noreferrer" : undefined}
+                  className="hover:text-primary-foreground/70 transition-colors"
+                >
+                  {label}
+                </a>
+              );
+            })}
           </div>
         </div>
       </div>
