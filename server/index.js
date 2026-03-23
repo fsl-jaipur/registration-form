@@ -37,7 +37,7 @@ await connectToDB();
 
 app.listen(PORT, () => console.log("Server started at port " + PORT));
 
-app.get("/", (req, res) => {
+app.get("/healthCheck", (req, res) => {
   res.send("Backend is working 🚀");
 });
 app.use("/api/students", studentRouter);
