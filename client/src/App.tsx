@@ -44,6 +44,7 @@ import AdminSuccessStories from "@/pages/AdminPages/AdminSuccessStories";
 import AdminUniversalHeader from "@/pages/AdminPages/AdminUniversalHeader";
 import AdminHeroSection from "@/pages/AdminPages/AdminHeroSection";
 import AdminCompanies from "@/pages/AdminPages/AdminCompanies";
+import AdminCareer from "@/pages/AdminPages/AdminCareer";
 import AdminEngineeringTeam from "@/pages/AdminPages/AdminEngineeringTeam";
 import AdminGetInTouch from "@/pages/AdminPages/AdminGetInTouch";
 import AdminFooter from "@/pages/AdminPages/AdminFooter";
@@ -339,6 +340,17 @@ const AppRoutes = () => {
                   redirectTo="/admin/login"
                 >
                   <AdminCompanies />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="career"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["admin"]}
+                  redirectTo="/admin/login"
+                >
+                  <AdminCareer />
                 </ProtectedRoute>
               }
             />

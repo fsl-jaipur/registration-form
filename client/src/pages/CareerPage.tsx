@@ -1,43 +1,19 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { ArrowRight, BriefcaseBusiness, Clock3, MapPin, Sparkles, Users, X } from "lucide-react";
-
-const openings = [
-  {
-    title: "Frontend Developer Mentor",
-    type: "Full Time",
-    location: "Jaipur / On-site",
-    summary:
-      "Guide learners through React, TypeScript, UI engineering, and portfolio-quality frontend projects.",
-  },
-  {
-    title: "Backend Developer Mentor",
-    type: "Full Time",
-    location: "Jaipur / On-site",
-    summary:
-      "Help students build strong API, database, and deployment skills using practical real-world assignments.",
-  },
-  {
-    title: "Student Success Executive",
-    type: "Full Time",
-    location: "Jaipur / On-site",
-    summary:
-      "Support learners from onboarding to placement readiness with clear communication and strong follow-through.",
-  },
-];
-
-const benefits = [
-  "Work with students who are actively building their careers in tech.",
-  "Teach and ship practical projects instead of only theory-heavy sessions.",
-  "Grow in a close-knit team where your ideas shape the learning experience.",
-  "Contribute directly to outcomes like confidence, portfolios, and placements.",
-];
-
-const hiringSteps = [
-  "Share your resume and a short note about your experience.",
-  "We review your profile and reach out for an introductory conversation.",
-  "Shortlisted candidates complete a discussion or practical round.",
-  "Selected applicants receive the final offer and onboarding plan.",
-];
+import {
+  ArrowRight,
+  BriefcaseBusiness,
+  Clock3,
+  MapPin,
+  Sparkles,
+  Users,
+  X,
+  type LucideIcon,
+} from "lucide-react";
+import {
+  fallbackCareerSection,
+  fetchCareerSection,
+  type CareerSectionData,
+} from "@/lib/api/career";
 
 type CareerFormState = {
   name: string;
@@ -51,13 +27,41 @@ const initialFormState: CareerFormState = {
   resume: null,
 };
 
+const iconMap: Record<string, LucideIcon> = {
+  ArrowRight,
+  BriefcaseBusiness,
+  Clock3,
+  MapPin,
+  Sparkles,
+  Users,
+};
+
+const accentClassMap: Record<string, string> = {
+  "brand-blue": "text-brand-blue",
+  "brand-orange": "text-brand-orange",
+};
+
 export default function CareerPage() {
+  const [content, setContent] = useState<CareerSectionData>(fallbackCareerSection);
   const [isApplyOpen, setIsApplyOpen] = useState(false);
   const [formState, setFormState] = useState<CareerFormState>(initialFormState);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const resumeInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const loadCareerPage = async () => {
+      try {
+        const data = await fetchCareerSection();
+        setContent(data);
+      } catch (fetchError) {
+        console.error("career section fetch error", fetchError);
+      }
+    };
+
+    void loadCareerPage();
+  }, []);
 
   useEffect(() => {
     if (!isApplyOpen) {
@@ -79,7 +83,7 @@ export default function CareerPage() {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [isApplyOpen]);
+  }, [isApplyOpen, submitting]);
 
   const handleOpenModal = () => {
     setError("");
@@ -88,9 +92,7 @@ export default function CareerPage() {
   };
 
   const handleCloseModal = () => {
-    if (submitting) {
-      return;
-    }
+    if (submitting) return;
     setIsApplyOpen(false);
   };
 
@@ -172,6 +174,11 @@ export default function CareerPage() {
     }
   };
 
+  const mailToHref = `mailto:${content.ctaEmailAddress}?subject=${encodeURIComponent(
+    content.ctaEmailSubject,
+  )}&body=${encodeURIComponent(content.ctaEmailBody)}`;
+  const telHref = `tel:${content.ctaPhoneNumber.replace(/\s+/g, "")}`;
+
   return (
     <>
       <main className="bg-background text-foreground">
@@ -186,15 +193,14 @@ export default function CareerPage() {
               <div className="max-w-2xl">
                 <span className="inline-flex items-center gap-2 rounded-full bg-brand-blue-light px-4 py-1.5 text-sm font-semibold text-brand-blue">
                   <Sparkles size={16} />
-                  Careers at FSL
+                  {content.heroBadge}
                 </span>
                 <h1 className="mt-5 text-4xl font-bold leading-tight md:text-5xl">
-                  Build careers while helping others
-                  <span className="text-gradient-brand"> build theirs.</span>
+                  {content.heroTitle}
+                  <span className="text-gradient-brand"> {content.heroHighlight}</span>
                 </h1>
                 <p className="mt-5 text-lg text-muted-foreground md:text-xl">
-                  We are looking for people who care about practical learning, strong student outcomes,
-                  and the kind of teaching that changes confidence as much as it changes skills.
+                  {content.heroDescription}
                 </p>
 
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -203,40 +209,35 @@ export default function CareerPage() {
                     onClick={handleOpenModal}
                     className="inline-flex items-center justify-center gap-2 rounded-lg gradient-brand px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:opacity-90"
                   >
-                    Apply Now
+                    {content.applyButtonLabel}
                     <ArrowRight size={16} />
                   </button>
                   <a
                     href="#open-roles"
                     className="inline-flex items-center justify-center rounded-lg border border-brand-blue px-6 py-3 text-sm font-semibold text-brand-blue transition-all duration-200 hover:bg-brand-blue hover:text-white"
                   >
-                    View Open Roles
+                    {content.rolesButtonLabel}
                   </a>
                 </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                  <BriefcaseBusiness className="mb-4 text-brand-blue" size={24} />
-                  <h2 className="text-lg font-semibold">Outcome-focused work</h2>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Your work directly improves classes, projects, and student growth.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                  <Users className="mb-4 text-brand-orange" size={24} />
-                  <h2 className="text-lg font-semibold">Small team energy</h2>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    You will collaborate closely, move quickly, and have room to contribute ideas.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:col-span-2">
-                  <Clock3 className="mb-4 text-brand-blue" size={24} />
-                  <h2 className="text-lg font-semibold">Teach what matters now</h2>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    We care about modern tools, practical assignments, and career-ready skill building.
-                  </p>
-                </div>
+                {content.highlightCards.map((card, index) => {
+                  const Icon = iconMap[card.icon] || BriefcaseBusiness;
+                  const accentClassName = accentClassMap[card.accent] || "text-brand-blue";
+                  const wideCard = index === content.highlightCards.length - 1 && content.highlightCards.length % 2 === 1;
+
+                  return (
+                    <div
+                      key={card._id || `${card.title}-${index}`}
+                      className={`rounded-2xl border border-border bg-card p-5 shadow-sm ${wideCard ? "sm:col-span-2" : ""}`}
+                    >
+                      <Icon className={`mb-4 ${accentClassName}`} size={24} />
+                      <h2 className="text-lg font-semibold">{card.title}</h2>
+                      <p className="mt-2 text-sm text-muted-foreground">{card.description}</p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -245,18 +246,16 @@ export default function CareerPage() {
         <section id="open-roles" className="container mx-auto px-4 py-14 md:py-20">
           <div className="max-w-2xl">
             <span className="inline-block rounded-full bg-brand-orange/10 px-4 py-1.5 text-sm font-semibold text-brand-orange">
-              Open Roles
+              {content.roleSectionBadge}
             </span>
-            <h2 className="mt-4 text-3xl font-bold md:text-4xl">Current opportunities at FSL</h2>
-            <p className="mt-3 text-muted-foreground">
-              If one of these feels close to your background, we would love to hear from you.
-            </p>
+            <h2 className="mt-4 text-3xl font-bold md:text-4xl">{content.roleSectionTitle}</h2>
+            <p className="mt-3 text-muted-foreground">{content.roleSectionDescription}</p>
           </div>
 
           <div className="mt-10 grid gap-6 lg:grid-cols-3">
-            {openings.map((opening) => (
+            {content.openings.map((opening) => (
               <article
-                key={opening.title}
+                key={opening._id || `${opening.title}-${opening.location}`}
                 className="flex h-full flex-col rounded-2xl border border-border bg-card p-6 shadow-sm transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg"
               >
                 <div className="flex items-center gap-2 text-sm font-medium text-brand-blue">
@@ -285,9 +284,9 @@ export default function CareerPage() {
         <section className="border-y border-border bg-muted/30">
           <div className="container mx-auto grid gap-10 px-4 py-14 md:py-20 lg:grid-cols-2">
             <div>
-              <h2 className="text-3xl font-bold md:text-4xl">Why join us</h2>
+              <h2 className="text-3xl font-bold md:text-4xl">{content.benefitsTitle}</h2>
               <div className="mt-6 space-y-4">
-                {benefits.map((benefit) => (
+                {content.benefits.map((benefit) => (
                   <div key={benefit} className="rounded-2xl border border-border bg-background p-4 text-sm text-muted-foreground shadow-sm">
                     {benefit}
                   </div>
@@ -296,10 +295,10 @@ export default function CareerPage() {
             </div>
 
             <div>
-              <h2 className="text-3xl font-bold md:text-4xl">Our hiring process</h2>
+              <h2 className="text-3xl font-bold md:text-4xl">{content.hiringStepsTitle}</h2>
               <div className="mt-6 space-y-4">
-                {hiringSteps.map((step, index) => (
-                  <div key={step} className="flex gap-4 rounded-2xl border border-border bg-background p-4 shadow-sm">
+                {content.hiringSteps.map((step, index) => (
+                  <div key={`${step}-${index}`} className="flex gap-4 rounded-2xl border border-border bg-background p-4 shadow-sm">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-blue text-sm font-bold text-white">
                       {index + 1}
                     </div>
@@ -313,24 +312,21 @@ export default function CareerPage() {
 
         <section className="container mx-auto px-4 py-14 md:py-20">
           <div className="rounded-3xl bg-brand-blue px-6 py-10 text-white md:px-10 md:py-14">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/75">Let&apos;s connect</p>
-            <h2 className="mt-3 text-3xl font-bold md:text-4xl">Don&apos;t see the perfect role?</h2>
-            <p className="mt-4 max-w-2xl text-white/85">
-              If you believe you can contribute to teaching, student success, operations, or placements,
-              send us your profile anyway. Strong people create strong teams.
-            </p>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/75">{content.ctaEyebrow}</p>
+            <h2 className="mt-3 text-3xl font-bold md:text-4xl">{content.ctaTitle}</h2>
+            <p className="mt-4 max-w-2xl text-white/85">{content.ctaDescription}</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
-                href="mailto:rohit@fullstacklearning.com?subject=Job Application&body=Hello, I would like to apply."
+                href={mailToHref}
                 className="inline-flex items-center justify-center rounded-lg bg-white px-6 py-3 text-sm font-semibold text-brand-blue transition-all duration-200 hover:opacity-90"
               >
-                Send Application
+                {content.ctaEmailLabel}
               </a>
               <a
-                href="tel:918824453320"
+                href={telHref}
                 className="inline-flex items-center justify-center rounded-lg border border-white/40 px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-white/10"
               >
-                Call +91-8824453320
+                {content.ctaPhoneLabel}
               </a>
             </div>
           </div>
@@ -339,19 +335,13 @@ export default function CareerPage() {
 
       {isApplyOpen && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 px-4 py-6">
-          <div
-            className="absolute inset-0"
-            aria-hidden="true"
-            onClick={handleCloseModal}
-          />
+          <div className="absolute inset-0" aria-hidden="true" onClick={handleCloseModal} />
 
           <div className="relative z-10 w-full max-w-xl rounded-3xl border border-border bg-card shadow-2xl">
             <div className="flex items-center justify-between border-b border-border px-6 py-5">
               <div>
-                <h2 className="text-2xl font-bold text-foreground">Apply for Career</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Fill in your details and upload your resume as a PDF.
-                </p>
+                <h2 className="text-2xl font-bold text-foreground">{content.modalTitle}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">{content.modalDescription}</p>
               </div>
               <button
                 type="button"
@@ -426,9 +416,7 @@ export default function CareerPage() {
                     required
                     disabled={submitting}
                   />
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Only PDF files are allowed. Image files are not accepted.
-                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">{content.resumeHelperText}</p>
                   {formState.resume && (
                     <p className="mt-2 text-sm font-medium text-brand-blue">
                       Selected file: {formState.resume.name}
@@ -442,7 +430,7 @@ export default function CareerPage() {
                     className="inline-flex items-center justify-center rounded-xl gradient-brand px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:opacity-90"
                     disabled={submitting}
                   >
-                    {submitting ? "Submitting..." : "Submit Application"}
+                    {submitting ? "Submitting..." : content.submitButtonLabel}
                   </button>
                   <button
                     type="button"
@@ -450,7 +438,7 @@ export default function CareerPage() {
                     className="inline-flex items-center justify-center rounded-xl border border-border px-6 py-3 text-sm font-semibold text-foreground transition-colors duration-200 hover:bg-muted"
                     disabled={submitting}
                   >
-                    Cancel
+                    {content.cancelButtonLabel}
                   </button>
                 </div>
               </form>

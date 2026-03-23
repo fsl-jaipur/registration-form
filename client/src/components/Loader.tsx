@@ -29,12 +29,12 @@ export default function Loader({ message = "Loading..." }: Props) {
   return createPortal(
     <div
       className="fixed inset-0 isolate z-[9999] grid place-items-center overflow-hidden bg-white px-6 dark:bg-black"
-      role="status"
+      role="status" 
       aria-live="polite"
       aria-busy="true"
     >
       <div className="flex w-full max-w-[22rem] flex-col items-center text-center">
-        <div className="mb-7 grid size-32 shrink-0 place-items-center rounded-full bg-white shadow-[0_16px_44px_rgba(15,23,42,0.14)] dark:bg-slate-950 dark:shadow-[0_16px_44px_rgba(0,0,0,0.42)]">
+        <div className="mb-7 grid size-24 shrink-0 place-items-center rounded-full bg-white shadow-[0_16px_44px_rgba(15,23,42,0.14)] dark:bg-slate-950 dark:shadow-[0_16px_44px_rgba(0,0,0,0.42)]">
           <img
             src={bundledLogo}
             alt="Full Stack Learning"
@@ -44,7 +44,7 @@ export default function Loader({ message = "Loading..." }: Props) {
             decoding="sync"
             fetchPriority="high"
             draggable={false}
-            className="size-[5.125rem] object-contain motion-safe:animate-[spin_1.8s_linear_infinite]"
+            className="size-[6.125rem] object-contain motion-safe:animate-[spin_1.8s_linear_infinite]"
           />
         </div>
 

@@ -24,6 +24,7 @@ const moreLinks = [
   { label: "Universal Header", href: "/admin/universal-header" },
   { label: "Hero Section", href: "/admin/hero-section" },
   { label: "Companies", href: "/admin/companies" },
+  { label: "Career", href: "/admin/career" },
   { label: "Engineering Team", href: "/admin/engineering-team" },
   { label: "Get In Touch", href: "/admin/get-in-touch" },
   { label: "Footer", href: "/admin/footer" },

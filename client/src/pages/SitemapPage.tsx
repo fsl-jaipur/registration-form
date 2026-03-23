@@ -142,6 +142,12 @@ const sitemapGroups: SitemapGroup[] = [
         to: "/admin/footer",
         badge: "Admin only",
       },
+      {
+        label: "Career Page Settings",
+        description: "Edit career page hero copy, open roles, benefits, and CTA content.",
+        to: "/admin/career",
+        badge: "Admin only",
+      },
     ],
   },
   {
