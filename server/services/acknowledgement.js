@@ -54,6 +54,7 @@ export function sendResultEmail(student, testTitle) {
               <p style="font-size: 16px; color: #333333;">
                 Best regards,<br/>
                 <strong>Admin Team</strong>
+                <strong>Full Stack Learning</strong>
               </p>
             </td>
           </tr>

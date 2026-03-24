@@ -234,7 +234,7 @@ const AppRoutes = () => {
               }
             />
             <Route
-              path="view/test"
+              path="students"
               element={
                 <ProtectedRoute
                   allowedRoles={["admin"]}

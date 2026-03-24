@@ -10,7 +10,7 @@ const logoSrcSet = "/images/logo@2x.png 2x, /images/logo.png 1x";
 
 const primaryLinks = [
   { label: "Dashboard", href: "/admin/home" },
-  { label: "Students", href: "/admin/view/test" },
+  { label: "Students", href: "/admin/students" },
   { label: "Results", href: "/admin/tests" },
 
 ];
