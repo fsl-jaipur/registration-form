@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Play } from "lucide-react";
 
 type Assignment = {
   _id: string;
@@ -7,6 +8,9 @@ type Assignment = {
   thumbnail?: string | null;
   category?: string;
   createdAt?: string;
+  trelloCardId?: string | null;
+  trelloCardUrl?: string | null;
+  trelloCardShortUrl?: string | null;
 };
 
 type ActivePlayer = {
@@ -262,9 +266,9 @@ function StudentAssignments() {
                         alt={assignment.title}
                         className="h-full w-full object-cover"
                       />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition">
-                        <div className="h-12 w-12 rounded-full bg-white/90 text-slate-800 grid place-items-center shadow">
-                          ?
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition group-hover:bg-black/40">
+                        <div className="grid h-14 w-14 place-items-center rounded-full bg-white/90 text-slate-800 shadow transition group-hover:scale-105">
+                          <Play className="ml-1 h-6 w-6 fill-current" />
                         </div>
                       </div>
                     </button>
@@ -287,19 +291,33 @@ function StudentAssignments() {
                       {assignment.category}
                     </p>
                   )}
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                        assignment.trelloCardUrl
+                          ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                          : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+                      }`}
+                    >
+                      {assignment.trelloCardUrl ? "Synced" : "Not synced"}
+                    </span>
+                    {assignment.trelloCardUrl && (
+                      <a
+                        href={assignment.trelloCardUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:underline"
+                      >
+                        View in Trello
+                      </a>
+                    )}
+                  </div>
                   {assignment.createdAt && (
                     <p className="mt-2 text-xs uppercase tracking-[0.15em] text-slate-500">
                       Added on {new Date(assignment.createdAt).toLocaleDateString("en-GB")}
                     </p>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => playVideo(assignment.videoLink, containerId)}
-                    disabled={!canEmbedVideo}
-                    className="mt-4 inline-flex items-center rounded-lg border border-brand-blue px-4 py-2 text-sm font-semibold text-brand-blue transition hover:bg-brand-blue hover:text-white disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 disabled:hover:bg-transparent disabled:hover:text-slate-400"
-                  >
-                    {activePlayer?.containerId === containerId ? "Playing Video" : "Open Video"}
-                  </button>
+                  
                 </div>
               </article>
             );
@@ -311,4 +329,5 @@ function StudentAssignments() {
 }
 
 export default StudentAssignments;
+
 

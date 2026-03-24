@@ -24,6 +24,21 @@ const assignmentSchema = new mongoose.Schema(
       default: null,
       trim: true,
     },
+    trelloCardId: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    trelloCardUrl: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    trelloCardShortUrl: {
+      type: String,
+      default: null,
+      trim: true,
+    },
   },
   { timestamps: true },
 );

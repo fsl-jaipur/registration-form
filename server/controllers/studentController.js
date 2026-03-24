@@ -17,7 +17,7 @@ export async function register(req, res) {
 
     const {
       name,
-      email,
+      email: rawEmail,
       phone,
       dob,
       gender,
@@ -65,6 +65,10 @@ export async function register(req, res) {
       aadharBack = aadharBackBody || "";
     }
 
+    const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
+    if (!email) {
+      return res.status(400).json({ message: "Email is required." });
+    }
     const plainPassword = generatePassword();
 
     const newRegistration = new studentModel({
@@ -90,7 +94,7 @@ export async function register(req, res) {
       aadharFront,
       aadharBack,
       password: plainPassword,
-      firstTimeSignin: true,
+      firstTimesignin: true,
       termsAccepted: toBool(termsAccepted) || toBool(tcAccepted) || false,
     });
 
@@ -112,12 +116,14 @@ export async function register(req, res) {
 
 export async function createCareerApplication(req, res) {
   try {
-    const name = typeof req.body.name === "string" ? req.body.name.trim() : "";
-    const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    const candidateName = typeof req.body.name === "string" ? req.body.name.trim() : "";
+    const candidateEmail = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    const phone = typeof req.body.phone === "string" && req.body.phone.trim() ? req.body.phone.trim() : "Not provided";
+    const jobTitle = typeof req.body.position === "string" ? req.body.position.trim() : "";
     const resumeFile = req.file;
 
-    if (!name || !email) {
-      return res.status(400).json({ message: "Name and email are required." });
+    if (!candidateName || !candidateEmail || !jobTitle) {
+      return res.status(400).json({ message: "Name, email, and position are required." });
     }
 
     if (!resumeFile) {
@@ -133,9 +139,10 @@ export async function createCareerApplication(req, res) {
     }
 
     const application = await careerApplicationModel.create({
-      name,
-      email,
-      resumeUrl: resumeFile.buffer,
+      candidateName,
+      candidateEmail,
+      phone,
+      jobTitle,
       resumeOriginalName: resumeFile.originalname,
       resumeMimeType: resumeFile.mimetype,
       resumeSize: resumeFile.size,

@@ -1,16 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Phone, Mail, MapPin, CheckCircle2 } from "lucide-react";
-
-const courses = [
-  "Full Stack Development",
-  "Frontend Development",
-  "Backend Development",
-  "Database Management",
-  "React Native Mobile",
-  "DevOps & Cloud",
-];
+import { useGetInTouch } from "@/hooks/useGetInTouch";
+import { fallbackGetInTouch } from "@/lib/api/getInTouch";
 
 export default function EnquiryForm() {
+  const { data: section = fallbackGetInTouch } = useGetInTouch();
+  const courses = section.courses ?? fallbackGetInTouch.courses;
+  const highlights = section.highlights ?? fallbackGetInTouch.highlights;
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -58,9 +54,9 @@ export default function EnquiryForm() {
       formData.append("course", form.course);
       formData.append("message", form.message);
 
-      formData.append("access_key", "9896dc59-07e4-4630-9b2d-39348c63866c");
+      formData.append("access_key", section.accessKey || fallbackGetInTouch.accessKey);
 
-      const response = await fetch("https://api.web3forms.com/submit", {
+      const response = await fetch(section.formEndpoint || fallbackGetInTouch.formEndpoint, {
         method: "POST",
         body: formData,
       });
@@ -90,15 +86,14 @@ export default function EnquiryForm() {
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <span className="inline-block px-4 py-1.5 rounded-full bg-brand-blue-light text-brand-blue text-sm font-semibold mb-4">
-            Get In Touch
+            {section.badgeText}
           </span>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
-            Start Your{" "}
-            <span className="text-gradient-brand">Learning Journey</span>
+            {section.heading}{" "}
+            <span className="text-gradient-brand">{section.highlight}</span>
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Fill out the form and our counselors will get back to you within 24
-            hours
+            {section.description}
           </p>
           <div className="flex items-center justify-center gap-2 mt-4">
             <div className="h-1 w-12 rounded-full bg-brand-blue" />
@@ -116,11 +111,11 @@ export default function EnquiryForm() {
             <div className="bg-[#1b8ebb] rounded-2xl p-6 text-primary-foreground">
               <h3 className="text-xl font-bold mb-2">Let's Connect!</h3>
               <p className="text-primary-foreground/80 text-sm mb-6">
-                Have questions? Our expert counselors are here to guide you.
+                {section.description}
               </p>
               <div className="space-y-4">
                 <a
-                  href="tel:918824453320"
+                  href={`tel:${section.phone}`}
                   className="flex items-center gap-3 hover:text-primary-foreground/80 transition-colors"
                 >
                   <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
@@ -130,11 +125,11 @@ export default function EnquiryForm() {
                     <p className="text-xs text-primary-foreground/70">
                       Call Us
                     </p>
-                    <p className="font-semibold text-sm">+91-8824453320</p>
+                    <p className="font-semibold text-sm">{section.phone}</p>
                   </div>
                 </a>
                 <a
-                  href="mailto:rohit@fullstacklearning.com"
+                  href={`mailto:${section.email}`}
                   className="flex items-center gap-3 hover:text-primary-foreground/80 transition-colors"
                 >
                   <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
@@ -145,7 +140,7 @@ export default function EnquiryForm() {
                       Email Us
                     </p>
                     <p className="font-semibold text-sm">
-                      rohit@fullstacklearning.com
+                      {section.email}
                     </p>
                   </div>
                 </a>
@@ -159,8 +154,8 @@ export default function EnquiryForm() {
                     </p>
                     <p className="font-semibold text-sm">
                       <a
-                        title="FSL on Google"
-                        href="https://maps.app.goo.gl/xbjzCRCa8NAS9YoDA"
+                        title="Find us on Maps"
+                        href={section.mapLink}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -172,29 +167,25 @@ export default function EnquiryForm() {
               </div>
             </div>
 
-            <div className="bg-card rounded-2xl p-6 border border-border shadow-md">
-              <h4 className="font-bold text-foreground mb-3">
-                Why Choose FSL?
-              </h4>
-              {[
-                "100% Placement Assistance",
-                "Industry Expert Mentors",
-                "Live Project Training",
-                "Flexible Batch Timings",
-                "EMI Options Available",
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="flex items-center gap-2 py-1.5 text-sm text-muted-foreground"
-                >
-                  <CheckCircle2
-                    size={15}
-                    className="text-brand-blue flex-shrink-0"
-                  />
-                  {item}
-                </div>
-              ))}
-            </div>
+            {highlights.length > 0 && (
+              <div className="bg-card rounded-2xl p-6 border border-border shadow-md">
+                <h4 className="font-bold text-foreground mb-3">
+                  Why Choose FSL?
+                </h4>
+                {highlights.map((item) => (
+                  <div
+                    key={item}
+                    className="flex items-center gap-2 py-1.5 text-sm text-muted-foreground"
+                  >
+                    <CheckCircle2
+                      size={15}
+                      className="text-brand-blue flex-shrink-0"
+                    />
+                    {item}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Form */}
@@ -269,9 +260,12 @@ export default function EnquiryForm() {
                     value={form.course}
                     onChange={handleChange}
                     required
+                    disabled={courses.length === 0}
                     className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40 focus:border-brand-blue transition-all duration-200"
                   >
-                    <option value="">Select a course</option>
+                    <option value="">
+                      {courses.length === 0 ? "No courses configured" : "Select a course"}
+                    </option>
                     {courses.map((c) => (
                       <option key={c} value={c}>
                         {c}

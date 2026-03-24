@@ -19,6 +19,34 @@ type TestType = {
   released: boolean;
 };
 
+type QuestionContent = {
+  text?: string;
+  fileUrl?: string;
+};
+
+type OptionContent = {
+  text?: string;
+  fileUrl?: string;
+};
+
+type ViewQuestion = {
+  question?: string | QuestionContent;
+  options?: Array<string | OptionContent>;
+};
+
+type ViewTest = {
+  _id: string;
+  title: string;
+  numQuestions?: number;
+  duration?: number;
+  released?: boolean;
+  questions?: ViewQuestion[];
+};
+
+type ViewTestResponse = {
+  test?: ViewTest;
+};
+
 type StatCardProps = {
   label: string;
   value: number | string;
@@ -53,6 +81,10 @@ const AdminHome = (): JSX.Element => {
   const [releaseStatus, setReleaseStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewLoading, setViewLoading] = useState(false);
+  const [viewTest, setViewTest] = useState<ViewTest | null>(null);
+  const [viewError, setViewError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const apiBase = import.meta.env.VITE_API_URL;
@@ -132,6 +164,37 @@ const AdminHome = (): JSX.Element => {
       console.error("Failed to delete test", error);
       setReleaseStatus("Failed to delete test");
     }
+  };
+
+  const handleOpenView = async (id: string) => {
+    setViewOpen(true);
+    setViewLoading(true);
+    setViewError(null);
+    setViewTest(null);
+
+    try {
+      const res = await fetch(`${apiBase}/test/test/${id}`, {
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch test");
+      }
+
+      const data = (await res.json()) as ViewTestResponse;
+      setViewTest(data.test ?? null);
+    } catch (error) {
+      console.error("Failed to fetch test", error);
+      setViewError("Failed to load questions. Please try again.");
+    } finally {
+      setViewLoading(false);
+    }
+  };
+
+  const handleCloseView = () => {
+    setViewOpen(false);
+    setViewTest(null);
+    setViewError(null);
   };
 
   // Alert Timeout
@@ -288,7 +351,7 @@ const AdminHome = (): JSX.Element => {
                               Update
                             </button>
                             <button
-                              onClick={() => navigate(`/admin/ViewTest/${test._id}`)}
+                              onClick={() => handleOpenView(test._id)}
                               className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 font-medium text-xs hover:border-brand-orange hover:text-brand-orange transition"
                             >
                               <Eye className="h-4 w-4" />
@@ -317,6 +380,115 @@ const AdminHome = (): JSX.Element => {
           </div>
         </div>
       </main>
+
+      {viewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
+          <div className="w-full max-w-4xl rounded-2xl border border-border bg-card shadow-xl">
+            <div className="flex items-center justify-between border-b border-border px-6 py-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Test Preview</p>
+                <h3 className="text-lg font-semibold text-foreground">
+                  {viewTest?.title ?? "View Test"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseView}
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:border-brand-blue hover:text-brand-blue transition"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto">
+              {viewLoading ? (
+                <div className="px-6 py-10 text-center text-sm text-muted-foreground">
+                  Loading questions...
+                </div>
+              ) : viewError ? (
+                <div className="px-6 py-10 text-center text-sm text-red-600">
+                  {viewError}
+                </div>
+              ) : viewTest?.questions && viewTest.questions.length > 0 ? (
+                <div className="divide-y divide-border">
+                  {viewTest.questions.map((q, idx) => {
+                    const questionText: string =
+                      typeof q.question === "object" && q.question !== null
+                        ? q.question.text || "WHAT WILL BE THE OUTPUT"
+                        : (q.question as string) || "No question text";
+
+                    const questionImage =
+                      typeof q.question === "object" && q.question?.fileUrl
+                        ? q.question.fileUrl
+                        : "";
+
+                    return (
+                      <article key={idx} className="px-6 py-5 space-y-3">
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold text-muted-foreground">
+                            Q{idx + 1}
+                          </p>
+                          <pre className="whitespace-pre-wrap break-words rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-foreground">
+                            {questionText}
+                          </pre>
+                        </div>
+
+                        {questionImage && (
+                          <img
+                            src={questionImage}
+                            alt="Question related"
+                            className="w-full max-h-[280px] rounded-xl border border-border bg-background object-contain shadow-sm"
+                            loading="lazy"
+                          />
+                        )}
+
+                        {q.options && q.options.length > 0 && (
+                          <ul className="grid gap-2">
+                            {q.options.map((opt, i) => {
+                              const optionText: string =
+                                typeof opt === "object" && opt !== null
+                                  ? opt.text || "No option text"
+                                  : (opt as string) || "";
+
+                              const optionFile =
+                                typeof opt === "object" && opt?.fileUrl
+                                  ? opt.fileUrl
+                                  : "";
+
+                              return (
+                                <li
+                                  key={i}
+                                  className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                                >
+                                  <span>{optionText}</span>
+                                  {optionFile && (
+                                    <a
+                                      href={optionFile}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs font-semibold text-brand-blue hover:underline"
+                                    >
+                                      View File
+                                    </a>
+                                  )}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="px-6 py-10 text-center text-sm text-muted-foreground">
+                  No questions found.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

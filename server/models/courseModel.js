@@ -8,7 +8,7 @@ const courseSchema = new mongoose.Schema(
     overview: { type: String, default: "" },
     duration: { type: String, default: "" },
     students: { type: String, default: "" },
-    rating: { type: Number, default: 0 },
+    rating: { type: Number },
     level: { type: String, default: "" },
     tags: { type: [String], default: [] },
     badge: { type: String, default: null },
@@ -17,7 +17,7 @@ const courseSchema = new mongoose.Schema(
     iconName: { type: String, default: "Layers" },
     fee: { type: String, default: "" },
     syllabus: { type: [String], default: [] },
-    order: { type: Number, default: 0 },
+    order: { type: Number },
   },
   { timestamps: true }
 );

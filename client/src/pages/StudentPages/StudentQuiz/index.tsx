@@ -463,6 +463,27 @@ function QuizPage() {
     return question.question || "No question text";
   };
 
+  const formatQuestionText = (rawText: string) => {
+    if (!rawText) return rawText;
+    if (rawText.includes("\n")) return rawText;
+
+    const looksLikeCode =
+      rawText.includes("function") ||
+      rawText.includes("=>") ||
+      rawText.includes("{") ||
+      rawText.includes("};") ||
+      rawText.includes("console.log");
+
+    if (!looksLikeCode) return rawText;
+
+    return rawText
+      .replace(/;\s*/g, ";\n")
+      .replace(/\{\s*/g, "{\n")
+      .replace(/\s*\}/g, "\n}")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  };
+
   const getQuestionImage = (question: Question) => {
     return typeof question.question === "object" ? question.question.fileUrl : undefined;
   };
@@ -547,10 +568,13 @@ function QuizPage() {
 
           {currentQuestion ? (
             <div className="space-y-6 p-6">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">
-                  Q{currentQuestionIndex + 1}: {getQuestionText(currentQuestion)}
-                </h2>
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Question {currentQuestionIndex + 1}
+                </p>
+                <pre className="whitespace-pre-wrap break-words rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 font-mono text-sm text-slate-900">
+                  {formatQuestionText(getQuestionText(currentQuestion))}
+                </pre>
 
                 {getQuestionImage(currentQuestion) && (
                   <img

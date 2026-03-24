@@ -13,18 +13,27 @@ import assignmentRoutes from "./routes/assignmentRoutes.js";
 import placedStudentRoutes from "./routes/placedStudentRoutes.js";
 import successStoryRoutes from "./routes/successStoryRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
+import dailyUpdateRoutes from "./routes/dailyUpdateRoutes.js";
+import universalHeaderRoutes from "./routes/universalHeaderRoutes.js";
+import heroSectionRoutes from "./routes/heroSectionRoutes.js";
+import companiesSectionRoutes from "./routes/companiesSectionRoutes.js";
+import engineeringTeamRoutes from "./routes/engineeringTeamRoutes.js";
+import getInTouchRoutes from "./routes/getInTouchRoutes.js";
+import footerRoutes from "./routes/footerRoutes.js";
+import careerSectionRoutes from "./routes/careerSectionRoutes.js";
+import jobApplicationRoutes from "./routes/jobApplicationRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const PORT = 8085;
+const PORT = Number(process.env.PORT) || 8085;
 const app = express();
 
 app.use(cookieParser());
 app.use(
   cors({
     origin: [process.env.FRONTEND_PATH, "http://localhost:8081","https://registration-form-dev.onrender.com","https://web.fullstacklearning.in"],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
   })
 );
@@ -45,3 +54,13 @@ app.use("/api/assignments", assignmentRoutes);
 app.use("/api/placed-students", placedStudentRoutes);
 app.use("/api/success-stories", successStoryRoutes);
 app.use("/api/categories", categoryRoutes);
+app.use("/api/daily-updates", dailyUpdateRoutes);
+app.use("/api/universal-header", universalHeaderRoutes);
+app.use("/api/hero-section", heroSectionRoutes);
+app.use("/api/companies-section", companiesSectionRoutes);
+app.use("/api/engineering-team", engineeringTeamRoutes);
+app.use("/api/get-in-touch", getInTouchRoutes);
+app.use("/api/footer", footerRoutes);
+app.use("/api/career-section", careerSectionRoutes);
+app.use("/", jobApplicationRoutes);
+app.use("/api", jobApplicationRoutes);

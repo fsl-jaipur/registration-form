@@ -2,20 +2,26 @@ import { Schema, model } from "mongoose";
 
 const careerApplicationSchema = new Schema(
   {
-    name: {
+    candidateName: {
       type: String,
       required: true,
       trim: true,
     },
-    email: {
+    candidateEmail: {
       type: String,
       required: true,
       trim: true,
       lowercase: true,
     },
-    resumeUrl: {
-      type: Buffer,
+    phone: {
+      type: String,
       required: true,
+      trim: true,
+    },
+    jobTitle: {
+      type: String,
+      required: true,
+      trim: true,
     },
     resumeOriginalName: {
       type: String,

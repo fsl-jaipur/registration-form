@@ -1,19 +1,12 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 import DeveloperTeam from "./DeveloperTeam";
 
-const companies = [
-  "TCS",
-  "Nagarro",
-  "Celebal",
-  "HCL Technologies",
-  "Genpact",
-  "Capgemini",
-  "Accenture",
-  "Cognizant",
-  "Vaibhav Global",
-  "H&M",
-  "Dev Technosys"
-];
+type Company = {
+  _id?: string;
+  name: string;
+  logo?: string;
+  order?: number;
+};
 
 const CompanyBadge = ({ name }: { name: string }) => (
   <div className="flex items-center justify-center px-6 py-4 mx-3 bg-card rounded-xl border border-border shadow-sm hover:shadow-lg hover:border-brand-blue/40 hover:-translate-y-1 transition-all duration-300 min-w-[140px] group cursor-default">
@@ -26,6 +19,41 @@ const CompanyBadge = ({ name }: { name: string }) => (
 export default function CompaniesSection() {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
+  const [badgeText, setBadgeText] = useState("Companies Hiring Our Students");
+  const [heading, setHeading] = useState("Our Students Work At Top Companies");
+  const [description, setDescription] = useState(
+    "Our graduates are working at the world's leading technology companies",
+  );
+  const [companies, setCompanies] = useState<Company[]>([]);
+
+  const apiBase = useMemo(
+    () => import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "",
+    [],
+  );
+
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      if (!apiBase) return;
+      try {
+        const res = await fetch(`${apiBase}/companies-section`);
+        if (!res.ok) throw new Error("Failed to fetch companies");
+        const data = await res.json();
+        const section = data?.section;
+        if (!section) throw new Error("Invalid companies payload");
+        setBadgeText(section.badgeText || badgeText);
+        setHeading(section.heading || heading);
+        setDescription(section.description || description);
+        const list: Company[] = section.companies || [];
+        setCompanies(list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+      } catch (error) {
+        console.error("companies fetch error", error);
+      }
+    };
+
+    fetchCompanies();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiBase]);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -47,15 +75,13 @@ export default function CompaniesSection() {
             className={`text-center mb-12 transition-all duration-700 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
           >
             <span className="inline-block px-4 py-1.5 rounded-full bg-brand-orange-light text-brand-orange text-sm font-semibold mb-4">
-              Companies Hiring Our Students
+              {badgeText}
             </span>
             <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
-              Our Students Work At{" "}
-              <span className="text-gradient-brand">Top Companies</span>
+              {heading}
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Our graduates are working at the world's leading technology
-              companies
+              {description}
             </p>
             <div className="flex items-center justify-center gap-2 mt-4">
               <div className="h-1 w-12 rounded-full bg-brand-orange" />
@@ -69,7 +95,7 @@ export default function CompaniesSection() {
             <div className="absolute right-0 top-0 h-full w-20 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
             <div className="flex animate-marquee">
               {doubled.map((c, i) => (
-                <CompanyBadge key={`${c}-${i}`} name={c} />
+                <CompanyBadge key={`${c.name}-${i}`} name={c.name} />
               ))}
             </div>
           </div>
@@ -86,7 +112,7 @@ export default function CompaniesSection() {
                 .slice()
                 .reverse()
                 .map((c, i) => (
-                  <CompanyBadge key={`rev-${c}-${i}`} name={c} />
+                  <CompanyBadge key={`rev-${c.name}-${i}`} name={c.name} />
                 ))}
             </div>
           </div>
