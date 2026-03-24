@@ -1,27 +1,9 @@
-const teamMembers = [
-  {
-    name: "Rohit Jain",
-    title: "Founder & CEO",
-    img: "/images/employees/rohit.jpg ",
-  },
-  {
-    name: "Akshat Sharma",
-    title: "Our Frontend Lead",
-    img: "/images/employees/akshat.jpeg ",
-  },
-  {
-    name: "Dheeraj Jangid",
-    title: "Our DevOps Guy",
-    img: "/images/employees/dheeraj.jpg ",
-  },
-  {
-    name: "Anant Tiwari",
-    title: "Our Backend Magician",
-    img: "/images/employees/anant.jpg ",
-  },
-];
+import { useEngineeringTeam } from "@/hooks/useEngineeringTeam";
+import { fallbackEngineeringTeam } from "@/lib/api/engineeringTeam";
 
 export default function DeveloperTeam() {
+  const { data: team = fallbackEngineeringTeam } = useEngineeringTeam();
+
   return (
     <section className="relative min-h-screen py-24 overflow-hidden">
       <div className="absolute inset-0 dot-grid opacity-40" />
@@ -44,14 +26,14 @@ export default function DeveloperTeam() {
 
         {/* Responsive Grid for Team Cards */}
         <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8 mt-8 overflow-visible place-items-center">
-          {teamMembers.map((member) => (
+          {team.map((member) => (
             <div
-              key={member.name}
+              key={member._id || member.name}
               className="w-full max-w-xs sm:max-w-[320px] md:max-w-[270px] lg:max-w-[280px] h-[340px] border border-white/50 rounded-lg relative flex items-end justify-start overflow-hidden shadow-lg group transition-all duration-300 bg-black/80"
             >
               <img
                 className="size-full object-cover rounded-lg transition-transform duration-300 group-hover:scale-105"
-                src={member.img}
+                src={member.photo}
                 alt={member.name}
               />
               {/* Gradient overlay appears on hover instead of always visible */}

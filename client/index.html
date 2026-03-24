@@ -4,7 +4,44 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/fsl.png" type="image/png">
-    <title>Full Stack Learning | Become a FSD the correct way</title>
+    <title>Full Stack Learning</title>
+    <script>
+      (() => {
+        const pathname = window.location.pathname;
+
+        if (pathname === "/") {
+          document.title = "Full Stack Learning | Become a FSD the correct way";
+          return;
+        }
+
+        if (pathname === "/privacy-policy") {
+          document.title = "Privacy Policy | Full Stack Learning";
+          return;
+        }
+
+        if (pathname === "/terms-of-service") {
+          document.title = "Terms of Service | Full Stack Learning";
+          return;
+        }
+
+        if (pathname === "/sitemap") {
+          document.title = "Sitemap | Full Stack Learning";
+          return;
+        }
+
+        if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+          document.title = "Admin Panel";
+          return;
+        }
+
+        if (pathname === "/student" || pathname.startsWith("/student/")) {
+          document.title = "Student Panel";
+          return;
+        }
+
+        document.title = "Full Stack Learning";
+      })();
+    </script>
   </head>
 
   <body>

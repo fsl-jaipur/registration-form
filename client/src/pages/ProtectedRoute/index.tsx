@@ -12,11 +12,7 @@ const ProtectedRoute = ({ children, allowedRoles, redirectTo }: ProtectedRoutePr
   const location = useLocation();
 
   if (!authChecked) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">
-        Checking session...
-      </div>
-    );
+    return null;
   }
 
   if (!isAuthenticated || !role || !allowedRoles.includes(role)) {

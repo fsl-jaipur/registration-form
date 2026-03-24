@@ -1,4 +1,5 @@
 import Assignment from "../models/assignmentModel.js";
+import { createTrelloCard } from "../services/trelloService.js";
 
 const youTubeThumbnail = (link) => {
   try {
@@ -38,6 +39,25 @@ export const createAssignment = async (req, res) => {
       category: category?.trim() || "uncategorized",
       thumbnail: thumb,
     });
+
+    try {
+      const card = await createTrelloCard({
+        title: assignment.title,
+        videoLink: assignment.videoLink,
+        category: assignment.category,
+        thumbnail: assignment.thumbnail,
+        assignmentId: assignment._id?.toString(),
+      });
+
+      if (card) {
+        assignment.trelloCardId = card.id || null;
+        assignment.trelloCardUrl = card.url || null;
+        assignment.trelloCardShortUrl = card.shortUrl || null;
+        await assignment.save();
+      }
+    } catch (trelloError) {
+      console.error("Trello card creation failed:", trelloError.message || trelloError);
+    }
 
     return res
       .status(201)

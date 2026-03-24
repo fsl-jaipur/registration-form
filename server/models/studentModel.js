@@ -5,7 +5,7 @@ import bcrypt from "bcrypt";
 const studentSchema = new Schema(
   {
     name: String,
-    email: String,
+    email: { type: String, trim: true, lowercase: true },
     phone: String,
     dob: String,
     gender: String,
@@ -27,7 +27,7 @@ const studentSchema = new Schema(
     role: {
       type: String,
       default: "student",
-      enum: ["student", "admin", "professional"],
+      enum: ["student", "admin"],
     },
     password: String,
     resetPasswordToken: String,

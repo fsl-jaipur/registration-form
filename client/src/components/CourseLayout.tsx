@@ -19,9 +19,8 @@ export default function CourseLayout({ course }: CourseLayoutProps) {
 
   return (
     <main
-      className={`container mx-auto px-4 py-8 transition-all duration-500 ${
-        mounted ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-6"
-      }`}
+      className={`container mx-auto px-4 py-8 transition-all duration-500 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-6"
+        }`}
     >
       <section className="rounded-3xl overflow-hidden bg-gradient-to-r from-muted/60 to-muted/40 p-6 md:p-10 mb-8 shadow-md">
         <div className="md:flex md:items-center md:justify-between gap-6">
@@ -47,11 +46,11 @@ export default function CourseLayout({ course }: CourseLayoutProps) {
               )}
             </div>
 
-            <div className="mt-6 flex flex-wrap items-center gap-4">
+            {/* <div className="mt-6 flex flex-wrap items-center gap-4">
               <Link to="/register" className="px-5 py-2 rounded-lg gradient-brand text-white shadow hover:opacity-95 transition">
                 Enroll Now
               </Link>
-            </div>
+            </div> */}
           </div>
 
           <div className="hidden md:block md:w-1/3">
@@ -130,7 +129,12 @@ export default function CourseLayout({ course }: CourseLayoutProps) {
                 <li>- Certificate of completion</li>
                 <li>- Placement assistance</li>
               </ul>
-              <button className="mt-6 w-full px-4 py-2 rounded-lg gradient-brand text-white">Enroll Now</button>
+              {/* <button className="mt-6 w-full px-4 py-2 rounded-lg gradient-brand text-white">Enroll Now</button> */}
+              <div className="mt-6 flex flex-wrap items-center gap-4">
+              <Link to="/register" className="mt-6 w-full text-center px-4 py-2 rounded-lg gradient-brand text-white shadow hover:opacity-95 transition">
+                Enroll Now
+              </Link>
+            </div>
             </div>
 
             <div className="bg-card rounded-2xl p-4 shadow-sm border border-border text-sm text-muted-foreground">

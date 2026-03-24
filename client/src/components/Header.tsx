@@ -1,30 +1,75 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Menu, X, Phone, LogIn, LogOut } from "lucide-react";
 import bundledLogo from "@/assets/logo.png";
 import { useNavigate, useLocation } from "react-router-dom";
 import LoginPage from "@/pages/Login";
 import { useAdminContext } from "@/Context/Admincontext";
-
-// Use public images to allow Vercel to serve retina variants from /public/images/
-const logoSrc = "/images/logo.png";
-const logoSrcSet = "/images/logo@2x.png 2x, /images/logo.png 1x";
-
-const navLinks = [
-  { label: "Home", href: "#home" },
-  { label: "About", href: "#about" },
-  { label: "Courses", href: "#courses" },
-  { label: "Placements", href: "#placements" },
-  { label: "Testimonials", href: "#testimonials" },
-  { label: "Life at FSL", href: "/lifeatfsl" },
-  { label: "Career", href: "/career" },
-  { label: "Contact", href: "#enquiry" },
-];
+import { useUniversalHeader } from "@/hooks/useUniversalHeader";
+import {
+  fallbackUniversalHeader,
+  type UniversalHeaderButton,
+  type UniversalHeaderNavItem,
+} from "@/lib/api/universalHeader";
 
 const enrollButtonClasses =
   "px-5 py-2.5 rounded-lg text-sm font-semibold text-primary-foreground gradient-brand hover:opacity-90 transition-all duration-200 hover:shadow-lg hover:scale-105";
 
 const loginButtonClasses =
   "px-4 py-2.5 rounded-lg text-sm font-semibold border border-brand-blue text-brand-blue hover:bg-brand-blue hover:text-white transition-all duration-200 flex items-center gap-2";
+
+const secondaryButtonClasses =
+  "px-4 py-2.5 rounded-lg text-sm font-semibold bg-brand-blue-light text-brand-blue hover:bg-brand-blue hover:text-white transition-all duration-200";
+
+const isExternalHref = (href: string) => /^(https?:|mailto:|tel:)/i.test(href);
+
+const normalizeHref = (href: string) =>
+  href.startsWith("/") || href.startsWith("#") ? href : `/${href}`;
+
+const scrollToSection = (hash: string) => {
+  if (!hash || !hash.startsWith("#")) return;
+  requestAnimationFrame(() => {
+    const el = document.querySelector(hash);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+};
+
+const openExternalLink = (href: string) => {
+  if (/^(mailto:|tel:)/i.test(href)) {
+    window.location.assign(href);
+    return;
+  }
+
+  window.open(href, "_blank", "noopener,noreferrer");
+};
+
+const isAuthButton = ({ label, href }: Pick<UniversalHeaderButton, "label" | "href">) => {
+  const normalizedLabel = label.trim().toLowerCase();
+  const normalizedHref = href.trim().toLowerCase();
+
+  return (
+    normalizedHref === "/login" ||
+    normalizedHref === "login" ||
+    normalizedLabel === "login" ||
+    normalizedLabel === "log in"
+  );
+};
+
+const getButtonClasses = (style: UniversalHeaderButton["style"], mobile = false) => {
+  const baseClasses =
+    style === "outline"
+      ? loginButtonClasses
+      : style === "secondary"
+        ? secondaryButtonClasses
+        : enrollButtonClasses;
+
+  return mobile
+    ? `${baseClasses} mt-2 w-full justify-center text-center`
+    : style === "primary"
+      ? `ml-4 ${baseClasses}`
+      : baseClasses;
+};
 
 const Header = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -33,7 +78,9 @@ const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, role, logout } = useAdminContext();
+  const { data: headerData = fallbackUniversalHeader } = useUniversalHeader();
   const isStudentLoggedIn = isAuthenticated && role === "student";
+  const header = headerData ?? fallbackUniversalHeader;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -41,27 +88,37 @@ const Header = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const scrollToSection = (hash: string) => {
-    if (!hash || !hash.startsWith("#")) return;
-    requestAnimationFrame(() => {
-      const el = document.querySelector(hash);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    });
-  };
+  useEffect(() => {
+    if (location.pathname === "/" && location.hash) {
+      scrollToSection(location.hash);
+    }
+  }, [location.hash, location.pathname]);
 
-  const handleNavClick = (href: string) => {
+  const handleLinkNavigation = (href: string, options?: { isExternal?: boolean }) => {
     setMobileOpen(false);
-    if (href.startsWith("#")) {
-      if (location.pathname !== "/") {
-        navigate(`/${href}`);
-        return;
-      }
-      scrollToSection(href);
+
+    const trimmedHref = href.trim();
+    if (!trimmedHref) return;
+
+    if (options?.isExternal || isExternalHref(trimmedHref)) {
+      openExternalLink(trimmedHref);
       return;
     }
-    navigate(href);
+
+    if (trimmedHref.startsWith("#")) {
+      if (location.pathname !== "/") {
+        navigate({ pathname: "/", hash: trimmedHref });
+        return;
+      }
+      scrollToSection(trimmedHref);
+      return;
+    }
+
+    navigate(normalizeHref(trimmedHref));
+  };
+
+  const handleNavClick = (item: UniversalHeaderNavItem) => {
+    handleLinkNavigation(item.href, { isExternal: item.isExternal });
   };
 
   const handleLogoClick = () => {
@@ -86,11 +143,37 @@ const Header = () => {
     setLoginOpen(true);
   };
 
+  const handleButtonClick = (button: UniversalHeaderButton) => {
+    if (isAuthButton(button)) {
+      void handleAuthAction();
+      return;
+    }
+
+    handleLinkNavigation(button.href);
+  };
+
+  const renderActionButton = (button: UniversalHeaderButton, index: number, mobile = false) => {
+    const authButton = isAuthButton(button);
+    const label = authButton && isStudentLoggedIn ? "Logout" : button.label;
+
+    return (
+      <button
+        key={button._id || `${button.label}-${button.href}-${index}`}
+        type="button"
+        onClick={() => handleButtonClick(button)}
+        className={getButtonClasses(button.style, mobile)}
+        aria-label={authButton && isStudentLoggedIn ? "Log out" : label}
+      >
+        {authButton && (isStudentLoggedIn ? <LogOut size={16} /> : <LogIn size={16} />)}
+        {label}
+      </button>
+    );
+  };
+
   // Auto-open login when navigation state requests it (e.g., after registration)
   useEffect(() => {
     if ((location.state as { openLogin?: boolean } | null)?.openLogin) {
       setLoginOpen(true);
-      // Clear the state flag so it doesn't reopen on back/forward
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location, navigate]);
@@ -98,7 +181,6 @@ const Header = () => {
   return (
     <>
       {loginOpen && <LoginPage onClose={() => setLoginOpen(false)} />}
-      {/* Top bar */}
       <div className="bg-brand-blue text-primary-foreground text-sm py-2 px-4 flex items-center justify-center gap-6">
         <a
           href="tel:918824453320"
@@ -116,16 +198,13 @@ const Header = () => {
         </a>
       </div>
 
-      {/* Main header */}
       <header
-        className={`sticky top-0 z-50 w-full transition-all duration-400 ${
-          scrolled
+        className={`sticky top-0 z-50 w-full transition-all duration-400 ${scrolled
             ? "bg-background/95 backdrop-blur-md shadow-lg"
             : "bg-background shadow-sm"
-        }`}
+          }`}
       >
         <div className="container mx-auto px-4 flex items-center justify-between h-16 md:h-20">
-          {/* Logo */}
           <a
             href="/"
             onClick={(e) => {
@@ -135,63 +214,44 @@ const Header = () => {
             className="flex items-center gap-2 group"
           >
             <img
-              src={logoSrc}
-              srcSet={logoSrcSet}
-              alt="FullStack Learning Logo"
+              src={header.logo}
+              alt={header.logoAlt || "FullStack Learning Logo"}
               loading="eager"
               decoding="async"
               style={{ imageRendering: "auto" }}
               onError={(e) => {
-                const t = e.currentTarget as HTMLImageElement;
-                if (!t.dataset.fallback) {
-                  t.src = bundledLogo;
-                  t.removeAttribute("srcset");
-                  t.dataset.fallback = "1";
+                const target = e.currentTarget as HTMLImageElement;
+                if (!target.dataset.fallback) {
+                  target.src = bundledLogo;
+                  target.dataset.fallback = "1";
                 }
               }}
               className="h-[68px] sm:h-[70px] md:h-[80px] lg:h-[90px] xl:h-[87px] w-auto transition-transform duration-300 group-hover:scale-105"
             />
           </a>
 
-          {/* Desktop Nav */}
           <nav className="hidden lg:flex items-center gap-3">
-            {navLinks.map((link) => (
+            {header.navItems.map((link, index) => (
               <a
-                key={link.label}
+                key={link._id || `${link.label}-${link.href}-${index}`}
                 href={link.href}
                 onClick={(e) => {
                   e.preventDefault();
-                  handleNavClick(link.href);
+                  handleNavClick(link);
                 }}
+                target={link.isExternal ? "_blank" : undefined}
+                rel={link.isExternal ? "noreferrer" : undefined}
                 className="relative px-2 py-2 text-sm font-medium text-foreground/80 hover:text-brand-blue transition-colors duration-200 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-brand-orange after:transition-all after:duration-300 hover:after:w-full"
               >
                 {link.label}
               </a>
             ))}
 
-            {/* Updated Enroll Now Button */}
-            {!isStudentLoggedIn && (
-              <a
-                href="/register"
-                className={`ml-4 ${enrollButtonClasses}`}
-              >
-                Enroll Now
-              </a>
-            )}
-            <button
-              type="button"
-              onClick={handleAuthAction}
-              className={loginButtonClasses}
-              aria-label={isStudentLoggedIn ? "Log out" : "Go to login"}
-            >
-              {isStudentLoggedIn ? <LogOut size={16} /> : <LogIn size={16} />}
-              {isStudentLoggedIn ? "Logout" : "Login"}
-            </button>
+            {header.buttons.map((button, index) => renderActionButton(button, index))}
           </nav>
 
-          {/* Mobile menu button */}
           <button
-            onClick={() => setMobileOpen(!mobileOpen)}
+            onClick={() => setMobileOpen((prev) => !prev)}
             className="lg:hidden p-2 rounded-lg text-brand-blue hover:bg-brand-blue-light transition-colors duration-200"
             aria-label="Toggle menu"
           >
@@ -199,45 +259,28 @@ const Header = () => {
           </button>
         </div>
 
-        {/* Mobile Nav */}
         <div
-          className={`lg:hidden overflow-hidden transition-all duration-300 bg-background border-t border-border ${
-            mobileOpen ? "max-h-[700px] opacity-100" : "max-h-0 opacity-0"
-          }`}
+          className={`lg:hidden overflow-hidden transition-all duration-300 bg-background border-t border-border ${mobileOpen ? "max-h-[700px] opacity-100" : "max-h-0 opacity-0"
+            }`}
         >
           <nav className="container mx-auto px-4 py-4 flex flex-col gap-2">
-            {navLinks.map((link) => (
+            {header.navItems.map((link, index) => (
               <a
-                key={link.label}
+                key={link._id || `${link.label}-${link.href}-${index}`}
                 href={link.href}
                 onClick={(e) => {
                   e.preventDefault();
-                  handleNavClick(link.href);
+                  handleNavClick(link);
                 }}
+                target={link.isExternal ? "_blank" : undefined}
+                rel={link.isExternal ? "noreferrer" : undefined}
                 className="px-4 py-3 rounded-lg text-sm font-medium text-foreground/80 hover:text-brand-blue hover:bg-brand-blue-light transition-colors duration-200"
               >
                 {link.label}
               </a>
             ))}
 
-            {/* Updated Enroll Now Button */}
-            {!isStudentLoggedIn && (
-              <a
-                href="/register"
-                className={`mt-2 w-full text-center ${enrollButtonClasses}`}
-              >
-                Enroll Now
-              </a>
-            )}
-            <button
-              type="button"
-              onClick={handleAuthAction}
-              className={`mt-2 w-full justify-center ${loginButtonClasses}`}
-              aria-label={isStudentLoggedIn ? "Log out" : "Go to login"}
-            >
-              {isStudentLoggedIn ? <LogOut size={16} /> : <LogIn size={16} />}
-              {isStudentLoggedIn ? "Logout" : "Login"}
-            </button>
+            {header.buttons.map((button, index) => renderActionButton(button, index, true))}
           </nav>
         </div>
       </header>

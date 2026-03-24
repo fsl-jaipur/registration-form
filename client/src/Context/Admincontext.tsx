@@ -29,8 +29,21 @@ export const adminContext = createContext<AdminContextValue>({
 });
 
 export const AdminProvider = ({ children }: { children: ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [role, setRole] = useState<Role>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return localStorage.getItem(storageKeys.auth) === "true";
+  });
+  const [role, setRole] = useState<Role>(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    const storedRole = localStorage.getItem(storageKeys.role);
+    return storedRole === "student" || storedRole === "admin" ? storedRole : null;
+  });
   const [authChecked, setAuthChecked] = useState(false);
   const API_BASE = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "";
 
@@ -96,16 +109,8 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // On mount: hydrate from storage, then verify with API
+  // On mount, verify the persisted session with the API.
   useEffect(() => {
-    const storedAuth = localStorage.getItem(storageKeys.auth);
-    const storedRole = localStorage.getItem(storageKeys.role) as Role | null;
-
-    if (storedAuth === "true" && storedRole) {
-      setIsAuthenticated(true);
-      setRole(storedRole);
-    }
-
     checkToken();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -21,6 +21,20 @@ type TestName = {
   title: string;
 };
 
+const formatDateDDMMYYYY = (value: string): string => {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+
+  return `${day}/${month}/${year}`;
+};
+
 export default function AllTests(): JSX.Element {
   const [tests, setTests] = useState<TestRecord[]>([]);
   const [testName, setTestName] = useState<TestName[]>([]);
@@ -42,7 +56,7 @@ export default function AllTests(): JSX.Element {
             const dateObj = new Date(attempt.startTime);
             return {
               testId: attempt.testId,
-              date: dateObj.toLocaleDateString(),
+              date: formatDateDDMMYYYY(attempt.startTime),
               time: dateObj.toLocaleTimeString(),
             };
           })

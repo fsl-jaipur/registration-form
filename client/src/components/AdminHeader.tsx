@@ -8,15 +8,26 @@ import { useAdminContext } from "@/Context/Admincontext";
 const logoSrc = "/images/logo.png";
 const logoSrcSet = "/images/logo@2x.png 2x, /images/logo.png 1x";
 
-const adminLinks = [
+const primaryLinks = [
   { label: "Dashboard", href: "/admin/home" },
-  { label: "Students", href: "/admin/view/test" },
+  { label: "Students", href: "/admin/students" },
   { label: "Results", href: "/admin/tests" },
+
+];
+
+const moreLinks = [
   { label: "Course Details", href: "/admin/courses" },
   { label: "Assignments", href: "/admin/assignments" },
+  { label: "Daily Updates", href: "/admin/daily-updates" },
   { label: "Placed Students", href: "/admin/placed-students" },
   { label: "Success Stories", href: "/admin/success-stories" },
-
+  { label: "Universal Header", href: "/admin/universal-header" },
+  { label: "Hero Section", href: "/admin/hero-section" },
+  { label: "Companies", href: "/admin/companies" },
+  { label: "Career", href: "/admin/career" },
+  { label: "Engineering Team", href: "/admin/engineering-team" },
+  { label: "Get In Touch", href: "/admin/get-in-touch" },
+  { label: "Footer", href: "/admin/footer" },
 ];
 
 const enrollButtonClasses =
@@ -30,6 +41,7 @@ const AdminHeader = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const apiBase = useMemo(
@@ -102,8 +114,8 @@ const AdminHeader = () => {
       {/* Main header */}
       <header
         className={`sticky top-0 z-50 w-full transition-all duration-400 ${scrolled
-            ? "bg-background/95 backdrop-blur-md shadow-lg"
-            : "bg-background shadow-sm"
+          ? "bg-background/95 backdrop-blur-md shadow-lg"
+          : "bg-background shadow-sm"
           }`}
       >
         <div className="container mx-auto px-4 flex items-center justify-between h-16 md:h-20">
@@ -140,7 +152,7 @@ const AdminHeader = () => {
 
           {/* Desktop Nav */}
           <nav className="hidden lg:flex items-center gap-3">
-            {adminLinks.map((link) => (
+            {primaryLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
@@ -149,13 +161,43 @@ const AdminHeader = () => {
                   handleNavClick(link.href);
                 }}
                 className={`relative px-2 py-2 text-sm font-medium transition-colors duration-200 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-brand-orange after:transition-all after:duration-300 hover:after:w-full ${location.pathname.startsWith(link.href)
-                    ? "text-brand-blue"
-                    : "text-foreground/80 hover:text-brand-blue"
+                  ? "text-brand-blue"
+                  : "text-foreground/80 hover:text-brand-blue"
                   }`}
               >
                 {link.label}
               </a>
             ))}
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMoreOpen((v) => !v)}
+                className="px-2 py-2 text-sm font-medium text-foreground/80 hover:text-brand-blue transition-colors duration-200 border border-border rounded-lg hover:border-brand-blue"
+              >
+                More
+              </button>
+              {moreOpen && (
+                <div className="absolute right-0 mt-2 w-56 rounded-lg border border-border bg-card shadow-lg z-20">
+                  {moreLinks.map((link) => (
+                    <button
+                      key={link.label}
+                      type="button"
+                      onClick={() => {
+                        setMoreOpen(false);
+                        handleNavClick(link.href);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm transition hover:bg-muted ${location.pathname.startsWith(link.href)
+                        ? "text-brand-blue font-semibold"
+                        : "text-foreground/80"
+                        }`}
+                    >
+                      {link.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Keep CTA style consistent with "Enroll" button */}
             {/* <a
@@ -208,7 +250,7 @@ const AdminHeader = () => {
             }`}
         >
           <nav className="container mx-auto px-4 py-4 flex flex-col gap-2">
-            {adminLinks.map((link) => (
+            {primaryLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
@@ -221,6 +263,23 @@ const AdminHeader = () => {
                 {link.label}
               </a>
             ))}
+
+            <div className="mt-4 border-t border-border pt-3 space-y-1">
+              <p className="text-xs font-semibold text-muted-foreground px-2">More</p>
+              {moreLinks.map((link) => (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleNavClick(link.href);
+                  }}
+                  className="px-4 py-3 rounded-lg text-sm font-medium text-foreground/80 hover:text-brand-blue hover:bg-brand-blue-light transition-colors duration-200"
+                >
+                  {link.label}
+                </a>
+              ))}
+            </div>
 
             <a
               href="/admin/create/test"
