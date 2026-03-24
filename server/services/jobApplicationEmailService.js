@@ -1,9 +1,11 @@
 import fs from "fs/promises";
 import sgMail from "@sendgrid/mail";
-
 const getEmailConfig = () => {
   const apiKey = process.env.SENDGRID_API_KEY;
-  const fromEmail = process.env.SENDGRID_FROM_EMAIL || process.env.SENDGRID_FROM || process.env.ADMIN_EMAIL;
+  const fromEmail =
+    process.env.SENDGRID_FROM_EMAIL ||
+    process.env.SENDGRID_FROM ||
+    process.env.ADMIN_EMAIL;
   const adminEmail = process.env.ADMIN_EMAIL || fromEmail;
 
   if (!apiKey) {
@@ -22,6 +24,8 @@ const getEmailConfig = () => {
 
   return { adminEmail, fromEmail };
 };
+
+
 
 const formatSubmittedAt = (submittedAt) =>
   new Intl.DateTimeFormat("en-IN", {
@@ -91,5 +95,10 @@ Date/Time: ${submittedAtLabel}`,
     ],
   };
 
-  await Promise.all([sgMail.send(userEmail), sgMail.send(adminEmailMessage)]);
+  try {
+    await Promise.all([sgMail.send(userEmail), sgMail.send(adminEmailMessage)]);
+  } catch (err) {
+    console.error("SendGrid error:", err?.response?.body?.errors);
+    throw err;
+  }
 };
