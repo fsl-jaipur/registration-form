@@ -2,10 +2,10 @@ import adminModel from "../models/adminModel.js";
 import studentModel from "../models/studentModel.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import crypto from "crypto";
+
 import { sendForgotPasswordEmail } from "../services/forgotPasswordEmail.js";
 import dotenv from "dotenv";
-import { log } from "console";
+
 dotenv.config();
 
 const escapeRegExp = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -27,15 +27,24 @@ export async function studentlogin(req, res) {
       });
     }
 
+    
     if (!user) {
       return res.status(404).json({ message: "Invalid email or password." });
     }
-
-    const isMatch = await bcrypt.compare(password, user.password);
+    
+    let isMatch = false;
+    if (user.firstTimesignin) {
+      isMatch = password === user.password;
+    } else {
+      isMatch = await bcrypt.compare(password, user.password);
+    }
+    console.log(isMatch); 
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid email or password." });
     }
-
+    
+    
+    
     const token = jwt.sign(
       { id: user._id, role: "student", loginStatus:user.firstTimesignin},
       process.env.JWT_SECRET,
@@ -265,15 +274,12 @@ export const resetPassword = async (req, res) => {
       return res.status(400).json({ message: "Token expired" });
     }
 
-    // Assign plaintext new password; model will hash on save
-    user.password = newPassword;
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     user.firstTimesignin = false;
     await user.save();
-
-    console.log(email,newPassword);
-    
 
     return res.status(200).json({ message: "Password has been reset" });
   } catch (error) {

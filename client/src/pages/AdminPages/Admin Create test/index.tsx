@@ -135,7 +135,19 @@ const CreateTestForm = (): JSX.Element => {
 
   const parseJsonQuestions = (rawInput: string): Question[] => {
     const parsedInput = normalizeImportedJson(rawInput);
-    const parsed = JSON.parse(parsedInput) as JsonQuizQuestion[] | { quizData?: JsonQuizQuestion[] };
+
+    const parseInputValue = (): JsonQuizQuestion[] | { quizData?: JsonQuizQuestion[] } => {
+      try {
+        return JSON.parse(parsedInput) as JsonQuizQuestion[] | { quizData?: JsonQuizQuestion[] };
+      } catch {
+        // Fallback for JS-style input (e.g., template literals, const quizData = [...]).
+        // This is for admin-only usage; it lets us handle non-JSON snippets safely enough here.
+        const parser = new Function(`"use strict"; return (${parsedInput});`);
+        return parser() as JsonQuizQuestion[] | { quizData?: JsonQuizQuestion[] };
+      }
+    };
+
+    const parsed = parseInputValue();
     const questionList = Array.isArray(parsed)
       ? parsed
       : Array.isArray(parsed?.quizData)
@@ -146,7 +158,35 @@ const CreateTestForm = (): JSX.Element => {
       throw new Error("Paste a JSON array of questions or an object with a quizData array.");
     }
 
-    return questionList.map((item, index) => {
+    const indexedQuestions = questionList.map((item, index) => ({
+      item,
+      index,
+    }));
+
+    const hasAnyId = indexedQuestions.some(({ item }) => item?.id !== undefined && item?.id !== null);
+
+    if (hasAnyId) {
+      indexedQuestions.sort((a, b) => {
+        const aId = a.item?.id;
+        const bId = b.item?.id;
+
+        if (aId === undefined || aId === null) return 1;
+        if (bId === undefined || bId === null) return -1;
+
+        const aNum = typeof aId === "number" ? aId : Number(aId);
+        const bNum = typeof bId === "number" ? bId : Number(bId);
+        const aNumValid = Number.isFinite(aNum);
+        const bNumValid = Number.isFinite(bNum);
+
+        if (aNumValid && bNumValid) {
+          return aNum - bNum;
+        }
+
+        return String(aId).localeCompare(String(bId));
+      });
+    }
+
+    return indexedQuestions.map(({ item }, index) => {
       const textSource =
         typeof item?.text === "string"
           ? item.text
@@ -157,9 +197,17 @@ const CreateTestForm = (): JSX.Element => {
               : "";
 
       const text = textSource.trim();
-      const options = Array.isArray(item?.options)
+      const rawOptions = Array.isArray(item?.options)
         ? item.options.map((option) => String(option ?? "").trim())
         : [];
+      let options = rawOptions.slice(0, DEFAULT_OPTION_COUNT);
+
+      if (options.length < DEFAULT_OPTION_COUNT) {
+        options = [
+          ...options,
+          ...Array.from({ length: DEFAULT_OPTION_COUNT - options.length }, () => ""),
+        ];
+      }
       const correctAnswerSource =
         typeof item?.correctAnswer === "string"
           ? item.correctAnswer
@@ -174,26 +222,15 @@ const CreateTestForm = (): JSX.Element => {
         throw new Error(`Imported question ${index + 1} is missing question text.`);
       }
 
-      if (options.length !== DEFAULT_OPTION_COUNT || options.some((option) => !option)) {
-        throw new Error(
-          `Imported question ${index + 1} must contain exactly ${DEFAULT_OPTION_COUNT} filled options.`
-        );
-      }
-
       const correctOptionIndex = options.findIndex((option) => option === correctAnswer);
-
-      if (correctOptionIndex === -1) {
-        throw new Error(
-          `Imported question ${index + 1} has a correct answer that does not match its options.`
-        );
-      }
+      const normalizedCorrectIndex = correctOptionIndex === -1 ? "" : String(correctOptionIndex);
 
       return {
         id: `question-${questionIdCounter++}`,
         text,
         file: null,
         options,
-        correctOptionIndex: String(correctOptionIndex),
+        correctOptionIndex: normalizedCorrectIndex,
         codeSnippet,
       };
     });
