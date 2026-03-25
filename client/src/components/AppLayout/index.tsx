@@ -8,7 +8,8 @@ export default function AppLayout() {
   const isStudentAuthenticatedPage =
     location.pathname === "/student/studentpanel" ||
     location.pathname.startsWith("/student/result") ||
-    location.pathname.startsWith("/student/assignments");
+    location.pathname.startsWith("/student/assignments") ||
+    location.pathname.startsWith("/student/daily-updates");
 
   return (
     <div className="min-h-screen bg-background text-foreground">
