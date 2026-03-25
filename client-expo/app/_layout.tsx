@@ -53,6 +53,7 @@ function RootLayoutNav() {
       <AuthProvider>
         <AuthGate />
         <Stack>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ title: "Student Login" }} />
           <Stack.Screen name="student-panel" options={{ title: "Student Panel" }} />
           <Stack.Screen name="student-result" options={{ title: "Results" }} />

@@ -56,7 +56,6 @@ export default function LoginScreen() {
         } else {
           router.replace("/student-panel");
         }
-        router.push("/")
       }
     } catch (err) {
       const fallbackMessage =
