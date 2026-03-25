@@ -2,6 +2,7 @@ import { useContext, useEffect, useMemo, useRef, useState, type FormEvent } from
 import { useLocation, useNavigate } from "react-router-dom";
 import { X, Eye, EyeOff } from "lucide-react";
 import { adminContext } from "@/Context/Admincontext";
+import { createApiClient } from "@shared/api/client";
 
 type StudentLoginResponse = {
   message?: string;
@@ -17,6 +18,7 @@ export default function LoginPage({ onClose }: LoginPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { setIsAuthenticated, setRole } = useContext(adminContext);
+  const api = createApiClient(import.meta.env.VITE_API_URL || "");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -80,11 +82,8 @@ export default function LoginPage({ onClose }: LoginPageProps) {
     setLoading(true);
 
     try {
-      const apiBase = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${apiBase}/auth/studentLogin`, {
+      const response = await api.request("/auth/studentLogin", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 

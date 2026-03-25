@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { createApiClient } from "@shared/api/client";
 
 type ResultResponse = {
   questionText?: string;
@@ -29,7 +30,7 @@ function ResultDetailPage() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { quizAttemptId } = useParams<{ quizAttemptId: string }>();
-  const apiBase = import.meta.env.VITE_API_URL as string;
+  const api = createApiClient(import.meta.env.VITE_API_URL || "");
 
   useEffect(() => {
     async function fetchResultDetail() {
@@ -37,11 +38,8 @@ function ResultDetailPage() {
         setLoading(true);
         setError("");
 
-        const response = await fetch(
-          `${apiBase}/students/quiz-attempt-detail/${quizAttemptId}`,
-          {
-            credentials: "include",
-          }
+        const response = await api.request(
+          `/students/quiz-attempt-detail/${quizAttemptId}`
         );
 
         if (!response.ok) {
@@ -76,7 +74,7 @@ function ResultDetailPage() {
       setError("Quiz attempt not found.");
       setLoading(false);
     }
-  }, [apiBase, quizAttemptId]);
+  }, [api, quizAttemptId]);
 
   const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString("en-GB");
 

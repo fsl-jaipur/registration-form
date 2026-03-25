@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { createApiClient } from "@shared/api/client";
 
 type QuestionText =
   | string
@@ -46,7 +47,7 @@ function QuizPage() {
   const { testId } = useParams<{ testId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const apiBase = import.meta.env.VITE_API_URL as string;
+  const api = createApiClient(import.meta.env.VITE_API_URL || "");
   const locationState = location.state as QuizLocationState | null;
 
   const [quizAttemptId, setQuizAttemptId] = useState<string | null>(null);
@@ -67,23 +68,9 @@ function QuizPage() {
 
   const requestJson = useCallback(
     async <T,>(path: string, init?: RequestInit): Promise<T> => {
-      const response = await fetch(`${apiBase}${path}`, {
-        ...init,
-        credentials: "include",
-        headers: {
-          ...(init?.body ? { "Content-Type": "application/json" } : {}),
-          ...init?.headers,
-        },
-      });
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || `Request failed: ${response.status}`);
-      }
-
-      return (await response.json()) as T;
+      return api.requestJson<T>(path, init);
     },
-    [apiBase]
+    [api]
   );
 
   useEffect(() => {
