@@ -11,9 +11,14 @@ type LandingHeaderProps = {
   logoAlt?: string;
   navItems: UniversalHeaderNavItem[];
   buttons: UniversalHeaderButton[];
+  onLinkPress?: (href: string) => void;
 };
 
-const openHref = (href: string) => {
+const openHref = (href: string, onLinkPress?: (href: string) => void) => {
+  if (onLinkPress) {
+    onLinkPress(href);
+    return;
+  }
   if (href.startsWith("/login")) {
     router.push("/login");
     return;
@@ -26,7 +31,11 @@ const openHref = (href: string) => {
     router.push("/student-panel");
     return;
   }
-  if (href.startsWith("http")) {
+  if (href.startsWith("/")) {
+    router.push(href);
+    return;
+  }
+  if (href.startsWith("http") || href.startsWith("mailto:") || href.startsWith("tel:")) {
     Linking.openURL(href);
   }
 };
@@ -38,6 +47,7 @@ export default function LandingHeader({
   logoAlt,
   navItems,
   buttons,
+  onLinkPress,
 }: LandingHeaderProps) {
   const resolvedLogo = resolveRemoteAsset(logo);
   const useLocalLogo = logo?.includes("/images/logo.png");
@@ -46,12 +56,6 @@ export default function LandingHeader({
 
   return (
     <View style={styles.container}>
-      <View style={styles.topRow}>
-        <Text style={styles.topText}>{phone}</Text>
-        <Text style={styles.topDivider}>|</Text>
-        <Text style={styles.topText}>{email}</Text>
-      </View>
-
       <View style={styles.mainRow}>
         <View style={styles.brand}>
           {useLocalLogo ? (
@@ -68,26 +72,16 @@ export default function LandingHeader({
           <Text style={styles.brandText}>{logoAlt || "FullStack Learning"}</Text>
         </View>
 
-        <View style={styles.actions}>
-          {buttons.map((button) => (
-            <Pressable
-              key={`${button.label}-${button.href}`}
-              style={button.style === "outline" ? styles.loginButton : styles.enrollButton}
-              onPress={() => openHref(button.href)}
-            >
-              <Text style={button.style === "outline" ? styles.loginText : styles.enrollText}>
-                {button.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
         <Pressable
           accessibilityRole="button"
           style={styles.menuButton}
           onPress={() => setMenuOpen((prev) => !prev)}
         >
-          <Text style={styles.menuButtonText}>{menuOpen ? "Close" : "Menu"}</Text>
+          <View style={styles.hamburger}>
+            <View style={[styles.hamburgerBar, menuOpen && styles.hamburgerBarTopOpen]} />
+            <View style={[styles.hamburgerBar, menuOpen && styles.hamburgerBarMiddleOpen]} />
+            <View style={[styles.hamburgerBar, menuOpen && styles.hamburgerBarBottomOpen]} />
+          </View>
         </Pressable>
       </View>
 
@@ -98,27 +92,31 @@ export default function LandingHeader({
               key={`${item.label}-${item.href}`}
               style={styles.navItemButton}
               onPress={() => {
-                openHref(item.href);
+                openHref(item.href, onLinkPress);
                 setMenuOpen(false);
               }}
             >
               <Text style={styles.navItem}>{item.label}</Text>
             </Pressable>
           ))}
+          <View style={styles.menuButtons}>
+            {buttons.map((button) => (
+              <Pressable
+                key={`${button.label}-${button.href}`}
+                style={button.style === "outline" ? styles.loginButton : styles.enrollButton}
+                onPress={() => {
+                  openHref(button.href, onLinkPress);
+                  setMenuOpen(false);
+                }}
+              >
+                <Text style={button.style === "outline" ? styles.loginText : styles.enrollText}>
+                  {button.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
-      ) : (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.navRow}
-        >
-          {navItems.map((item) => (
-            <Pressable key={`${item.label}-${item.href}`} onPress={() => openHref(item.href)}>
-              <Text style={styles.navItem}>{item.label}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -129,20 +127,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
     paddingHorizontal: 16,
-  },
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 8,
-    marginBottom: 10,
-  },
-  topText: {
-    color: "#e2f2ff",
-    fontSize: 12,
-  },
-  topDivider: {
-    color: "#e2f2ff",
-    fontSize: 12,
   },
   mainRow: {
     flexDirection: "row",
@@ -171,10 +155,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
-  actions: {
-    flexDirection: "row",
-    gap: 8,
-  },
   menuButton: {
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -182,10 +162,24 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.2)",
     marginLeft: 8,
   },
-  menuButtonText: {
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "700",
+  hamburger: {
+    width: 20,
+    height: 16,
+    justifyContent: "space-between",
+  },
+  hamburgerBar: {
+    height: 2,
+    borderRadius: 999,
+    backgroundColor: "#ffffff",
+  },
+  hamburgerBarTopOpen: {
+    transform: [{ translateY: 7 }, { rotate: "45deg" }],
+  },
+  hamburgerBarMiddleOpen: {
+    opacity: 0,
+  },
+  hamburgerBarBottomOpen: {
+    transform: [{ translateY: -7 }, { rotate: "-45deg" }],
   },
   enrollButton: {
     backgroundColor: "#f97316",
@@ -224,6 +218,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(15, 23, 42, 0.8)",
     borderRadius: 12,
     padding: 10,
+    gap: 8,
+  },
+  menuButtons: {
+    marginTop: 8,
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   navItemButton: {

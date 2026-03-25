@@ -62,6 +62,23 @@ function RootLayoutNav() {
           <Stack.Screen name="student-quiz/[testId]" options={{ title: "Quiz" }} />
           <Stack.Screen name="register" options={{ title: "Register" }} />
           <Stack.Screen name="forgot-password" options={{ title: "Forgot Password" }} />
+          <Stack.Screen name="reset-password" options={{ title: "Reset Password" }} />
+          <Stack.Screen name="lifeatfsl" options={{ title: "Life At FSL" }} />
+          <Stack.Screen name="career" options={{ title: "Career" }} />
+          <Stack.Screen name="privacy-policy" options={{ title: "Privacy Policy" }} />
+          <Stack.Screen name="terms-of-service" options={{ title: "Terms of Service" }} />
+          <Stack.Screen name="sitemap" options={{ title: "Sitemap" }} />
+          <Stack.Screen name="courses/index" options={{ title: "Courses" }} />
+          <Stack.Screen name="courses/[slug]" options={{ title: "Course" }} />
+          <Stack.Screen name="student/studentpanel" options={{ title: "Student Panel" }} />
+          <Stack.Screen name="student/result" options={{ title: "Results" }} />
+          <Stack.Screen name="student/assignments" options={{ title: "Assignments" }} />
+          <Stack.Screen name="student/daily-updates" options={{ title: "Daily Updates" }} />
+          <Stack.Screen name="student/result-detail/[quizAttemptId]" options={{ title: "Result Details" }} />
+          <Stack.Screen name="student/quiz/[testId]" options={{ title: "Quiz" }} />
+          <Stack.Screen name="student/changepassword" options={{ title: "Change Password" }} />
+          <Stack.Screen name="admin/index" options={{ title: "Admin" }} />
+          <Stack.Screen name="admin/[...path]" options={{ title: "Admin" }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         </Stack>

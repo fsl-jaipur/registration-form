@@ -2,7 +2,21 @@ import { useEffect } from "react";
 import { useSegments, router } from "expo-router";
 import { useAuth } from "../context/auth";
 
-const PUBLIC_ROUTES = new Set(["", "index", "login", "register", "forgot-password"]);
+const PUBLIC_ROUTES = new Set([
+  "",
+  "index",
+  "login",
+  "register",
+  "forgot-password",
+  "reset-password",
+  "lifeatfsl",
+  "career",
+  "privacy-policy",
+  "terms-of-service",
+  "sitemap",
+  "courses",
+  "admin",
+]);
 
 export default function AuthGate() {
   const segments = useSegments();

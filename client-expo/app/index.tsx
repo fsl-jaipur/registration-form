@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ImageBackground,
+  Animated,
+  Linking,
+  LayoutChangeEvent,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -9,6 +11,7 @@ import {
   TextInput,
   View,
   Image,
+  type ImageSourcePropType,
 } from "react-native";
 import { router } from "expo-router";
 import LandingHeader from "../components/LandingHeader";
@@ -38,6 +41,8 @@ import {
 const heroImage = require("../assets/images/hero.jpg");
 
 export default function LandingScreen() {
+  const scrollRef = useRef<ScrollView>(null);
+  const sectionOffsets = useRef<Record<string, number>>({});
   const [header, setHeader] = useState(fallbackHeader);
   const [hero, setHero] = useState(fallbackHero);
   const [footer, setFooter] = useState(fallbackFooter);
@@ -55,6 +60,8 @@ export default function LandingScreen() {
     message: "",
   });
   const [formStatus, setFormStatus] = useState("");
+  const [heroIndex, setHeroIndex] = useState(0);
+  const heroFade = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     let mounted = true;
@@ -100,21 +107,95 @@ export default function LandingScreen() {
     };
   }, []);
 
-  const heroImageSource = useMemo(() => {
-    const first = hero.images?.[0]?.url;
-    const resolved = resolveRemoteAsset(first);
-    if (first?.includes("/images/hero") || first?.includes("/images/Hero")) {
-      return heroImage;
-    }
-    if (resolved && /^https?:\/\//i.test(resolved)) {
-      return { uri: resolved };
-    }
-    return heroImage;
+  const heroImageSources = useMemo<ImageSourcePropType[]>(() => {
+    const images = hero.images?.length ? hero.images : [];
+    const resolved = images
+      .map((img) => {
+        const url = img?.url ?? "";
+        if (
+          url.includes("/images/hero") ||
+          url.includes("/images/Hero") ||
+          url.includes("/images/hero-bg") ||
+          url.includes("/images/Hero-bg")
+        ) {
+          return heroImage;
+        }
+        const remote = resolveRemoteAsset(url);
+        if (remote && /^https?:\/\//i.test(remote)) {
+          return { uri: remote } as ImageSourcePropType;
+        }
+        return null;
+      })
+      .filter(Boolean) as ImageSourcePropType[];
+
+    return resolved.length ? resolved : [heroImage];
   }, [hero.images]);
+
+  useEffect(() => {
+    setHeroIndex(0);
+    heroFade.setValue(1);
+  }, [heroImageSources, heroFade]);
+
+  useEffect(() => {
+    if (heroImageSources.length < 2) return;
+    const intervalId = setInterval(() => {
+      Animated.timing(heroFade, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }).start(() => {
+        setHeroIndex((prev) => (prev + 1) % heroImageSources.length);
+        heroFade.setValue(0);
+        Animated.timing(heroFade, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 3000);
+
+    return () => clearInterval(intervalId);
+  }, [heroFade, heroImageSources.length]);
+
+  const handleSectionLayout =
+    (key: string) =>
+    (event: LayoutChangeEvent): void => {
+      sectionOffsets.current[key] = event.nativeEvent.layout.y;
+    };
+
+  const scrollToAnchor = (anchor: string) => {
+    const key = anchor.replace("#", "");
+    if (key === "home") {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      return;
+    }
+    const y = sectionOffsets.current[key];
+    if (typeof y === "number") {
+      scrollRef.current?.scrollTo({ y, animated: true });
+    }
+  };
+
+  const handleLinkPress = (href: string) => {
+    if (href.startsWith("#")) {
+      scrollToAnchor(href);
+      return;
+    }
+    if (href.startsWith("/")) {
+      router.push(href);
+      return;
+    }
+    if (href.startsWith("http") || href.startsWith("mailto:") || href.startsWith("tel:")) {
+      Linking.openURL(href);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.content}
+        stickyHeaderIndices={[0]}
+      >
         <LandingHeader
           phone={header.phone || "+91-8824453320"}
           email={header.email || "rohit@fullstacklearning.com"}
@@ -122,9 +203,15 @@ export default function LandingScreen() {
           logoAlt={header.logoAlt}
           navItems={header.navItems}
           buttons={header.buttons}
+          onLinkPress={handleLinkPress}
         />
 
-        <ImageBackground source={heroImageSource} style={styles.hero} imageStyle={styles.heroImage}>
+        <View style={styles.hero}>
+          <Animated.Image
+            source={heroImageSources[heroIndex]}
+            style={[styles.heroImage, { opacity: heroFade }]}
+            resizeMode="cover"
+          />
           <View style={styles.heroOverlay} />
           <View style={styles.heroContent}>
             <View style={styles.badge}>
@@ -145,10 +232,7 @@ export default function LandingScreen() {
                 <Pressable
                   key={button.label}
                   style={button.style === "outline" ? styles.secondaryButton : styles.primaryButton}
-                  onPress={() => {
-                    if (button.href.startsWith("/register")) router.push("/register");
-                    else router.push("/login");
-                  }}
+                  onPress={() => handleLinkPress(button.href)}
                 >
                   <Text
                     style={button.style === "outline" ? styles.secondaryButtonText : styles.primaryButtonText}
@@ -159,7 +243,7 @@ export default function LandingScreen() {
               ))}
             </View>
           </View>
-        </ImageBackground>
+        </View>
 
         <View style={styles.statsRow}>
           {hero.stats.map((stat) => (
@@ -173,7 +257,7 @@ export default function LandingScreen() {
           ))}
         </View>
 
-        <View style={styles.section}>
+        <View style={styles.section} onLayout={handleSectionLayout("about")}>
           <Text style={styles.sectionBadge}>About FSL</Text>
           <Text style={styles.sectionTitle}>
             A Learning Platform To Help You <Text style={styles.sectionHighlight}>Jump Into Tech</Text>
@@ -196,7 +280,7 @@ export default function LandingScreen() {
           </View>
         </View>
 
-        <View style={styles.sectionAlt}>
+        <View style={styles.sectionAlt} onLayout={handleSectionLayout("courses")}>
           <Text style={styles.sectionBadgeBlue}>What We Offer</Text>
           <Text style={styles.sectionTitle}>
             Our <Text style={styles.sectionHighlight}>Popular Courses</Text>
@@ -205,7 +289,7 @@ export default function LandingScreen() {
             Industry-aligned curriculum designed by experts.
           </Text>
           <View style={styles.courseGrid}>
-            {(courses.length ? courses : []).slice(0, 6).map((course) => (
+            {(courses.length ? courses : []).map((course) => (
               <View key={course._id || course.title} style={styles.courseCard}>
                 <Text style={styles.courseTitle}>{course.title}</Text>
                 <Text style={styles.courseDesc}>{course.description}</Text>
@@ -222,13 +306,13 @@ export default function LandingScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
+        <View style={styles.section} onLayout={handleSectionLayout("placements")}>
           <Text style={styles.sectionBadge}>Our Placed Students</Text>
           <Text style={styles.sectionTitle}>
             Success is <Text style={styles.sectionHighlight}>Our Story</Text>
           </Text>
           <View style={styles.placedGrid}>
-            {placedStudents.slice(0, 8).map((student) => (
+            {placedStudents.map((student) => (
               <View key={`${student.name}-${student.company}`} style={styles.placedCard}>
                 {student.image ? (
                   <Image source={{ uri: student.image }} style={styles.placedImage} />
@@ -243,13 +327,13 @@ export default function LandingScreen() {
           </View>
         </View>
 
-        <View style={styles.sectionAlt}>
+        <View style={styles.sectionAlt} onLayout={handleSectionLayout("testimonials")}>
           <Text style={styles.sectionBadgeOrange}>Success Stories</Text>
           <Text style={styles.sectionTitle}>
             What Our <Text style={styles.sectionHighlight}>Students Say</Text>
           </Text>
           <View style={styles.testimonialGrid}>
-            {testimonials.slice(0, 6).map((t) => (
+            {testimonials.map((t) => (
               <View key={t._id || t.name} style={styles.testimonialCard}>
                 <Text style={styles.testimonialText}>"{t.text}"</Text>
                 <View style={styles.testimonialFooter}>
@@ -276,7 +360,7 @@ export default function LandingScreen() {
           <Text style={styles.sectionTitle}>{companies.heading}</Text>
           <Text style={styles.sectionText}>{companies.description}</Text>
           <View style={styles.companyRow}>
-            {companies.companies.slice(0, 10).map((company) => (
+            {companies.companies.map((company) => (
               <View key={company.name} style={styles.companyChip}>
                 <Text style={styles.companyText}>{company.name}</Text>
               </View>
@@ -304,7 +388,7 @@ export default function LandingScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
+        <View style={styles.section} onLayout={handleSectionLayout("enquiry")}>
           <Text style={styles.sectionBadgeBlue}>{getInTouch.badgeText}</Text>
           <Text style={styles.sectionTitle}>
             {getInTouch.heading} <Text style={styles.sectionHighlight}>{getInTouch.highlight}</Text>
@@ -370,7 +454,7 @@ export default function LandingScreen() {
           </View>
         </View>
 
-        <LandingFooter {...footer} />
+        <LandingFooter {...footer} onLinkPress={handleLinkPress} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -389,8 +473,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   heroImage: {
-    width: "100%",
-    height: "100%",
+    ...StyleSheet.absoluteFillObject,
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,

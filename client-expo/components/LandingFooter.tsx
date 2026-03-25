@@ -2,9 +2,15 @@ import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import type { FooterData } from "../lib/landingData";
 
-type LandingFooterProps = FooterData;
+type LandingFooterProps = FooterData & {
+  onLinkPress?: (href: string) => void;
+};
 
-const openFooterLink = (href: string) => {
+const openFooterLink = (href: string, onLinkPress?: (href: string) => void) => {
+  if (onLinkPress) {
+    onLinkPress(href);
+    return;
+  }
   if (href.startsWith("/login")) {
     router.push("/login");
     return;
@@ -17,15 +23,16 @@ const openFooterLink = (href: string) => {
     router.push("/student-panel");
     return;
   }
-  if (href.startsWith("http")) {
+  if (href.startsWith("/")) {
+    router.push(href);
+    return;
+  }
+  if (href.startsWith("http") || href.startsWith("mailto:") || href.startsWith("tel:")) {
     Linking.openURL(href);
   }
 };
 
 export default function LandingFooter({
-  phone,
-  email,
-  address,
   description,
   ctaTitle,
   ctaSubtitle,
@@ -33,7 +40,12 @@ export default function LandingFooter({
   ctaButtonHref,
   sections,
   socials,
+  contact,
+  onLinkPress,
 }: LandingFooterProps) {
+  const phone = contact?.phone ?? "";
+  const email = contact?.email ?? "";
+  const address = contact?.address ?? "";
   return (
     <View style={styles.container}>
       <Text style={styles.title}>FullStack Learning</Text>
@@ -42,7 +54,7 @@ export default function LandingFooter({
       <View style={styles.contactBox}>
         <Text style={styles.ctaTitle}>{ctaTitle}</Text>
         <Text style={styles.ctaSubtitle}>{ctaSubtitle}</Text>
-        <Pressable style={styles.ctaButton} onPress={() => openFooterLink(ctaButtonHref)}>
+        <Pressable style={styles.ctaButton} onPress={() => openFooterLink(ctaButtonHref, onLinkPress)}>
           <Text style={styles.ctaButtonText}>{ctaButtonLabel}</Text>
         </Pressable>
 
@@ -57,7 +69,10 @@ export default function LandingFooter({
           <Text style={styles.sectionTitle}>{section.title}</Text>
           <View style={styles.sectionLinks}>
             {section.links.map((link) => (
-              <Pressable key={`${section.title}-${link.label}`} onPress={() => openFooterLink(link.href)}>
+              <Pressable
+                key={`${section.title}-${link.label}`}
+                onPress={() => openFooterLink(link.href, onLinkPress)}
+              >
                 <Text style={styles.link}>{link.label}</Text>
               </Pressable>
             ))}
@@ -67,7 +82,7 @@ export default function LandingFooter({
 
       <View style={styles.linksRow}>
         {socials.map((social) => (
-          <Pressable key={social.label} onPress={() => openFooterLink(social.href)}>
+          <Pressable key={social.label} onPress={() => openFooterLink(social.href, onLinkPress)}>
             <Text style={styles.link}>{social.label}</Text>
           </Pressable>
         ))}

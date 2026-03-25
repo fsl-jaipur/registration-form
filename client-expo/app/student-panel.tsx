@@ -104,9 +104,21 @@ export default function StudentPanelScreen() {
           </Text>
         </View>
 
+        <View style={styles.quickLinks}>
+          <Pressable style={styles.quickLinkButton} onPress={() => router.push("/student/assignments")}>
+            <Text style={styles.quickLinkText}>Assignments</Text>
+          </Pressable>
+          <Pressable style={styles.quickLinkButton} onPress={() => router.push("/student/daily-updates")}>
+            <Text style={styles.quickLinkText}>Daily Updates</Text>
+          </Pressable>
+          <Pressable style={styles.quickLinkButton} onPress={() => router.push("/student/result")}>
+            <Text style={styles.quickLinkText}>Result</Text>
+          </Pressable>
+        </View>
+
         <View style={styles.headerRow}>
           <Text style={styles.title}>Available Tests</Text>
-          <Pressable style={styles.resultButton} onPress={() => router.push("/student-result")}>
+          <Pressable style={styles.resultButton} onPress={() => router.push("/student/result")}>
             <Text style={styles.resultButtonText}>Result</Text>
           </Pressable>
         </View>
@@ -241,6 +253,23 @@ const styles = StyleSheet.create({
     color: "#1f2937",
     fontWeight: "700",
     fontSize: 12,
+  },
+  quickLinks: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+  },
+  quickLinkButton: {
+    backgroundColor: "#e2e8f0",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+  },
+  quickLinkText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#0f172a",
   },
   error: {
     backgroundColor: "#fee2e2",
