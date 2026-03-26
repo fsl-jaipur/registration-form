@@ -32,7 +32,7 @@ const app = express();
 app.use(cookieParser());
 app.use(
   cors({
-    origin: [process.env.FRONTEND_PATH, "http://localhost:8081","https://registration-form-dev.onrender.com","https://web.fullstacklearning.in"],
+    origin: [process.env.FRONTEND_PATH, "http://localhost:8081","https://registration-form-dev.onrender.com","https://web.fullstacklearning.in","https://www.fullstacklearning.com"],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
   })
