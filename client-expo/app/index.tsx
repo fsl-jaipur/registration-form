@@ -290,7 +290,24 @@ export default function LandingScreen() {
           </Text>
           <View style={styles.courseGrid}>
             {(courses.length ? courses : []).map((course) => (
-              <View key={course._id || course.title} style={styles.courseCard}>
+              <Pressable
+                key={course._id || course.title}
+                style={styles.courseCard}
+                onPress={() => {
+                  const slug = course.slug
+                    ? course.slug
+                    : course.title
+                      ? course.title
+                          .toLowerCase()
+                          .replace(/[^a-z0-9\\s-]/g, "")
+                          .trim()
+                          .replace(/\\s+/g, "-")
+                      : "";
+                  if (slug) {
+                    router.push(`/courses/${slug}`);
+                  }
+                }}
+              >
                 <Text style={styles.courseTitle}>{course.title}</Text>
                 <Text style={styles.courseDesc}>{course.description}</Text>
                 <View style={styles.courseMetaRow}>
@@ -298,7 +315,7 @@ export default function LandingScreen() {
                   {course.students ? <Text style={styles.courseMeta}>{course.students}</Text> : null}
                   {course.rating ? <Text style={styles.courseMeta}>★ {course.rating}</Text> : null}
                 </View>
-              </View>
+              </Pressable>
             ))}
             {courses.length === 0 ? (
               <Text style={styles.sectionText}>Courses will appear here soon.</Text>
