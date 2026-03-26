@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* FullStack Learning - Design System
-   Brand Colors: Steel Blue (#1b75bc) + Burnt Orange (#e8602c)
-   All colors MUST be HSL.
-*/
 
 @layer base {
   :root {

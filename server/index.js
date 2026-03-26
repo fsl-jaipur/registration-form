@@ -42,10 +42,14 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use("/static", express.static(join(__dirname, "uploads")));
 
+
 await connectToDB();
 
 app.listen(PORT, () => console.log("Server started at port " + PORT));
 
+app.get("/", (req, res) => {
+  res.send("Welcome to the Full Stack Learning API");
+});
 app.use("/api/students", studentRouter);
 app.use("/api/auth", loginRouter);
 app.use("/api/test", adminRoutes);
