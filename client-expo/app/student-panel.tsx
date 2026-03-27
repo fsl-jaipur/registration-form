@@ -82,7 +82,7 @@ export default function StudentPanelScreen() {
     () => (
       <View>
         <View style={styles.topActions}>
-          <Pressable style={styles.topLink} onPress={() => router.replace("/")}>
+          <Pressable style={styles.topLink} onPress={() => router.replace("/student-panel")}>
             <Text style={styles.topLinkText}>Home</Text>
           </Pressable>
           <Pressable
