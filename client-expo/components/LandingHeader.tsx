@@ -19,20 +19,21 @@ const openHref = (href: string, onLinkPress?: (href: string) => void) => {
     onLinkPress(href);
     return;
   }
+  const navigate = (target: string) => router.push(target as any);
   if (href.startsWith("/login")) {
-    router.push("/login");
+    navigate("/login");
     return;
   }
   if (href.startsWith("/register")) {
-    router.push("/register");
+    navigate("/register");
     return;
   }
   if (href.startsWith("/student-panel")) {
-    router.push("/student-panel");
+    navigate("/student-panel");
     return;
   }
   if (href.startsWith("/")) {
-    router.push(href);
+    navigate(href);
     return;
   }
   if (href.startsWith("http") || href.startsWith("mailto:") || href.startsWith("tel:")) {
@@ -157,20 +158,20 @@ const styles = StyleSheet.create({
   },
   menuButton: {
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: "#ffffff",
     marginLeft: 8,
   },
   hamburger: {
-    width: 20,
+    width: 22,
     height: 16,
     justifyContent: "space-between",
   },
   hamburgerBar: {
     height: 2,
     borderRadius: 999,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#1e6fb3",
   },
   hamburgerBarTopOpen: {
     transform: [{ translateY: 7 }, { rotate: "45deg" }],
