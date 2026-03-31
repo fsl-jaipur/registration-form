@@ -5,6 +5,71 @@ export type ApiClient = {
   requestJson: <T>(path: string, init?: RequestInitLike) => Promise<T>;
 };
 
+const FALLBACK_ERROR_MESSAGE = "Something went wrong. Please try again.";
+
+const stripHtml = (value: string) =>
+  value
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const tryParseJson = (value: string) => {
+  try {
+    return JSON.parse(value) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+};
+
+export function extractApiErrorMessage(input: unknown): string {
+  if (typeof input !== "string") {
+    if (input && typeof input === "object") {
+      const message = (input as { message?: unknown }).message;
+      if (typeof message === "string" && message.trim()) {
+        return message.trim();
+      }
+    }
+    return FALLBACK_ERROR_MESSAGE;
+  }
+
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return FALLBACK_ERROR_MESSAGE;
+  }
+
+  const parsed = tryParseJson(trimmed);
+  if (parsed) {
+    const message = parsed.message;
+    if (typeof message === "string" && message.trim()) {
+      return message.trim();
+    }
+  }
+
+  if (trimmed.startsWith("<")) {
+    const withoutHtml = stripHtml(trimmed);
+    if (withoutHtml) {
+      const cleanedHtmlMessage = withoutHtml
+        .replace(/^cannot\s+(GET|POST|PUT|PATCH|DELETE)\s+/i, "Request failed: ")
+        .trim();
+      return cleanedHtmlMessage || FALLBACK_ERROR_MESSAGE;
+    }
+    return FALLBACK_ERROR_MESSAGE;
+  }
+
+  const compact = trimmed.replace(/\s+/g, " ");
+  if (
+    compact.startsWith("{") ||
+    compact.startsWith("[") ||
+    compact.toLowerCase().includes("<!doctype html")
+  ) {
+    return FALLBACK_ERROR_MESSAGE;
+  }
+
+  return compact;
+}
+
 export function createApiClient(baseUrl: string): ApiClient {
   const normalizedBase = baseUrl?.replace(/\/$/, "") ?? "";
 
@@ -43,7 +108,7 @@ export function createApiClient(baseUrl: string): ApiClient {
   const requestJson = async <T,>(path: string, init: RequestInitLike = {}) => {
     const response = await request(path, init);
     if (!response.ok) {
-      const message = await response.text();
+      const message = extractApiErrorMessage(await response.text());
       throw new Error(message || `Request failed: ${response.status}`);
     }
     return (await response.json()) as T;

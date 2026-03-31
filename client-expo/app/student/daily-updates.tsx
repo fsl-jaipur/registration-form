@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { createApiClient } from "@shared/api/client";
 import { getApiBaseUrl } from "@shared/config/api";
+import FormToast from "../../components/FormToast";
 
 type DailyUpdate = {
   _id: string;
@@ -112,7 +113,7 @@ export default function StudentDailyUpdatesScreen() {
                 </Pressable>
               </View>
 
-              {error ? <Text style={styles.error}>{error}</Text> : null}
+              {error ? <FormToast message={error} /> : null}
             </View>
 
             <View style={styles.updatesHeader}>
@@ -220,9 +221,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   formFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
+    gap: 10,
   },
   formHint: {
     fontSize: 12,
@@ -233,6 +233,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
+    alignSelf: "flex-end",
   },
   submitButtonDisabled: {
     opacity: 0.7,
@@ -240,15 +241,6 @@ const styles = StyleSheet.create({
   submitText: {
     color: "#fff",
     fontWeight: "700",
-    fontSize: 12,
-  },
-  error: {
-    marginTop: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: "#fee2e2",
-    borderRadius: 6,
-    color: "#b91c1c",
     fontSize: 12,
   },
   updatesHeader: {

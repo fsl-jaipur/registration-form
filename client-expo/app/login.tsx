@@ -1,19 +1,23 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { createApiClient } from "@shared/api/client";
 import { getApiBaseUrl } from "@shared/config/api";
 import { useAuth } from "../context/auth";
+import FormToast from "../components/FormToast";
 
 type StudentLoginResponse = {
   message?: string;
@@ -31,6 +35,19 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
 
   const api = createApiClient(getApiBaseUrl());
+
+  useEffect(() => {
+    if (!error && !success) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setError("");
+      setSuccess("");
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [error, success]);
 
   const handleSubmit = async () => {
     if (loading) return;
@@ -70,65 +87,80 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.card}>
-          <Text style={styles.title}>Student Login</Text>
-          <Text style={styles.subtitle}>Enter your email and password to continue.</Text>
-
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          {success ? <Text style={styles.success}>{success}</Text> : null}
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="you@example.com"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.card}>
+            <Image
+              source={require("../assets/images/logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
             />
-          </View>
+            <Text style={styles.title}>Student Login</Text>
+            <Text style={styles.subtitle}>Enter your email and password to continue.</Text>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.passwordRow}>
+            {error ? <FormToast message={error} /> : null}
+            {success ? <FormToast message={success} type="success" /> : null}
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Email</Text>
               <TextInput
-                style={[styles.input, styles.passwordInput]}
-                placeholder="********"
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={setPassword}
+                style={styles.input}
+                placeholder="you@example.com"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
               />
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setShowPassword((prev) => !prev)}
-                style={styles.toggleButton}
-              >
-                <Text style={styles.toggleText}>{showPassword ? "Hide" : "Show"}</Text>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Password</Text>
+              <View style={styles.passwordRow}>
+                <TextInput
+                  style={[styles.input, styles.passwordInput]}
+                  placeholder="********"
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={setPassword}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setShowPassword((prev) => !prev)}
+                  style={styles.toggleButton}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color="#64748b"
+                  />
+                </Pressable>
+              </View>
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Login</Text>}
+            </Pressable>
+
+            <View style={styles.linksRow}>
+              <Pressable onPress={() => router.push("/register")}>
+                <Text style={styles.link}>Create an account</Text>
+              </Pressable>
+              <Pressable onPress={() => router.push("/forgot-password")}>
+                <Text style={styles.link}>Forgot password?</Text>
               </Pressable>
             </View>
           </View>
-
-          <Pressable
-            accessibilityRole="button"
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleSubmit}
-            disabled={loading}
-          >
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Login</Text>}
-          </Pressable>
-
-          <View style={styles.linksRow}>
-            <Pressable onPress={() => router.push("/register")}>
-              <Text style={styles.link}>Create an account</Text>
-            </Pressable>
-            <Pressable onPress={() => router.push("/forgot-password")}>
-              <Text style={styles.link}>Forgot password?</Text>
-            </Pressable>
-          </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -141,6 +173,9 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: "center",
     padding: 24,
   },
@@ -148,37 +183,36 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 24,
-    shadowColor: "#0f172a",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
     elevation: 3,
+    ...Platform.select({
+      web: {
+        boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
+      },
+      default: {
+        shadowColor: "#0f172a",
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+    }),
+  },
+  logo: {
+    width: 96,
+    height: 96,
+    alignSelf: "center",
+    marginBottom: 16,
   },
   title: {
     fontSize: 24,
     fontWeight: "700",
     color: "#0f172a",
     marginBottom: 4,
+    textAlign: "center",
   },
   subtitle: {
     fontSize: 14,
     color: "#64748b",
     marginBottom: 16,
-  },
-  error: {
-    backgroundColor: "#fee2e2",
-    color: "#b91c1c",
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 10,
-    fontSize: 12,
-  },
-  success: {
-    backgroundColor: "#dcfce7",
-    color: "#166534",
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 10,
-    fontSize: 12,
+    textAlign: "center",
   },
   field: {
     marginBottom: 12,
@@ -207,16 +241,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   toggleButton: {
-    marginLeft: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: "#e2e8f0",
-  },
-  toggleText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#0f172a",
+    position: "absolute",
+    right: 12,
+    height: "100%",
+    justifyContent: "center",
+    paddingHorizontal: 4,
   },
   button: {
     backgroundColor: "#2563eb",

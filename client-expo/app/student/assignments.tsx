@@ -1,24 +1,27 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Image,
+  Linking,
+  Platform,
   Pressable,
   SafeAreaView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
-  Image,
-  Platform,
 } from "react-native";
 import { createApiClient } from "@shared/api/client";
 import { getApiBaseUrl } from "@shared/config/api";
 
-let WebView: any = null;
+let YoutubePlayer: any = null;
 if (Platform.OS !== "web") {
   try {
-    WebView = require("react-native-webview").WebView;
+    YoutubePlayer = require("react-native-youtube-iframe").default;
   } catch {
-    WebView = null;
+    YoutubePlayer = null;
   }
 }
 
@@ -31,41 +34,80 @@ type Assignment = {
   createdAt?: string;
 };
 
-const getYouTubeEmbedUrl = (videoLink: string) => {
+type VideoUrls = {
+  embedUrl: string;
+  watchUrl: string;
+  videoId?: string;
+  playlistId?: string;
+};
+
+const getYouTubeVideoUrls = (videoLink: string): VideoUrls | null => {
   try {
     const url = new URL(videoLink);
     const host = url.hostname.replace(/^www\./, "");
-    const playlistId = url.searchParams.get("list");
-    
-    // Additional params for mobile playback
-    const mobileParams = "rel=0&playsinline=1&enablejsapi=1&modestbranding=1";
+    const playlistId = url.searchParams.get("list") || undefined;
+    const mobileParams = "rel=0&playsinline=1&enablejsapi=1";
 
     if (host === "youtu.be") {
       const videoId = url.pathname.slice(1);
-      return videoId ? `https://www.youtube.com/embed/${videoId}?${mobileParams}` : null;
+      if (!videoId) {
+        return null;
+      }
+
+      return {
+        embedUrl: `https://www.youtube.com/embed/${videoId}?${mobileParams}`,
+        watchUrl: `https://www.youtube.com/watch?v=${videoId}`,
+        videoId,
+      };
     }
 
     if (host === "youtube.com" || host === "m.youtube.com") {
       if (url.pathname === "/watch") {
-        const videoId = url.searchParams.get("v");
+        const videoId = url.searchParams.get("v") || undefined;
+
         if (videoId) {
-          return `https://www.youtube.com/embed/${videoId}?${mobileParams}`;
+          return {
+            embedUrl: `https://www.youtube.com/embed/${videoId}?${mobileParams}`,
+            watchUrl: `https://www.youtube.com/watch?v=${videoId}`,
+            videoId,
+            playlistId,
+          };
         }
+
         if (playlistId) {
-          return `https://www.youtube.com/embed/videoseries?list=${playlistId}&${mobileParams}`;
+          return {
+            embedUrl: `https://www.youtube.com/embed/videoseries?list=${playlistId}&${mobileParams}`,
+            watchUrl: `https://www.youtube.com/playlist?list=${playlistId}`,
+            playlistId,
+          };
         }
       }
+
       if (url.pathname.startsWith("/embed/")) {
-        const videoId = url.pathname.split("/embed/")[1];
-        return videoId ? `https://www.youtube.com/embed/${videoId}?${mobileParams}` : null;
+        const videoId = url.pathname.split("/embed/")[1]?.split("/")[0];
+        if (!videoId) {
+          return null;
+        }
+
+        return {
+          embedUrl: `https://www.youtube.com/embed/${videoId}?${mobileParams}`,
+          watchUrl: `https://www.youtube.com/watch?v=${videoId}`,
+          videoId,
+        };
       }
+
       if (url.pathname === "/playlist" && playlistId) {
-        return `https://www.youtube.com/embed/videoseries?list=${playlistId}&${mobileParams}`;
+        return {
+          embedUrl: `https://www.youtube.com/embed/videoseries?list=${playlistId}&${mobileParams}`,
+          watchUrl: `https://www.youtube.com/playlist?list=${playlistId}`,
+          playlistId,
+        };
       }
     }
   } catch {
     return null;
   }
+
   return null;
 };
 
@@ -76,7 +118,10 @@ export default function StudentAssignmentsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [playerErrors, setPlayerErrors] = useState<Record<string, string>>({});
 
+  const { width: screenWidth } = useWindowDimensions();
+  const playerHeight = ((screenWidth - 40) * 9) / 16;
   const api = createApiClient(getApiBaseUrl());
 
   useEffect(() => {
@@ -88,11 +133,7 @@ export default function StudentAssignmentsScreen() {
         setAssignments(Array.isArray(data?.assignments) ? data.assignments : []);
 
         const cats = Array.from(
-          new Set(
-            (data?.assignments || [])
-              .map((a) => a.category)
-              .filter(Boolean)
-          )
+          new Set((data?.assignments || []).map((a) => a.category).filter(Boolean))
         ) as string[];
         setCategories(cats);
       } catch (err) {
@@ -110,6 +151,15 @@ export default function StudentAssignmentsScreen() {
     if (selectedCategory === "All") return assignments;
     return assignments.filter((a) => a.category === selectedCategory);
   }, [assignments, selectedCategory]);
+
+  const openVideoExternally = async (videoUrl: string) => {
+    try {
+      await Linking.openURL(videoUrl);
+    } catch (err) {
+      console.error("Failed to open assignment video", err);
+      Alert.alert("Unable to open video", "Please try again in the YouTube app or your browser.");
+    }
+  };
 
   const tabList = ["All", ...categories];
 
@@ -145,20 +195,10 @@ export default function StudentAssignmentsScreen() {
                 {tabList.map((tab) => (
                   <Pressable
                     key={tab}
-                    style={[
-                      styles.tab,
-                      selectedCategory === tab && styles.tabActive,
-                    ]}
+                    style={[styles.tab, selectedCategory === tab && styles.tabActive]}
                     onPress={() => setSelectedCategory(tab)}
                   >
-                    <Text
-                      style={[
-                        styles.tabText,
-                        selectedCategory === tab && styles.tabTextActive,
-                      ]}
-                    >
-                      {tab}
-                    </Text>
+                    <Text style={[styles.tabText, selectedCategory === tab && styles.tabTextActive]}>{tab}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -174,48 +214,58 @@ export default function StudentAssignmentsScreen() {
           </View>
         }
         renderItem={({ item }) => {
-          const embedUrl = getYouTubeEmbedUrl(item.videoLink);
+          const videoUrls = getYouTubeVideoUrls(item.videoLink);
+          const isYouTube = !!videoUrls;
           const isPlaying = playingId === item._id;
+          const playerError = playerErrors[item._id];
 
           return (
             <View style={styles.card}>
-              <View style={styles.videoContainer}>
-                {isPlaying && embedUrl ? (
+              <View style={[styles.videoContainer, { height: playerHeight }]}>
+                {isPlaying && isYouTube ? (
                   Platform.OS === "web" ? (
                     <iframe
-                      src={embedUrl}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        border: "none",
-                        borderRadius: "8px",
-                      }}
+                      src={videoUrls.embedUrl}
+                      style={{ width: "100%", height: "100%", border: "none", borderRadius: "8px" }}
                       title={item.title}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                     />
-                  ) : WebView ? (
-                    <WebView
-                      source={{ uri: embedUrl }}
-                      style={styles.webview}
-                      javaScriptEnabled={true}
-                      domStorageEnabled={true}
-                      allowsInlineMediaPlayback={true}
-                      mediaPlaybackRequiresUserAction={false}
-                      allowsFullscreenVideo={true}
-                      mixedContentMode="compatibility"
-                      originWhitelist={["*"]}
-                      showsVerticalScrollIndicator={false}
-                      showsHorizontalScrollIndicator={false}
-                      onError={(syntheticEvent: any) => {
-                        const { nativeEvent } = syntheticEvent;
-                        console.warn("WebView error:", nativeEvent);
+                  ) : playerError ? (
+                    <View style={styles.fallback}>
+                      <Text style={styles.fallbackText}>This video could not be played inline.</Text>
+                    </View>
+                  ) : !YoutubePlayer ? (
+                    <View style={styles.fallback}>
+                      <Text style={styles.fallbackText}>Video player is not available on this device.</Text>
+                    </View>
+                  ) : (
+                    <YoutubePlayer
+                      height={playerHeight}
+                      play
+                      videoId={videoUrls.videoId}
+                      playList={videoUrls.playlistId}
+                      forceAndroidAutoplay
+                      initialPlayerParams={{
+                        controls: true,
+                        rel: false,
+                        preventFullScreen: false,
+                        showClosedCaptions: false,
+                      }}
+                      webViewStyle={styles.youtubeWebView}
+                      webViewProps={{
+                        allowsFullscreenVideo: true,
+                        mediaPlaybackRequiresUserAction: false,
+                        mixedContentMode: "compatibility",
+                      }}
+                      onError={(playerEvent: string) => {
+                        console.warn("YouTube player error:", playerEvent);
+                        setPlayerErrors((current) => ({
+                          ...current,
+                          [item._id]: playerEvent,
+                        }));
                       }}
                     />
-                  ) : (
-                    <View style={styles.fallback}>
-                      <Text style={styles.fallbackText}>Video player not available</Text>
-                    </View>
                   )
                 ) : (
                   <>
@@ -226,10 +276,26 @@ export default function StudentAssignmentsScreen() {
                     )}
                     <Pressable
                       style={styles.playButton}
-                      onPress={() => setPlayingId(item._id)}
+                      onPress={() => {
+                        if (!isYouTube) {
+                          void openVideoExternally(item.videoLink);
+                          return;
+                        }
+
+                        setPlayerErrors((current) => {
+                          if (!current[item._id]) {
+                            return current;
+                          }
+
+                          const next = { ...current };
+                          delete next[item._id];
+                          return next;
+                        });
+                        setPlayingId(item._id);
+                      }}
                     >
                       <View style={styles.playIcon}>
-                        <Text style={styles.playSymbol}>▶</Text>
+                        <Text style={styles.playSymbol}>{"\u25B6"}</Text>
                       </View>
                     </Pressable>
                   </>
@@ -239,19 +305,16 @@ export default function StudentAssignmentsScreen() {
               <View style={styles.cardContent}>
                 <Text style={styles.cardTitle}>{item.title}</Text>
 
-                {isPlaying && embedUrl && (
-                  <Pressable
-                    style={styles.closeButton}
-                    onPress={() => setPlayingId(null)}
-                  >
-                    <Text style={styles.closeText}>Close Video</Text>
+                {!isYouTube && (
+                  <Pressable style={styles.watchButton} onPress={() => void openVideoExternally(item.videoLink)}>
+                    <Text style={styles.watchButtonText}>Open Video</Text>
                   </Pressable>
                 )}
 
+                {playerError ? <Text style={styles.errorInline}>Player error: {playerError}</Text> : null}
+
                 <View style={styles.cardMeta}>
-                  {item.category && (
-                    <Text style={styles.category}>{item.category}</Text>
-                  )}
+                  {item.category && <Text style={styles.category}>{item.category}</Text>}
                   {item.createdAt && (
                     <Text style={styles.date}>
                       ADDED ON {new Date(item.createdAt)
@@ -348,6 +411,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontSize: 12,
   },
+  errorInline: {
+    marginBottom: 10,
+    color: "#b91c1c",
+    fontSize: 12,
+  },
   listContent: {
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -362,12 +430,11 @@ const styles = StyleSheet.create({
   },
   videoContainer: {
     width: "100%",
-    aspectRatio: 16 / 9,
     backgroundColor: "#000",
     position: "relative",
   },
-  webview: {
-    flex: 1,
+  youtubeWebView: {
+    opacity: 0.99,
   },
   thumbnail: {
     width: "100%",
@@ -383,10 +450,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#1f2937",
+    paddingHorizontal: 20,
   },
   fallbackText: {
     color: "#fff",
     fontSize: 14,
+    textAlign: "center",
   },
   playButton: {
     ...StyleSheet.absoluteFillObject,
@@ -416,17 +485,18 @@ const styles = StyleSheet.create({
     color: "#0f172a",
     marginBottom: 12,
   },
-  closeButton: {
-    paddingVertical: 8,
+  watchButton: {
+    paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: "#fee2e2",
+    backgroundColor: "#dbeafe",
     borderRadius: 6,
     marginBottom: 10,
   },
-  closeText: {
+  watchButtonText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: "#b91c1c",
+    fontWeight: "700",
+    color: "#1d4ed8",
+    textAlign: "center",
   },
   cardMeta: {
     flexDirection: "column",
@@ -450,3 +520,4 @@ const styles = StyleSheet.create({
     color: "#64748b",
   },
 });
+

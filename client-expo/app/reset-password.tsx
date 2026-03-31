@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -11,9 +12,11 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { createApiClient } from "@shared/api/client";
 import { getApiBaseUrl } from "@shared/config/api";
+import FormToast from "../components/FormToast";
 
 export default function ResetPasswordScreen() {
   const params = useLocalSearchParams<{ email?: string }>();
@@ -28,6 +31,19 @@ export default function ResetPasswordScreen() {
   const [showPassword, setShowPassword] = useState(false);
 
   const api = createApiClient(getApiBaseUrl());
+
+  useEffect(() => {
+    if (!error && !success) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setError("");
+      setSuccess("");
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [error, success]);
 
   const handleSubmit = async () => {
     if (loading) return;
@@ -62,7 +78,7 @@ export default function ResetPasswordScreen() {
     setLoading(true);
 
     try {
-      const data = await api.requestJson<{ message?: string }>("/api/reset-password", {
+      const data = await api.requestJson<{ message?: string }>("/api/auth/reset-password", {
         method: "POST",
         body: JSON.stringify({
           email: trimmedEmail,
@@ -89,18 +105,24 @@ export default function ResetPasswordScreen() {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           <View style={styles.card}>
+            <Image
+              source={require("../assets/images/logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={styles.title}>Reset Password</Text>
             <Text style={styles.subtitle}>Set a new password for your account.</Text>
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-            {success ? <Text style={styles.success}>{success}</Text> : null}
+            {error ? <FormToast message={error} /> : null}
+            {success ? <FormToast message={success} type="success" /> : null}
 
             <View style={styles.field}>
               <Text style={styles.label}>Email</Text>
@@ -144,21 +166,38 @@ export default function ResetPasswordScreen() {
                   onPress={() => setShowPassword((prev) => !prev)}
                   style={styles.toggleButton}
                 >
-                  <Text style={styles.toggleText}>{showPassword ? "Hide" : "Show"}</Text>
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color="#64748b"
+                  />
                 </Pressable>
               </View>
             </View>
 
             <View style={styles.field}>
               <Text style={styles.label}>Confirm password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm new password"
-                secureTextEntry={!showPassword}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                editable={!loading}
-              />
+              <View style={styles.passwordRow}>
+                <TextInput
+                  style={[styles.input, styles.passwordInput]}
+                  placeholder="Confirm new password"
+                  secureTextEntry={!showPassword}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  editable={!loading}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setShowPassword((prev) => !prev)}
+                  style={styles.toggleButton}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color="#64748b"
+                  />
+                </Pressable>
+              </View>
             </View>
 
             <Pressable
@@ -203,10 +242,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 24,
-    shadowColor: "#0f172a",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
     elevation: 3,
+    ...Platform.select({
+      web: {
+        boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
+      },
+      default: {
+        shadowColor: "#0f172a",
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+    }),
+  },
+  logo: {
+    width: 90,
+    height: 90,
+    alignSelf: "center",
+    marginBottom: 16,
   },
   title: {
     fontSize: 24,
@@ -220,22 +272,6 @@ const styles = StyleSheet.create({
     color: "#64748b",
     marginBottom: 20,
     textAlign: "center",
-  },
-  error: {
-    backgroundColor: "#fee2e2",
-    color: "#b91c1c",
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 10,
-    fontSize: 12,
-  },
-  success: {
-    backgroundColor: "#dcfce7",
-    color: "#166534",
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 10,
-    fontSize: 12,
   },
   field: {
     marginBottom: 14,
@@ -266,12 +302,9 @@ const styles = StyleSheet.create({
   toggleButton: {
     position: "absolute",
     right: 12,
-    padding: 4,
-  },
-  toggleText: {
-    color: "#1976d2",
-    fontSize: 13,
-    fontWeight: "500",
+    height: "100%",
+    justifyContent: "center",
+    paddingHorizontal: 4,
   },
   button: {
     backgroundColor: "#1976d2",

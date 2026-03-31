@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -13,6 +15,7 @@ import {
 import { router } from "expo-router";
 import { createApiClient } from "@shared/api/client";
 import { getApiBaseUrl } from "@shared/config/api";
+import FormToast from "../components/FormToast";
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState("");
@@ -21,6 +24,19 @@ export default function ForgotPasswordScreen() {
   const [loading, setLoading] = useState(false);
 
   const api = createApiClient(getApiBaseUrl());
+
+  useEffect(() => {
+    if (!error && !success) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setError("");
+      setSuccess("");
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [error, success]);
 
   const handleSubmit = async () => {
     if (loading) return;
@@ -36,7 +52,7 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
 
     try {
-      const data = await api.requestJson<{ message?: string }>("/api/forgot-password", {
+      const data = await api.requestJson<{ message?: string }>("/api/auth/forgot-password", {
         method: "POST",
         body: JSON.stringify({ email: trimmedEmail }),
       });
@@ -62,49 +78,60 @@ export default function ForgotPasswordScreen() {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.card}>
-          <Text style={styles.title}>Forgot Password</Text>
-          <Text style={styles.subtitle}>
-            Enter your email and we'll send a password reset link.
-          </Text>
-
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          {success ? <Text style={styles.success}>{success}</Text> : null}
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="you@example.com"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
-              editable={!loading}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.card}>
+            <Image
+              source={require("../assets/images/logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
             />
-          </View>
+            <Text style={styles.title}>Forgot Password</Text>
+            <Text style={styles.subtitle}>
+              Enter your email and we'll send a password reset OTP.
+            </Text>
 
-          <Pressable
-            accessibilityRole="button"
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleSubmit}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Send Reset Link</Text>
-            )}
-          </Pressable>
+            {error ? <FormToast message={error} /> : null}
+            {success ? <FormToast message={success} type="success" /> : null}
 
-          <View style={styles.linksRow}>
-            <Pressable onPress={() => router.push("/login")}>
-              <Text style={styles.link}>Back to Login</Text>
+            <View style={styles.field}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="you@example.com"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+                editable={!loading}
+              />
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Send Reset Link</Text>
+              )}
             </Pressable>
+
+            <View style={styles.linksRow}>
+              <Pressable onPress={() => router.push("/login")}>
+                <Text style={styles.link}>Back to Login</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -117,6 +144,9 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: "center",
     padding: 24,
   },
@@ -124,10 +154,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 24,
-    shadowColor: "#0f172a",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
     elevation: 3,
+    ...Platform.select({
+      web: {
+        boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
+      },
+      default: {
+        shadowColor: "#0f172a",
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+    }),
+  },
+  logo: {
+    width: 90,
+    height: 90,
+    alignSelf: "center",
+    marginBottom: 16,
   },
   title: {
     fontSize: 24,
@@ -141,22 +184,6 @@ const styles = StyleSheet.create({
     color: "#64748b",
     marginBottom: 20,
     textAlign: "center",
-  },
-  error: {
-    backgroundColor: "#fee2e2",
-    color: "#b91c1c",
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 10,
-    fontSize: 12,
-  },
-  success: {
-    backgroundColor: "#dcfce7",
-    color: "#166534",
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 10,
-    fontSize: 12,
   },
   field: {
     marginBottom: 16,

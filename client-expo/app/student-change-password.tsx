@@ -1,19 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { createApiClient } from "@shared/api/client";
+import { createApiClient, extractApiErrorMessage } from "@shared/api/client";
 import { getApiBaseUrl } from "@shared/config/api";
+import FormToast from "../components/FormToast";
 
 type ChangePasswordResponse = {
   message?: string;
+};
+
+const parseJsonObject = <T,>(value: string): T => {
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return {} as T;
+  }
 };
 
 export default function StudentChangePasswordScreen() {
@@ -26,6 +40,19 @@ export default function StudentChangePasswordScreen() {
   const [showNew, setShowNew] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const api = createApiClient(getApiBaseUrl());
+
+  useEffect(() => {
+    if (!message) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setMessage("");
+      setIsSuccess(false);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [message]);
 
   const handleChangePassword = async () => {
     if (loading) return;
@@ -44,7 +71,8 @@ export default function StudentChangePasswordScreen() {
         }),
       });
 
-      const data = (await response.json()) as ChangePasswordResponse;
+      const raw = await response.text();
+      const data = raw ? parseJsonObject<ChangePasswordResponse>(raw) : {};
 
       if (response.ok) {
         setIsSuccess(true);
@@ -54,7 +82,7 @@ export default function StudentChangePasswordScreen() {
         }, 2000);
       } else {
         setIsSuccess(false);
-        setMessage(data.message ?? "Unable to update password.");
+        setMessage(extractApiErrorMessage(raw) || "Unable to update password.");
       }
     } catch (error) {
       setIsSuccess(false);
@@ -66,74 +94,94 @@ export default function StudentChangePasswordScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.card}>
-        <Text style={styles.title}>Change Password</Text>
-        <Text style={styles.subtitle}>
-          Update your password to continue to your student dashboard.
-        </Text>
-
-        {message ? (
-          <View style={[styles.messageBox, isSuccess ? styles.successBox : styles.errorBox]}>
-            <Text style={isSuccess ? styles.successText : styles.errorText}>{message}</Text>
-          </View>
-        ) : null}
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your email"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Old Password</Text>
-          <View style={styles.passwordRow}>
-            <TextInput
-              style={[styles.input, styles.passwordInput]}
-              placeholder="********"
-              secureTextEntry={!showOld}
-              value={oldPassword}
-              onChangeText={setOldPassword}
-            />
-            <Pressable onPress={() => setShowOld((prev) => !prev)} style={styles.toggleButton}>
-              <Text style={styles.toggleText}>{showOld ? "Hide" : "Show"}</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>New Password</Text>
-          <View style={styles.passwordRow}>
-            <TextInput
-              style={[styles.input, styles.passwordInput]}
-              placeholder="********"
-              secureTextEntry={!showNew}
-              value={newPassword}
-              onChangeText={setNewPassword}
-            />
-            <Pressable onPress={() => setShowNew((prev) => !prev)} style={styles.toggleButton}>
-              <Text style={styles.toggleText}>{showNew ? "Hide" : "Show"}</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        <Pressable
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleChangePassword}
-          disabled={loading}
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Update Password</Text>
-          )}
-        </Pressable>
-      </View>
+          <View style={styles.card}>
+            <Image
+              source={require("../assets/images/logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.title}>Change Password</Text>
+            <Text style={styles.subtitle}>
+              Update your password to continue to your student dashboard.
+            </Text>
+
+            {message ? <FormToast message={message} type={isSuccess ? "success" : "error"} /> : null}
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your email"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+              />
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Old Password</Text>
+              <View style={styles.passwordRow}>
+                <TextInput
+                  style={[styles.input, styles.passwordInput]}
+                  placeholder="********"
+                  secureTextEntry={!showOld}
+                  value={oldPassword}
+                  onChangeText={setOldPassword}
+                />
+                <Pressable onPress={() => setShowOld((prev) => !prev)} style={styles.toggleButton}>
+                  <Ionicons
+                    name={showOld ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color="#64748b"
+                  />
+                </Pressable>
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>New Password</Text>
+              <View style={styles.passwordRow}>
+                <TextInput
+                  style={[styles.input, styles.passwordInput]}
+                  placeholder="********"
+                  secureTextEntry={!showNew}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                />
+                <Pressable onPress={() => setShowNew((prev) => !prev)} style={styles.toggleButton}>
+                  <Ionicons
+                    name={showNew ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color="#64748b"
+                  />
+                </Pressable>
+              </View>
+            </View>
+
+            <Pressable
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleChangePassword}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Update Password</Text>
+              )}
+            </Pressable>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -142,17 +190,36 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#f8fafc",
-    justifyContent: "center",
+  },
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     padding: 24,
+    justifyContent: "center",
   },
   card: {
     backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 24,
-    shadowColor: "#0f172a",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
     elevation: 3,
+    ...Platform.select({
+      web: {
+        boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
+      },
+      default: {
+        shadowColor: "#0f172a",
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+    }),
+  },
+  logo: {
+    width: 90,
+    height: 90,
+    alignSelf: "center",
+    marginBottom: 16,
   },
   title: {
     fontSize: 22,
@@ -166,25 +233,6 @@ const styles = StyleSheet.create({
     color: "#64748b",
     textAlign: "center",
     marginBottom: 16,
-  },
-  messageBox: {
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 12,
-  },
-  successBox: {
-    backgroundColor: "#dcfce7",
-  },
-  errorBox: {
-    backgroundColor: "#fee2e2",
-  },
-  successText: {
-    fontSize: 12,
-    color: "#166534",
-  },
-  errorText: {
-    fontSize: 12,
-    color: "#b91c1c",
   },
   field: {
     marginBottom: 12,
@@ -212,16 +260,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   toggleButton: {
-    marginLeft: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: "#e2e8f0",
-  },
-  toggleText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#0f172a",
+    position: "absolute",
+    right: 12,
+    height: "100%",
+    justifyContent: "center",
+    paddingHorizontal: 4,
   },
   button: {
     backgroundColor: "#2563eb",

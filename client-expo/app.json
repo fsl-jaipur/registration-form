@@ -36,6 +36,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "EXPO_PUBLIC_API_URL": "https://registration-form-17dw.onrender.com",
+      "EXPO_PUBLIC_API_BASE_URL": "https://registration-form-17dw.onrender.com",
+      "router": {},
+      "eas": {
+        "projectId": "8267240e-0e89-41f7-95d7-6aa80484d086"
+      }
     }
   }
 }

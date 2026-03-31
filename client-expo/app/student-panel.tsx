@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   Pressable,
   SafeAreaView,
   StyleSheet,
@@ -9,9 +10,12 @@ import {
   View,
 } from "react-native";
 import { router } from "expo-router";
-import { createApiClient } from "@shared/api/client";
+import { useFocusEffect } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createApiClient, extractApiErrorMessage } from "@shared/api/client";
 import { getApiBaseUrl } from "@shared/config/api";
 import { useAuth } from "../context/auth";
+import FormToast from "../components/FormToast";
 
 type Test = {
   _id: string;
@@ -19,6 +23,59 @@ type Test = {
   numQuestions: number;
   duration: number;
   released?: boolean;
+};
+
+const parseJsonObject = <T,>(value: string): T => {
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return {} as T;
+  }
+};
+
+const ATTEMPTED_TESTS_STORAGE_KEY = "fsl_attempted_test_ids";
+
+const readStoredAttemptedTestIds = async (): Promise<string[]> => {
+  try {
+    if (Platform.OS === "web") {
+      if (typeof window === "undefined") {
+        return [];
+      }
+      const raw = window.localStorage.getItem(ATTEMPTED_TESTS_STORAGE_KEY);
+      if (!raw) {
+        return [];
+      }
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+    }
+
+    const raw = await AsyncStorage.getItem(ATTEMPTED_TESTS_STORAGE_KEY);
+    if (!raw) {
+      return [];
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+};
+
+const persistAttemptedTestIds = async (ids: Set<string>) => {
+  try {
+    const serialized = JSON.stringify(Array.from(ids));
+
+    if (Platform.OS === "web") {
+      if (typeof window === "undefined") {
+        return;
+      }
+      window.localStorage.setItem(ATTEMPTED_TESTS_STORAGE_KEY, serialized);
+      return;
+    }
+
+    await AsyncStorage.setItem(ATTEMPTED_TESTS_STORAGE_KEY, serialized);
+  } catch {
+    // Ignore storage write failures.
+  }
 };
 
 export default function StudentPanelScreen() {
@@ -30,23 +87,40 @@ export default function StudentPanelScreen() {
   const api = createApiClient(getApiBaseUrl());
   const { logout } = useAuth();
 
+  const mergeAttemptedTestIds = (ids: string[]) => {
+    setAttemptedTestIds((current) => {
+      const next = new Set([...current, ...ids]);
+      void persistAttemptedTestIds(next);
+      return next;
+    });
+  };
+
   useEffect(() => {
+    void readStoredAttemptedTestIds().then((ids) => {
+      if (ids.length > 0) {
+        setAttemptedTestIds(new Set(ids));
+      }
+    });
+
+    const loadAttemptedTestIds = async () => {
+      try {
+        const attemptedResponse = await api.requestJson<{ attemptedTestIds?: string[] }>("/api/students/attempted-test-ids");
+        mergeAttemptedTestIds(attemptedResponse.attemptedTestIds ?? []);
+      } catch (attemptError) {
+        console.error("Failed to fetch attempted test IDs", attemptError);
+      }
+    };
+
     async function fetchData() {
       try {
         setLoading(true);
         setError("");
         
-        // Fetch tests and attempted test IDs in parallel
-        const [testsResponse, attemptedResponse] = await Promise.all([
-          api.requestJson<{ tests?: Test[] }>("/api/test/allTests"),
-          api.requestJson<{ attemptedTestIds?: string[] }>("/api/students/attempted-test-ids").catch(() => ({ attemptedTestIds: [] })),
-        ]);
+        const testsResponse = await api.requestJson<{ tests?: Test[] }>("/api/test/allTests");
         
         const releasedTests = (testsResponse.tests ?? []).filter((test) => test.released);
         setTests(releasedTests);
-        
-        // Store attempted test IDs as a Set for O(1) lookups
-        setAttemptedTestIds(new Set(attemptedResponse.attemptedTestIds ?? []));
+        await loadAttemptedTestIds();
       } catch (fetchError) {
         console.error("Failed to fetch tests", fetchError);
         setError("Failed to load tests. Please try again.");
@@ -55,8 +129,23 @@ export default function StudentPanelScreen() {
       }
     }
 
-    fetchData();
+    void fetchData();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void api
+        .requestJson<{ attemptedTestIds?: string[] }>("/api/students/attempted-test-ids")
+        .then((response) => {
+          mergeAttemptedTestIds(response.attemptedTestIds ?? []);
+        })
+        .catch((attemptError) => {
+          console.error("Failed to refresh attempted test IDs", attemptError);
+        });
+
+      return undefined;
+    }, [])
+  );
 
   const handleStartTest = async (testId: string) => {
     try {
@@ -66,15 +155,19 @@ export default function StudentPanelScreen() {
         method: "POST",
       });
 
-      const data = (await response.json()) as { message?: string; quizAttemptId?: string };
+      const raw = await response.text();
+      const data = raw ? parseJsonObject<{ message?: string; quizAttemptId?: string }>(raw) : {};
 
       if (!response.ok) {
         if (response.status === 400 && data.message === "You have already attempted this quiz.") {
-          setError("You have already attempted this quiz.");
+          mergeAttemptedTestIds([testId]);
+          setError("");
           return;
         }
-        throw new Error(data.message || "Failed to start quiz");
+        throw new Error(extractApiErrorMessage(raw) || "Failed to start quiz");
       }
+
+      mergeAttemptedTestIds([testId]);
 
       router.push({
         pathname: "/student-quiz/[testId]",
@@ -133,7 +226,7 @@ export default function StudentPanelScreen() {
           </Pressable>
         </View>
 
-        {error && !loading ? <Text style={styles.error}>{error}</Text> : null}
+        {error && !loading ? <FormToast message={error} /> : null}
       </View>
     ),
     [error, loading]
@@ -191,7 +284,7 @@ export default function StudentPanelScreen() {
                   styles.startButtonText,
                   isAttempted && styles.startButtonTextAttempted,
                 ]}>
-                  {isStarting ? "Starting..." : isAttempted ? "Completed" : "Start"}
+                  {isStarting ? "Starting..." : isAttempted ? "Attempted" : "Start"}
                 </Text>
               </Pressable>
             </View>
@@ -297,14 +390,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#0f172a",
   },
-  error: {
-    backgroundColor: "#fee2e2",
-    color: "#b91c1c",
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 10,
-    fontSize: 12,
-  },
   card: {
     backgroundColor: "#ffffff",
     borderRadius: 14,
@@ -312,10 +397,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    shadowColor: "#0f172a",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
     elevation: 2,
+    ...Platform.select({
+      web: {
+        boxShadow: "0 6px 18px rgba(15, 23, 42, 0.06)",
+      },
+      default: {
+        shadowColor: "#0f172a",
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+    }),
   },
   cardInfo: {
     flex: 1,
