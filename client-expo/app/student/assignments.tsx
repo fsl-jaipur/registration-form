@@ -36,28 +36,31 @@ const getYouTubeEmbedUrl = (videoLink: string) => {
     const url = new URL(videoLink);
     const host = url.hostname.replace(/^www\./, "");
     const playlistId = url.searchParams.get("list");
+    
+    // Additional params for mobile playback
+    const mobileParams = "rel=0&playsinline=1&enablejsapi=1&modestbranding=1";
 
     if (host === "youtu.be") {
       const videoId = url.pathname.slice(1);
-      return videoId ? `https://www.youtube.com/embed/${videoId}?rel=0` : null;
+      return videoId ? `https://www.youtube.com/embed/${videoId}?${mobileParams}` : null;
     }
 
     if (host === "youtube.com" || host === "m.youtube.com") {
       if (url.pathname === "/watch") {
         const videoId = url.searchParams.get("v");
         if (videoId) {
-          return `https://www.youtube.com/embed/${videoId}?rel=0`;
+          return `https://www.youtube.com/embed/${videoId}?${mobileParams}`;
         }
         if (playlistId) {
-          return `https://www.youtube.com/embed/videoseries?list=${playlistId}`;
+          return `https://www.youtube.com/embed/videoseries?list=${playlistId}&${mobileParams}`;
         }
       }
       if (url.pathname.startsWith("/embed/")) {
         const videoId = url.pathname.split("/embed/")[1];
-        return videoId ? `https://www.youtube.com/embed/${videoId}?rel=0` : null;
+        return videoId ? `https://www.youtube.com/embed/${videoId}?${mobileParams}` : null;
       }
       if (url.pathname === "/playlist" && playlistId) {
-        return `https://www.youtube.com/embed/videoseries?list=${playlistId}`;
+        return `https://www.youtube.com/embed/videoseries?list=${playlistId}&${mobileParams}`;
       }
     }
   } catch {
@@ -195,8 +198,19 @@ export default function StudentAssignmentsScreen() {
                     <WebView
                       source={{ uri: embedUrl }}
                       style={styles.webview}
+                      javaScriptEnabled={true}
+                      domStorageEnabled={true}
+                      allowsInlineMediaPlayback={true}
+                      mediaPlaybackRequiresUserAction={false}
+                      allowsFullscreenVideo={true}
+                      mixedContentMode="compatibility"
+                      originWhitelist={["*"]}
                       showsVerticalScrollIndicator={false}
                       showsHorizontalScrollIndicator={false}
+                      onError={(syntheticEvent: any) => {
+                        const { nativeEvent } = syntheticEvent;
+                        console.warn("WebView error:", nativeEvent);
+                      }}
                     />
                   ) : (
                     <View style={styles.fallback}>

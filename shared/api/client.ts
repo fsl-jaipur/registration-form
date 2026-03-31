@@ -8,6 +8,9 @@ export type ApiClient = {
 export function createApiClient(baseUrl: string): ApiClient {
   const normalizedBase = baseUrl?.replace(/\/$/, "") ?? "";
 
+  // Log the API client initialization for debugging
+  console.log("[ApiClient] Initialized with base URL:", normalizedBase || "(empty)");
+
   const buildUrl = (path: string) => {
     const cleanPath = path.startsWith("/") ? path : `/${path}`;
     return `${normalizedBase}${cleanPath}`;
@@ -15,7 +18,12 @@ export function createApiClient(baseUrl: string): ApiClient {
 
   const ensureBase = () => {
     if (!normalizedBase) {
-      throw new Error("API base URL is not configured");
+      console.error("[ApiClient] ERROR: API base URL is not configured!");
+      console.error("[ApiClient] Please check:");
+      console.error("  1. EXPO_PUBLIC_API_URL in your .env file");
+      console.error("  2. extra.EXPO_PUBLIC_API_URL in app.config.js");
+      console.error("  3. For production builds, ensure the URL is set in app.config.js");
+      throw new Error("API base URL is not configured. Check console for details.");
     }
   };
 

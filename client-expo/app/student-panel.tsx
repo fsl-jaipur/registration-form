@@ -23,6 +23,7 @@ type Test = {
 
 export default function StudentPanelScreen() {
   const [tests, setTests] = useState<Test[]>([]);
+  const [attemptedTestIds, setAttemptedTestIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [startingTestId, setStartingTestId] = useState<string | null>(null);
@@ -30,13 +31,22 @@ export default function StudentPanelScreen() {
   const { logout } = useAuth();
 
   useEffect(() => {
-    async function fetchTests() {
+    async function fetchData() {
       try {
         setLoading(true);
         setError("");
-        const data = await api.requestJson<{ tests?: Test[] }>("/api/test/allTests");
-        const releasedTests = (data.tests ?? []).filter((test) => test.released);
+        
+        // Fetch tests and attempted test IDs in parallel
+        const [testsResponse, attemptedResponse] = await Promise.all([
+          api.requestJson<{ tests?: Test[] }>("/api/test/allTests"),
+          api.requestJson<{ attemptedTestIds?: string[] }>("/api/students/attempted-test-ids").catch(() => ({ attemptedTestIds: [] })),
+        ]);
+        
+        const releasedTests = (testsResponse.tests ?? []).filter((test) => test.released);
         setTests(releasedTests);
+        
+        // Store attempted test IDs as a Set for O(1) lookups
+        setAttemptedTestIds(new Set(attemptedResponse.attemptedTestIds ?? []));
       } catch (fetchError) {
         console.error("Failed to fetch tests", fetchError);
         setError("Failed to load tests. Please try again.");
@@ -45,7 +55,7 @@ export default function StudentPanelScreen() {
       }
     }
 
-    fetchTests();
+    fetchData();
   }, []);
 
   const handleStartTest = async (testId: string) => {
@@ -152,25 +162,41 @@ export default function StudentPanelScreen() {
             <Text style={styles.emptyText}>No tests available.</Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.cardInfo}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardMeta}>
-                {item.numQuestions} questions • {item.duration} mins
-              </Text>
+        renderItem={({ item }) => {
+          const isAttempted = attemptedTestIds.has(item._id);
+          const isStarting = startingTestId === item._id;
+          const isDisabled = isAttempted || isStarting;
+
+          return (
+            <View style={styles.card}>
+              <View style={styles.cardInfo}>
+                <Text style={styles.cardTitle}>{item.title}</Text>
+                <Text style={styles.cardMeta}>
+                  {item.numQuestions} questions • {item.duration} mins
+                </Text>
+                {isAttempted && (
+                  <Text style={styles.attemptedBadge}>Already Attempted</Text>
+                )}
+              </View>
+              <Pressable
+                style={[
+                  styles.startButton,
+                  isDisabled && styles.startButtonDisabled,
+                  isAttempted && styles.startButtonAttempted,
+                ]}
+                onPress={() => void handleStartTest(item._id)}
+                disabled={isDisabled}
+              >
+                <Text style={[
+                  styles.startButtonText,
+                  isAttempted && styles.startButtonTextAttempted,
+                ]}>
+                  {isStarting ? "Starting..." : isAttempted ? "Completed" : "Start"}
+                </Text>
+              </Pressable>
             </View>
-            <Pressable
-              style={[styles.startButton, startingTestId === item._id && styles.startButtonDisabled]}
-              onPress={() => void handleStartTest(item._id)}
-              disabled={startingTestId === item._id}
-            >
-              <Text style={styles.startButtonText}>
-                {startingTestId === item._id ? "Starting..." : "Start"}
-              </Text>
-            </Pressable>
-          </View>
-        )}
+          );
+        }}
       />
     </SafeAreaView>
   );
@@ -305,6 +331,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#64748b",
   },
+  attemptedBadge: {
+    fontSize: 11,
+    color: "#059669",
+    fontWeight: "600",
+    marginTop: 4,
+  },
   startButton: {
     backgroundColor: "#f59e0b",
     paddingVertical: 8,
@@ -314,10 +346,16 @@ const styles = StyleSheet.create({
   startButtonDisabled: {
     opacity: 0.7,
   },
+  startButtonAttempted: {
+    backgroundColor: "#d1d5db",
+  },
   startButtonText: {
     fontSize: 12,
     fontWeight: "700",
     color: "#1f2937",
+  },
+  startButtonTextAttempted: {
+    color: "#6b7280",
   },
   emptyState: {
     padding: 20,

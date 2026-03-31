@@ -1,26 +1,21 @@
 {
   "expo": {
-    "name": "client-expo",
+    "name": "FSL",
     "slug": "client-expo",
     "version": "1.0.1",
-
     "runtimeVersion": "1.0.1",
-
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
     "scheme": "clientexpo",
     "userInterfaceStyle": "automatic",
-
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-
     "ios": {
       "supportsTablet": true
     },
-
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
@@ -29,33 +24,18 @@
       "useCleartextTraffic": true,
       "predictiveBackGestureEnabled": false
     },
-
     "web": {
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
-
     "plugins": [
       "expo-router",
       "expo-font",
       "expo-web-browser"
     ],
-
     "experiments": {
       "typedRoutes": true
-    },
-
-    "extra": {
-      "EXPO_PUBLIC_API_URL": "https://registration-form-17dw.onrender.com",
-      "router": {},
-      "eas": {
-        "projectId": "004e494c-41af-40e1-9cd5-8fe1ffdc712e"
-      }
-    },
-
-    "updates": {
-      "url": "https://u.expo.dev/004e494c-41af-40e1-9cd5-8fe1ffdc712e"
     }
   }
 }
