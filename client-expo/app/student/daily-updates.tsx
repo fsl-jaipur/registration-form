@@ -191,6 +191,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 20,
     paddingVertical: 16,
+    paddingBottom: 96,
     gap: 12,
   },
   formCard: {

@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -16,6 +16,7 @@ import {
 import * as DocumentPicker from "expo-document-picker";
 import { router } from "expo-router";
 import { getApiBaseUrl } from "@shared/config/api";
+import FormToast from "../components/FormToast";
 
 type RegisterResponse = {
   message?: string;
@@ -98,6 +99,19 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    if (!error && !success) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setError("");
+      setSuccess("");
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [error, success]);
 
   const updateField = (key: keyof FormState, value: string) => {
     setForm((prev) => {
@@ -271,7 +285,7 @@ export default function RegisterScreen() {
         throw new Error(data.message || "Registration failed. Please try again.");
       }
 
-      setSuccess(data.message || "Registration successful. Please check your email for login details.");
+      setSuccess(data.message || "Registration successful. Your login password has been sent to your email.");
       resetForm();
       setTimeout(() => router.replace("/login"), 1200);
     } catch (err) {
@@ -290,8 +304,8 @@ export default function RegisterScreen() {
             <Text style={styles.subtitle}>Fill in your details to register</Text>
           </View>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          {success ? <Text style={styles.success}>{success}</Text> : null}
+          {error ? <FormToast message={error} /> : null}
+          {success ? <FormToast message={success} type="success" /> : null}
 
           <SectionCard title="Personal Details">
             <Field label="Name *" placeholder="Full Name" value={form.name} onChangeText={(v) => updateField("name", v)} />

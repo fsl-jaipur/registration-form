@@ -57,7 +57,7 @@ export default function ForgotPasswordScreen() {
         body: JSON.stringify({ email: trimmedEmail }),
       });
 
-      setSuccess(data?.message ?? "Password reset OTP sent to your email.");
+      setSuccess(data?.message ?? "OTP sent to your email. Use it to reset your password.");
       
       // Navigate to reset password page after a short delay
       setTimeout(() => {
@@ -121,7 +121,7 @@ export default function ForgotPasswordScreen() {
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.buttonText}>Send Reset Link</Text>
+                <Text style={styles.buttonText}>Send OTP</Text>
               )}
             </Pressable>
 

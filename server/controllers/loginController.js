@@ -254,7 +254,7 @@ export const forgotPassword = async (req, res) => {
     // send OTP email using service (it will use dynamic template if configured)
     await sendForgotPasswordEmail({ to: email, name: user.name, otp, expiryMinutes: 60 });
 
-    return res.status(200).json({ message: "Password reset OTP sent" });
+    return res.status(200).json({ message: "Password reset OTP sent on email" });
   } catch (error) {
     console.error("Forgot password error:", error);
     return res.status(500).json({ message: "Error processing forgot password", error: error.message });

@@ -28,7 +28,8 @@ export default function ResetPasswordScreen() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const api = createApiClient(getApiBaseUrl());
 
@@ -87,7 +88,7 @@ export default function ResetPasswordScreen() {
         }),
       });
 
-      setSuccess(data?.message ?? "Password has been reset successfully!");
+      setSuccess(data?.message ?? "Password reset successful. You can now log in with your new password.");
 
       // Redirect to login after success
       setTimeout(() => {
@@ -156,18 +157,18 @@ export default function ResetPasswordScreen() {
                 <TextInput
                   style={[styles.input, styles.passwordInput]}
                   placeholder="Enter new password"
-                  secureTextEntry={!showPassword}
+                  secureTextEntry={!showNewPassword}
                   value={newPassword}
                   onChangeText={setNewPassword}
                   editable={!loading}
                 />
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => setShowPassword((prev) => !prev)}
+                  onPress={() => setShowNewPassword((prev) => !prev)}
                   style={styles.toggleButton}
                 >
                   <Ionicons
-                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    name={showNewPassword ? "eye-off-outline" : "eye-outline"}
                     size={20}
                     color="#64748b"
                   />
@@ -181,18 +182,18 @@ export default function ResetPasswordScreen() {
                 <TextInput
                   style={[styles.input, styles.passwordInput]}
                   placeholder="Confirm new password"
-                  secureTextEntry={!showPassword}
+                  secureTextEntry={!showConfirmPassword}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   editable={!loading}
                 />
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => setShowPassword((prev) => !prev)}
+                  onPress={() => setShowConfirmPassword((prev) => !prev)}
                   style={styles.toggleButton}
                 >
                   <Ionicons
-                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
                     size={20}
                     color="#64748b"
                   />

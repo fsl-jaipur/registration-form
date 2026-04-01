@@ -188,6 +188,12 @@ export default function StudentPanelScreen() {
           <Pressable style={styles.topLink} onPress={() => router.replace("/student-panel")}>
             <Text style={styles.topLinkText}>Home</Text>
           </Pressable>
+          <Pressable style={styles.quickLinkButton} onPress={() => router.push("/student/assignments")}>
+            <Text style={styles.quickLinkText}>Assignments</Text>
+          </Pressable>
+          <Pressable style={styles.quickLinkButton} onPress={() => router.push("/student/daily-updates")}>
+            <Text style={styles.quickLinkText}>Daily Updates</Text>
+          </Pressable>
           <Pressable
             style={styles.logoutButton}
             onPress={async () => {
@@ -205,18 +211,6 @@ export default function StudentPanelScreen() {
             Important: This quiz is monitored for integrity. Switching apps, opening new windows, or
             attempting to copy content may automatically submit your quiz with the current score.
           </Text>
-        </View>
-
-        <View style={styles.quickLinks}>
-          <Pressable style={styles.quickLinkButton} onPress={() => router.push("/student/assignments")}>
-            <Text style={styles.quickLinkText}>Assignments</Text>
-          </Pressable>
-          <Pressable style={styles.quickLinkButton} onPress={() => router.push("/student/daily-updates")}>
-            <Text style={styles.quickLinkText}>Daily Updates</Text>
-          </Pressable>
-          <Pressable style={styles.quickLinkButton} onPress={() => router.push("/student/result")}>
-            <Text style={styles.quickLinkText}>Result</Text>
-          </Pressable>
         </View>
 
         <View style={styles.headerRow}>
@@ -314,29 +308,31 @@ const styles = StyleSheet.create({
   },
   topActions: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 10,
+    justifyContent: "flex-start",
+    alignItems: "center",
+    flexWrap: "nowrap",
+    gap: 6,
     marginBottom: 10,
   },
   topLink: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 6,
     borderRadius: 10,
     backgroundColor: "#e2e8f0",
   },
   topLinkText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     color: "#0f172a",
   },
   logoutButton: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 10,
     backgroundColor: "#0f172a",
   },
   logoutText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
     color: "#ffffff",
   },
@@ -373,20 +369,14 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 12,
   },
-  quickLinks: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
-  },
   quickLinkButton: {
     backgroundColor: "#e2e8f0",
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     borderRadius: 10,
   },
   quickLinkText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     color: "#0f172a",
   },

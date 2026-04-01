@@ -64,7 +64,7 @@ export default function LoginScreen() {
 
       if (data) {
         const { message, loginStatus, firstTimeSignin } = data;
-        setSuccess(message ?? "Login successful");
+        setSuccess(message ?? "Logged in successfully. Opening your student panel.");
         setAuthenticated(true, "student");
 
         const needsPasswordChange = firstTimeSignin ?? loginStatus ?? false;
