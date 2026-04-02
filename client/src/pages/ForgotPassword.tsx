@@ -34,7 +34,7 @@ export default function ForgotPassword(): JSX.Element {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="h-[70vh] bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-lg">
         <h1 className="text-2xl font-bold mb-2 text-foreground text-center">Forgot Password</h1>
         <p className="text-sm text-muted-foreground mb-6 text-center">Enter your email and we'll send a password reset link.</p>

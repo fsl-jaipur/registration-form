@@ -52,7 +52,6 @@ type StudentDetailPanelProps = {
 export const StudentDetailPanel = ({
   studentId,
   embedded = false,
-  onClose,
 }: StudentDetailPanelProps): JSX.Element => {
   const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
@@ -198,17 +197,7 @@ export const StudentDetailPanel = ({
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          {embedded ? (
-            onClose ? (
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold hover:border-brand-blue hover:text-brand-blue transition"
-              >
-                Close
-              </button>
-            ) : null
-          ) : (
+          {embedded ? null : (
             <Link
               to="/admin/students"
               className="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold hover:border-brand-blue hover:text-brand-blue transition"

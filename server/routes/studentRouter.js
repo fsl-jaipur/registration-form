@@ -15,7 +15,8 @@ import {
   getAllScore,
   StudenAnswer,
   getStudentQuizAttempts,
-  getStudentQuizAttemptDetail
+  getStudentQuizAttemptDetail,
+  getAttemptedTestIds
 
 } from "../controllers/studentController.js";
 import { careerResumeUpload, fileArr } from "../middlewares/multer.js";
@@ -39,6 +40,7 @@ studentRouter.get("/score",getAllScore)
 studentRouter.get("/admin/test/:testId/student/:studentId/answers",authMiddleware("adminToken", "studentToken"),StudenAnswer)
 studentRouter.get('/quiz-attempts', authMiddleware("adminToken", "studentToken"), getStudentQuizAttempts);
 studentRouter.get('/quiz-attempt-detail/:quizAttemptId', authMiddleware("adminToken", "studentToken"), getStudentQuizAttemptDetail);
+studentRouter.get('/attempted-test-ids', authMiddleware("studentToken"), getAttemptedTestIds);
 
 
 export default studentRouter;

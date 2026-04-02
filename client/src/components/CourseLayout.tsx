@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Course } from "@/lib/courses";
 
@@ -9,6 +9,9 @@ type CourseLayoutProps = {
 
 export default function CourseLayout({ course }: CourseLayoutProps) {
   const [mounted, setMounted] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
   useEffect(() => setMounted(true), []);
 
   if (!course) return null;
@@ -16,6 +19,18 @@ export default function CourseLayout({ course }: CourseLayoutProps) {
   const title = course.title ?? "Course";
   const syllabus = course.syllabus ?? [];
   const description = course.description || course.overview || "Course details will be updated soon.";
+
+  const handleContactNavigation = () => {
+    if (location.pathname !== "/") {
+      navigate({ pathname: "/", hash: "#enquiry" });
+      return;
+    }
+
+    const enquirySection = document.querySelector("#enquiry");
+    if (enquirySection) {
+      enquirySection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   return (
     <main
@@ -141,9 +156,13 @@ export default function CourseLayout({ course }: CourseLayoutProps) {
               <h4 className="font-semibold">Support</h4>
               <p className="mt-2">
                 Have questions?{" "}
-                <Link to="/contact" className="text-brand-blue hover:underline">
+                <button
+                  type="button"
+                  onClick={handleContactNavigation}
+                  className="text-brand-blue hover:underline"
+                >
                   Contact us
-                </Link>{" "}
+                </button>{" "}
                 for guidance and batch timings.
               </p>
             </div>
