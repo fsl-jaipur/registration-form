@@ -44,7 +44,12 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use("/static", express.static(join(__dirname, "uploads")));
 
-await connectToDB();
+try {
+  await connectToDB();
+} catch (error) {
+  console.error("Unable to start server because MongoDB connection failed.");
+  process.exit(1);
+}
 
 app.listen(PORT, () => {
   console.log(`Server started at port ${PORT}`);

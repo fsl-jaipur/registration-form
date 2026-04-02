@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { createApiClient } from "@shared/api/client";
 
 
 type ChangePasswordResponse = {
@@ -19,6 +20,7 @@ const ChangePassword = (): JSX.Element => {
 
   const navigate = useNavigate();
   const { toast } = useToast();
+  const api = createApiClient(import.meta.env.VITE_API_URL || "");
 
   const handleChangePassword = async (
     e: FormEvent<HTMLFormElement>
@@ -31,13 +33,8 @@ const ChangePassword = (): JSX.Element => {
     setMessage(""); // Clear previous messages
 
     try {
-      const apiBase = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${apiBase}/auth/changePassword`, {
+      const response = await api.request("/auth/changePassword", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
         body: JSON.stringify({
           email,
           password: oldPassword,

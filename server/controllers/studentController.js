@@ -687,3 +687,28 @@ export async function getStudentQuizAttemptDetail(req, res) {
     });
   }
 }
+
+// Get all test IDs that the student has attempted (regardless of result release status)
+export async function getAttemptedTestIds(req, res) {
+  try {
+    const token = req.firstTimeSignin;
+    const studentId = token.id;
+
+    const studentAttempts = await attemptQuiz.findOne({ studentId });
+
+    if (!studentAttempts || !studentAttempts.attempts.length) {
+      return res.status(200).json({ attemptedTestIds: [] });
+    }
+
+    // Return all attempted test IDs
+    const attemptedTestIds = studentAttempts.attempts.map(attempt => attempt.testId.toString());
+
+    return res.status(200).json({ attemptedTestIds });
+  } catch (error) {
+    console.error("Error fetching attempted test IDs:", error);
+    return res.status(500).json({
+      message: "Failed to fetch attempted test IDs",
+      error: error.message,
+    });
+  }
+}
