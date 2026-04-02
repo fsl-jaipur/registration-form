@@ -32,7 +32,7 @@ const app = express();
 app.use(cookieParser());
 app.use(
   cors({
-    origin: [process.env.FRONTEND_PATH, "http://localhost:8081","https://registration-form-dev.onrender.com","https://web.fullstacklearning.in"],
+    origin: [process.env.FRONTEND_PATH, "http://localhost:8081","https://registration-form-dev.onrender.com","https://web.fullstacklearning.in","https://www.fullstacklearning.com"],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
   })
@@ -51,6 +51,9 @@ try {
 
 app.listen(PORT, () => console.log("Server started at port " + PORT));
 
+app.get("/", (req, res) => {
+  res.send("Welcome to the Full Stack Learning API");
+});
 app.use("/api/students", studentRouter);
 app.use("/api/auth", loginRouter);
 app.use("/api/test", adminRoutes);
