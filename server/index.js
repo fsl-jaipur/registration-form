@@ -26,7 +26,9 @@ import jobApplicationRoutes from "./routes/jobApplicationRoutes.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const PORT = Number(process.env.PORT) || 8085;
+const PORT = process.env.PORT || 3000;
+
+
 const app = express();
 
 app.use(cookieParser());
@@ -49,10 +51,12 @@ try {
   process.exit(1);
 }
 
-app.listen(PORT, () => console.log("Server started at port " + PORT));
+app.listen(PORT, () => {
+  console.log(`Server started at port ${PORT}`);
+});
 
-app.get("/", (req, res) => {
-  res.send("Welcome to the Full Stack Learning API");
+app.get("/healthCheck", (req, res) => {
+  res.send("Backend is working 🚀");
 });
 app.use("/api/students", studentRouter);
 app.use("/api/auth", loginRouter);
