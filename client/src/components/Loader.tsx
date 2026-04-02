@@ -42,7 +42,7 @@ export default function Loader({ message = "Loading..." }: Props) {
             height={82}
             loading="eager"
             decoding="sync"
-            fetchPriority="high"
+            fetchpriority="high"
             draggable={false}
             className="size-[6.125rem] object-contain motion-safe:animate-[spin_1.8s_linear_infinite]"
           />

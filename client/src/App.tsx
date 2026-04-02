@@ -32,7 +32,7 @@ import AppLayout from "@/components/AppLayout/index";
 import StudentResult from "@/pages/StudentPages/StudentResult";
 import ResultDetailPage from "@/pages/StudentPages/ResultDetailPage";
 import StudentQuiz from "@/pages/StudentPages/StudentQuiz";
-import StudentAssignments from "@/pages/StudentPages/StudentAssignments";
+import { StudentAssignments } from "@/pages/StudentPages/StudentAssignments";
 import StudentDailyUpdates from "@/pages/StudentPages/StudentDailyUpdates";
 import Login from "@/pages/Login";
 import AdminLayout from "@/components/AdminLayout";
