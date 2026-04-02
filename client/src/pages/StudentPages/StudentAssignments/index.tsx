@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
-import { Play } from "lucide-react";
+import { ExternalLink, Play } from "lucide-react";
+
+type AssignmentType = "video" | "image_text";
 
 type Assignment = {
   _id: string;
   title: string;
+  assignmentType?: AssignmentType;
   videoLink: string;
+  imageUrl?: string | null;
+  contentText?: string;
   thumbnail?: string | null;
   category?: string;
   createdAt?: string;
@@ -67,7 +72,19 @@ const getYouTubeEmbedUrl = (videoLink: string, autoplay = false) => {
   return null;
 };
 
-function StudentAssignments() {
+const normalizeAssignmentType = (assignment: Partial<Assignment>): AssignmentType => {
+  if (assignment.assignmentType === "image_text") return "image_text";
+  if (assignment.assignmentType === "video") return "video";
+
+  const hasVideo = Boolean(assignment.videoLink?.trim());
+  const hasImage = Boolean(assignment.imageUrl?.trim());
+  const hasText = Boolean(assignment.contentText?.trim());
+
+  if (hasImage && (hasText || !hasVideo)) return "image_text";
+  return "video";
+};
+
+export function StudentAssignments() {
   const apiBase = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -93,7 +110,14 @@ function StudentAssignments() {
           throw new Error(data?.message ?? "Failed to fetch assignments.");
         }
 
-        setAssignments(Array.isArray(data?.assignments) ? data.assignments : []);
+        setAssignments(
+          Array.isArray(data?.assignments)
+            ? data.assignments.map((item: any) => ({
+                ...item,
+                assignmentType: normalizeAssignmentType(item),
+              }))
+            : [],
+        );
       } catch (fetchError) {
         console.error("Failed to fetch assignments", fetchError);
         setError(
@@ -154,7 +178,6 @@ function StudentAssignments() {
       return;
     }
 
-    // Replacing the active player URL automatically stops the previous iframe playback.
     setActivePlayer({
       containerId,
       embedUrl,
@@ -174,9 +197,9 @@ function StudentAssignments() {
           Student Assignments
         </p>
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Assignments & Videos</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Assignments</h1>
           <p className="mt-2 text-sm text-slate-600">
-            Watch the assignment videos and complete your work using the latest instructions shared by your mentor.
+            Watch video assignments or review image + text instructions shared by your mentor.
           </p>
         </div>
       </div>
@@ -220,7 +243,7 @@ function StudentAssignments() {
         <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">No assignments yet</h2>
           <p className="mt-2 text-sm text-slate-600">
-            Assignment videos will appear here once they are added from the admin side.
+            Assignment content will appear here once it is added from the admin side.
           </p>
         </div>
       )}
@@ -233,6 +256,70 @@ function StudentAssignments() {
             </div>
           )}
           {visibleAssignments.map((assignment) => {
+            const assignmentType = normalizeAssignmentType(assignment);
+
+            if (assignmentType === "image_text") {
+              const imageSource = assignment.imageUrl || assignment.thumbnail || "";
+              return (
+                <article
+                  key={assignment._id}
+                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                >
+                  <div className="aspect-video bg-slate-100 relative overflow-hidden">
+                    {imageSource ? (
+                      <img
+                        src={imageSource}
+                        alt={assignment.title}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-600">
+                        Image is not available.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-5">
+                    <h2 className="text-xl font-semibold text-slate-900">{assignment.title}</h2>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {assignment.category && (
+                        <p className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-blue">
+                          {assignment.category}
+                        </p>
+                      )}
+                      <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200">
+                        Image + Text
+                      </span>
+                    </div>
+
+                    {assignment.contentText && (
+                      <p className="mt-3 whitespace-pre-line text-sm text-slate-700">
+                        {assignment.contentText}
+                      </p>
+                    )}
+
+                    {assignment.imageUrl && (
+                      <a
+                        href={assignment.imageUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand-blue hover:underline"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Open image
+                      </a>
+                    )}
+
+                    {assignment.createdAt && (
+                      <p className="mt-2 text-xs uppercase tracking-[0.15em] text-slate-500">
+                        Added on {new Date(assignment.createdAt).toLocaleDateString("en-GB")}
+                      </p>
+                    )}
+                  </div>
+                </article>
+              );
+            }
+
             const containerId = `assignment-video-${assignment._id}`;
             const previewEmbedUrl =
               activePlayer?.containerId === containerId ? activePlayer.embedUrl : null;
@@ -286,11 +373,23 @@ function StudentAssignments() {
 
                 <div className="p-5">
                   <h2 className="text-xl font-semibold text-slate-900">{assignment.title}</h2>
-                  {assignment.category && (
-                    <p className="mt-2 inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-blue">
-                      {assignment.category}
-                    </p>
-                  )}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {assignment.category && (
+                      <p className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-blue">
+                        {assignment.category}
+                      </p>
+                    )}
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                        assignmentType === "video"
+                          ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200"
+                          : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+                      }`}
+                    >
+                      {assignmentType === "video" ? "Video" : "Image + Text"}
+                    </span>
+                  </div>
+
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <span
                       className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
@@ -312,12 +411,24 @@ function StudentAssignments() {
                       </a>
                     )}
                   </div>
+
+                  {assignmentType === "video" && assignment.videoLink && (
+                    <a
+                      href={assignment.videoLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand-blue hover:underline"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Open video
+                    </a>
+                  )}
+
                   {assignment.createdAt && (
                     <p className="mt-2 text-xs uppercase tracking-[0.15em] text-slate-500">
                       Added on {new Date(assignment.createdAt).toLocaleDateString("en-GB")}
                     </p>
                   )}
-                  
                 </div>
               </article>
             );
@@ -329,5 +440,3 @@ function StudentAssignments() {
 }
 
 export default StudentAssignments;
-
-
