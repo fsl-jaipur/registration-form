@@ -184,6 +184,10 @@ const AppRoutes = () => {
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/sitemap" element={<SitemapPage />} />
 
+            <Route
+              path="/student"
+              element={<Navigate to="/student/studentpanel" replace />}
+            />
             <Route path="/student/changepassword" element={<ResetPassword />} />
             <Route
               path="/student/studentpanel"
