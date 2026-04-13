@@ -5,7 +5,7 @@ import bcrypt from "bcrypt";
 const studentSchema = new Schema(
   {
     name: String,
-    email: String,
+    email: { type: String, trim: true, lowercase: true },
     phone: String,
     dob: String,
     gender: String,
@@ -27,7 +27,7 @@ const studentSchema = new Schema(
     role: {
       type: String,
       default: "student",
-      enum: ["student", "admin", "professional"],
+      enum: ["student", "admin"],
     },
     password: String,
     resetPasswordToken: String,
@@ -44,26 +44,26 @@ const studentSchema = new Schema(
 );
 
 
-studentSchema.pre("save", async function (next) {
-  try {
-    // Generate password if it doesn't exist
-    if (!this.password) {
-      this.password = generatePassword();
-    }
+// studentSchema.pre("save", async function (next) {
+//   try {
+//     // Generate password if it doesn't exist
+//     if (!this.password) {
+//       this.password = generatePassword();
+//     }
     
-    // Hash password on creation or when it was modified.
-    // Skip re-hashing if the value already looks like a bcrypt hash.
-    if (this.password && (this.isNew || this.isModified("password"))) {
-      if (typeof this.password === "string" && !this.password.startsWith("$2")) {
-        this.password = await bcrypt.hash(this.password, 10);
-      }
-    }
+//     // Hash password on creation or when it was modified.
+//     // Skip re-hashing if the value already looks like a bcrypt hash.
+//     if (this.password && (this.isNew || this.isModified("password"))) {
+//       if (typeof this.password === "string" && !this.password.startsWith("$2")) {
+//         this.password = await bcrypt.hash(this.password, 10);
+//       }
+//     }
     
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
+//     next();
+//   } catch (error) {
+//     next(error);
+//   }
+// });
 
 const studentModel = model("student", studentSchema);
 export default studentModel;

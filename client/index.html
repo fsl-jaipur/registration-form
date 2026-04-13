@@ -1,14 +1,64 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" href="/fsl.png" type="image/png">
-    <title>Full Stack Learning | Become a FSD the correct way</title>
-  </head>
 
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="/fsl.png" type="image/png">
+  <title>Full Stack Learning</title>
+  <meta property="og:title" content="Full Stack Learning" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://res.cloudinary.com/ddadanczt/image/upload/v1773825983/q6yploibjpdhtvlaoxnv.png" />
+  <meta property="og:url" content="https://www.fullstacklearning.com/" />
+  <meta property="og:description" content="Master AI powered Full Stack Development & Data Science with practical, hands-on training and real-world projects." />
+
+  <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://res.cloudinary.com/ddadanczt/image/upload/v1773825983/q6yploibjpdhtvlaoxnv.png" />
+<meta name="twitter:title" content="Full Stack Learning">
+<meta name="twitter:description" content="Master AI powered Full Stack Development & Data Science with practical, hands-on training and real-world projects.">
+
+  <script>
+    (() => {
+      const pathname = window.location.pathname;
+
+      if (pathname === "/") {
+        document.title = "Full Stack Learning | Become a FSD the correct way";
+        return;
+      }
+
+      if (pathname === "/privacy-policy") {
+        document.title = "Privacy Policy | Full Stack Learning";
+        return;
+      }
+
+      if (pathname === "/terms-of-service") {
+        document.title = "Terms of Service | Full Stack Learning";
+        return;
+      }
+
+      if (pathname === "/sitemap") {
+        document.title = "Sitemap | Full Stack Learning";
+        return;
+      }
+
+      if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+        document.title = "Admin Panel";
+        return;
+      }
+
+      if (pathname === "/student" || pathname.startsWith("/student/")) {
+        document.title = "Student Panel";
+        return;
+      }
+
+      document.title = "Full Stack Learning";
+    })();
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

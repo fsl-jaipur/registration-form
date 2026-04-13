@@ -1,4 +1,6 @@
 import Assignment from "../models/assignmentModel.js";
+import { createTrelloCard } from "../services/trelloService.js";
+import { cloudinaryUpload } from "../middlewares/cloudinaryUpload.js";
 
 const youTubeThumbnail = (link) => {
   try {
@@ -22,22 +24,76 @@ const youTubeThumbnail = (link) => {
   return null;
 };
 
+const normalizeType = (type) =>
+  type === "image_text" ? "image_text" : "video";
+
 export const createAssignment = async (req, res) => {
   try {
-    const { title, videoLink, category } = req.body;
+    const {
+      title,
+      assignmentType,
+      videoLink,
+      imageUrl,
+      contentText,
+      category,
+    } = req.body;
 
-    if (!title?.trim() || !videoLink?.trim()) {
-      return res.status(400).json({ message: "Title and video link are required." });
+    const normalizedType = normalizeType(assignmentType);
+
+    if (!title?.trim()) {
+      return res.status(400).json({ message: "Title is required." });
     }
 
-    const thumb = youTubeThumbnail(videoLink);
+    if (normalizedType === "video" && !videoLink?.trim()) {
+      return res.status(400).json({ message: "Video link is required for video assignments." });
+    }
+
+    const uploadedImageUrl = req.file
+      ? (await cloudinaryUpload([req.file]))?.[0]?.secure_url || null
+      : null;
+    const bodyImageUrl = imageUrl?.trim() || "";
+    const finalImageUrl = uploadedImageUrl || bodyImageUrl || null;
+
+    if (normalizedType === "image_text" && (!finalImageUrl || !contentText?.trim())) {
+      return res.status(400).json({ message: "Image upload or image URL and text are required for image assignments." });
+    }
+
+    const thumb =
+      normalizedType === "video"
+        ? youTubeThumbnail(videoLink)
+        : finalImageUrl;
 
     const assignment = await Assignment.create({
       title: title.trim(),
-      videoLink: videoLink.trim(),
+      assignmentType: normalizedType,
+      videoLink: normalizedType === "video" ? videoLink.trim() : "",
+      imageUrl: normalizedType === "image_text" ? finalImageUrl : null,
+      contentText: normalizedType === "image_text" ? contentText.trim() : "",
       category: category?.trim() || "uncategorized",
       thumbnail: thumb,
     });
+
+    try {
+      const card = await createTrelloCard({
+        title: assignment.title,
+        assignmentType: assignment.assignmentType,
+        videoLink: assignment.videoLink,
+        imageUrl: assignment.imageUrl,
+        contentText: assignment.contentText,
+        category: assignment.category,
+        thumbnail: assignment.thumbnail,
+        assignmentId: assignment._id?.toString(),
+      });
+
+      if (card) {
+        assignment.trelloCardId = card.id || null;
+        assignment.trelloCardUrl = card.url || null;
+        assignment.trelloCardShortUrl = card.shortUrl || null;
+        await assignment.save();
+      }
+    } catch (trelloError) {
+      console.error("Trello card creation failed:", trelloError.message || trelloError);
+    }
 
     return res
       .status(201)
@@ -65,20 +121,82 @@ export const getAllAssignments = async (_req, res) => {
 export const updateAssignment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, videoLink, category } = req.body;
-    const update = {};
-    if (title) update.title = title.trim();
-    if (videoLink) {
-      update.videoLink = videoLink.trim();
-      const thumb = youTubeThumbnail(videoLink);
-      update.thumbnail = thumb;
+    const {
+      title,
+      assignmentType,
+      videoLink,
+      imageUrl,
+      contentText,
+      category,
+    } = req.body;
+
+    const existing = await Assignment.findById(id);
+    if (!existing) {
+      return res.status(404).json({ message: "Assignment not found" });
     }
-    if (category) update.category = category.trim();
 
-    const assignment = await Assignment.findByIdAndUpdate(id, update, { new: true });
-    if (!assignment) return res.status(404).json({ message: "Assignment not found" });
+    const nextType = assignmentType
+      ? normalizeType(assignmentType)
+      : existing.assignmentType || "video";
 
-    return res.status(200).json({ message: "Assignment updated", assignment });
+    const nextTitle = typeof title === "string" ? title.trim() : existing.title;
+    const nextCategory =
+      typeof category === "string"
+        ? category.trim() || "uncategorized"
+        : existing.category;
+
+    const nextVideoLink =
+      nextType === "video"
+        ? typeof videoLink === "string"
+          ? videoLink.trim()
+          : existing.videoLink
+        : "";
+
+    const uploadedImageUrl = req.file
+      ? (await cloudinaryUpload([req.file]))?.[0]?.secure_url || null
+      : null;
+
+    const nextImageUrl =
+      nextType === "image_text"
+        ? uploadedImageUrl ||
+          (typeof imageUrl === "string" ? imageUrl.trim() : existing.imageUrl || "")
+        : null;
+
+    const nextContentText =
+      nextType === "image_text"
+        ? typeof contentText === "string"
+          ? contentText.trim()
+          : existing.contentText || ""
+        : "";
+
+    if (!nextTitle) {
+      return res.status(400).json({ message: "Title is required." });
+    }
+
+    if (nextType === "video" && !nextVideoLink) {
+      return res.status(400).json({ message: "Video link is required for video assignments." });
+    }
+
+    if (nextType === "image_text" && (!nextImageUrl || !nextContentText)) {
+      return res.status(400).json({ message: "Image upload or image URL and text are required for image assignments." });
+    }
+
+    const nextThumbnail =
+      nextType === "video"
+        ? youTubeThumbnail(nextVideoLink)
+        : nextImageUrl;
+
+    existing.title = nextTitle;
+    existing.assignmentType = nextType;
+    existing.videoLink = nextVideoLink;
+    existing.imageUrl = nextImageUrl;
+    existing.contentText = nextContentText;
+    existing.category = nextCategory;
+    existing.thumbnail = nextThumbnail;
+
+    await existing.save();
+
+    return res.status(200).json({ message: "Assignment updated", assignment: existing });
   } catch (error) {
     console.error("updateAssignment error:", error);
     return res

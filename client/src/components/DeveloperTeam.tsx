@@ -16,7 +16,7 @@ const teamMembers = [
     name: "Dheeraj Jangid",
     title: "Our DevOps Guy",
     img: "/images/employees/dheeraj.jpg ",
-  }
+  },
 ];
 
 export default function DeveloperTeam() {

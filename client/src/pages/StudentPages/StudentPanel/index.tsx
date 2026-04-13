@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { createApiClient } from "@shared/api/client";
 
 type Test = {
   _id: string;
@@ -15,22 +16,14 @@ function StudentPanel() {
   const [error, setError] = useState("");
   const [startingTestId, setStartingTestId] = useState<string | null>(null);
   const navigate = useNavigate();
+  const api = createApiClient(import.meta.env.VITE_API_URL || "");
 
   useEffect(() => {
     async function fetchTests() {
       try {
         setLoading(true);
         setError("");
-        const apiBase = import.meta.env.VITE_API_URL;
-        const testsResponse = await fetch(`${apiBase}/test/allTests`, {
-          credentials: "include",
-        });
-
-        if (!testsResponse.ok) {
-          throw new Error("Failed to fetch tests");
-        }
-
-        const data = (await testsResponse.json()) as { tests?: Test[] };
+        const data = await api.requestJson<{ tests?: Test[] }>("/test/allTests");
         const releasedTests = (data.tests ?? []).filter((test) => test.released);
         setTests(releasedTests);
       } catch (error) {
@@ -48,10 +41,8 @@ function StudentPanel() {
     try {
       setStartingTestId(testId);
       setError("");
-      const apiBase = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${apiBase}/students/start-quiz/${testId}`, {
+      const response = await api.request(`/students/start-quiz/${testId}`, {
         method: "POST",
-        credentials: "include",
       });
 
       const data = (await response.json()) as { message?: string; quizAttemptId?: string };

@@ -9,10 +9,27 @@ const assignmentSchema = new mongoose.Schema(
       minlength: 2,
       maxlength: 140,
     },
+    assignmentType: {
+      type: String,
+      enum: ["video", "image_text"],
+      default: "video",
+      trim: true,
+    },
     videoLink: {
       type: String,
-      required: true,
+      default: "",
       trim: true,
+    },
+    imageUrl: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    contentText: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 4000,
     },
     category: {
       type: String,
@@ -20,6 +37,21 @@ const assignmentSchema = new mongoose.Schema(
       default: "uncategorized",
     },
     thumbnail: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    trelloCardId: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    trelloCardUrl: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    trelloCardShortUrl: {
       type: String,
       default: null,
       trim: true,

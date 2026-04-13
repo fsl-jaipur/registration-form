@@ -160,9 +160,14 @@ const ViewTest = (): JSX.Element => {
                 return (
                   <article key={idx} className="px-6 py-5 space-y-3 hover:bg-muted/40 transition">
                     <div className="flex items-start justify-between gap-3">
-                      <h3 className="text-base font-semibold text-foreground">
-                        Q{idx + 1}: {questionText}
-                      </h3>
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold text-muted-foreground">
+                          Q{idx + 1}
+                        </p>
+                        <pre className="whitespace-pre-wrap break-words rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-foreground">
+                          {questionText}
+                        </pre>
+                      </div>
                     </div>
 
                     {questionImage && (

@@ -32,20 +32,32 @@ import AppLayout from "@/components/AppLayout/index";
 import StudentResult from "@/pages/StudentPages/StudentResult";
 import ResultDetailPage from "@/pages/StudentPages/ResultDetailPage";
 import StudentQuiz from "@/pages/StudentPages/StudentQuiz";
-import StudentAssignments from "@/pages/StudentPages/StudentAssignments";
+import { StudentAssignments } from "@/pages/StudentPages/StudentAssignments";
+import StudentDailyUpdates from "@/pages/StudentPages/StudentDailyUpdates";
 import Login from "@/pages/Login";
 import AdminLayout from "@/components/AdminLayout";
 import AdminCourseDetails from "@/pages/AdminPages/AdminCourseDetails";
 import AdminAssignments from "@/pages/AdminPages/AdminAssignments";
+import AdminDailyUpdates from "@/pages/AdminPages/AdminDailyUpdates";
 import AdminPlacedStudents from "@/pages/AdminPages/AdminPlacedStudents";
 import AdminSuccessStories from "@/pages/AdminPages/AdminSuccessStories";
+import AdminUniversalHeader from "@/pages/AdminPages/AdminUniversalHeader";
+import AdminHeroSection from "@/pages/AdminPages/AdminHeroSection";
+import AdminCompanies from "@/pages/AdminPages/AdminCompanies";
+import AdminCareer from "@/pages/AdminPages/AdminCareer";
+import AdminEngineeringTeam from "@/pages/AdminPages/AdminEngineeringTeam";
+import AdminGetInTouch from "@/pages/AdminPages/AdminGetInTouch";
+import AdminFooter from "@/pages/AdminPages/AdminFooter";
 // import StudentChangePassword from "@/pages/StudentPages/StudentPanel";
 // import StudentDashboard from "@/pages/StudentPages/StudentPanel/StudentDashboard";
 import ResetPassword from "@/pages/ResetPassword";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetStudentPassword from "@/pages/ResetStudentPassword";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsOfService from "@/pages/TermsOfService";
+import SitemapPage from "@/pages/SitemapPage";
 
-import { AdminProvider } from "@/Context/Admincontext";
+import { AdminProvider, useAdminContext } from "@/Context/Admincontext";
 import CreateTestForm from "@/pages/AdminPages/Admin Create test";
 import AdminViewStudent from "@/pages/AdminPages/AdminViewStudent";
 import AdminViewResult from "@/pages/AdminPages/AdminViewResult";
@@ -53,12 +65,15 @@ import TestScoresPage from "@/pages/AdminPages/AdminViewResult/testScore/indexVi
 import AdminStudentDetail from "@/pages/AdminPages/AdminStudentDetail";
 import ViewTest from "./pages/AdminPages/AdminHome/ViewTest";
 import UpdateTest from "./pages/AdminPages/AdminHome/updateTest";
+import { getDocumentTitle } from "@/lib/documentTitle";
 
 const queryClient = new QueryClient();
 
 const AppRoutes = () => {
   const location = useLocation();
+  const { authChecked } = useAdminContext();
   const [loading, setLoading] = useState(true);
+  const showLoader = loading || !authChecked;
 
   useLayoutEffect(() => {
     setLoading(true);
@@ -70,14 +85,48 @@ const AppRoutes = () => {
   }, [location.pathname]);
 
   useEffect(() => {
-    console.log("scroll useEffect");
+    if (location.hash) {
+      return;
+    }
+
     window.scrollTo(0, 0);
+  }, [location.hash, location.pathname]);
+
+  useEffect(() => {
+    if (!location.hash || showLoader) {
+      return;
+    }
+
+    let attempts = 0;
+    const maxAttempts = 20;
+
+    const scrollToHashTarget = () => {
+      const target = document.querySelector(location.hash);
+
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+
+      attempts += 1;
+      if (attempts < maxAttempts) {
+        window.setTimeout(scrollToHashTarget, 150);
+      }
+    };
+
+    scrollToHashTarget();
+  }, [location.hash, showLoader]);
+
+  useEffect(() => {
+    document.title = getDocumentTitle(location.pathname);
   }, [location.pathname]);
 
   return (
     <>
-      {loading && <Loader />}
-      <div className={loading ? "pointer-events-none" : ""}>
+      {showLoader && <Loader />}
+      <div
+        className={`transition-opacity duration-200 ${showLoader ? "pointer-events-none opacity-0" : "opacity-100"}`}
+      >
         <Routes>
           <Route element={<AppLayout />}>
             <Route
@@ -131,7 +180,14 @@ const AppRoutes = () => {
 
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetStudentPassword />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/sitemap" element={<SitemapPage />} />
 
+            <Route
+              path="/student"
+              element={<Navigate to="/student/studentpanel" replace />}
+            />
             <Route path="/student/changepassword" element={<ResetPassword />} />
             <Route
               path="/student/studentpanel"
@@ -158,6 +214,14 @@ const AppRoutes = () => {
               }
             />
             <Route
+              path="/student/daily-updates"
+              element={
+                <ProtectedRoute allowedRoles={["student"]} redirectTo="/login">
+                  <StudentDailyUpdates />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/student/result-detail/:quizAttemptId"
               element={
                 <ProtectedRoute allowedRoles={["student"]} redirectTo="/login">
@@ -176,7 +240,7 @@ const AppRoutes = () => {
             }
           />
 
-          <Route path="/admin" element={<AdminLayout />}>
+          <Route path="/admin/*" element={<AdminLayout />}>
             <Route index element={<Navigate to="login" replace />} />
             <Route path="login" element={<AdminLogin />} />
             <Route
@@ -202,7 +266,7 @@ const AppRoutes = () => {
               }
             />
             <Route
-              path="view/test"
+              path="students"
               element={
                 <ProtectedRoute
                   allowedRoles={["admin"]}
@@ -246,6 +310,17 @@ const AppRoutes = () => {
               }
             />
             <Route
+              path="daily-updates"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["admin"]}
+                  redirectTo="/admin/login"
+                >
+                  <AdminDailyUpdates />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="placed-students"
               element={
                 <ProtectedRoute
@@ -264,6 +339,83 @@ const AppRoutes = () => {
                   redirectTo="/admin/login"
                 >
                   <AdminSuccessStories />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="universal-header"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["admin"]}
+                  redirectTo="/admin/login"
+                >
+                  <AdminUniversalHeader />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="hero-section"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["admin"]}
+                  redirectTo="/admin/login"
+                >
+                  <AdminHeroSection />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="companies"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["admin"]}
+                  redirectTo="/admin/login"
+                >
+                  <AdminCompanies />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="career"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["admin"]}
+                  redirectTo="/admin/login"
+                >
+                  <AdminCareer />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="engineering-team"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["admin"]}
+                  redirectTo="/admin/login"
+                >
+                  <AdminEngineeringTeam />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="get-in-touch"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["admin"]}
+                  redirectTo="/admin/login"
+                >
+                  <AdminGetInTouch />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="footer"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["admin"]}
+                  redirectTo="/admin/login"
+                >
+                  <AdminFooter />
                 </ProtectedRoute>
               }
             />

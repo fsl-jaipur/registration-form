@@ -13,11 +13,7 @@ const StudentPublicRoute = ({
   const { isAuthenticated, role, authChecked } = useAdminContext();
 
   if (!authChecked) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">
-        Checking session...
-      </div>
-    );
+    return null;
   }
 
   if (isAuthenticated && role === "student") {

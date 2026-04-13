@@ -1,22 +1,39 @@
 import { useEffect, useMemo, useState } from "react";
-import { LogIn, LogOut, Menu, Phone, X } from "lucide-react";
+import { ChevronDown, LogIn, LogOut, Menu, Phone, X } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import bundledLogo from "@/assets/logo.png";
 import { useAdminContext } from "@/Context/Admincontext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Match the universal header imagery for consistent retina support
 const logoSrc = "/images/logo.png";
 const logoSrcSet = "/images/logo@2x.png 2x, /images/logo.png 1x";
 
-const adminLinks = [
+const primaryLinks = [
   { label: "Dashboard", href: "/admin/home" },
-  { label: "Students", href: "/admin/view/test" },
+  { label: "Students", href: "/admin/students" },
   { label: "Results", href: "/admin/tests" },
+
+];
+
+const moreLinks = [
   { label: "Course Details", href: "/admin/courses" },
   { label: "Assignments", href: "/admin/assignments" },
+  { label: "Daily Updates", href: "/admin/daily-updates" },
   { label: "Placed Students", href: "/admin/placed-students" },
   { label: "Success Stories", href: "/admin/success-stories" },
-
+  { label: "Universal Header", href: "/admin/universal-header" },
+  { label: "Hero Section", href: "/admin/hero-section" },
+  { label: "Companies", href: "/admin/companies" },
+  { label: "Career", href: "/admin/career" },
+  { label: "Engineering Team", href: "/admin/engineering-team" },
+  { label: "Get In Touch", href: "/admin/get-in-touch" },
+  { label: "Footer", href: "/admin/footer" },
 ];
 
 const enrollButtonClasses =
@@ -82,7 +99,8 @@ const AdminHeader = () => {
   return (
     <>
       {/* Top bar mirrors universal header */}
-      <div className="bg-brand-blue text-primary-foreground text-sm py-2 px-4 flex items-center justify-center gap-6">
+      <div className="bg-brand-blue px-4 py-2 text-sm text-primary-foreground">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-center gap-1 text-center sm:flex-row sm:gap-6">
         <a
           href="tel:918824453320"
           className="flex items-center gap-1 hover:text-brand-orange transition-colors duration-200"
@@ -90,23 +108,24 @@ const AdminHeader = () => {
           <Phone size={14} />
           +91-8824453320
         </a>
-        <span className="text-primary-foreground/50">|</span>
+        <span className="hidden text-primary-foreground/50 sm:inline">|</span>
         <a
           href="mailto:rohit@fullstacklearning.com"
           className="hover:text-brand-orange transition-colors duration-200"
         >
           rohit@fullstacklearning.com
         </a>
+        </div>
       </div>
 
       {/* Main header */}
       <header
         className={`sticky top-0 z-50 w-full transition-all duration-400 ${scrolled
-            ? "bg-background/95 backdrop-blur-md shadow-lg"
-            : "bg-background shadow-sm"
+          ? "bg-background/95 backdrop-blur-md shadow-lg"
+          : "bg-background shadow-sm"
           }`}
       >
-        <div className="container mx-auto px-4 flex items-center justify-between h-16 md:h-20">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4 md:h-20">
           {/* Logo */}
           <a
             href="/admin/home"
@@ -114,7 +133,7 @@ const AdminHeader = () => {
               e.preventDefault();
               handleLogoClick();
             }}
-            className="flex items-center gap-2 group"
+            className="group flex min-w-0 items-center gap-2"
           >
             <img
               src={logoSrc}
@@ -133,14 +152,14 @@ const AdminHeader = () => {
               }}
               className="h-[68px] sm:h-[70px] md:h-[80px] lg:h-[90px] xl:h-[87px] w-auto transition-transform duration-300 group-hover:scale-105"
             />
-            <span className="hidden sm:block text-lg font-semibold text-foreground">
+            <span className="hidden text-lg font-semibold text-foreground sm:block">
               Admin Panel
             </span>
           </a>
 
           {/* Desktop Nav */}
           <nav className="hidden lg:flex items-center gap-3">
-            {adminLinks.map((link) => (
+            {primaryLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
@@ -149,13 +168,39 @@ const AdminHeader = () => {
                   handleNavClick(link.href);
                 }}
                 className={`relative px-2 py-2 text-sm font-medium transition-colors duration-200 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-brand-orange after:transition-all after:duration-300 hover:after:w-full ${location.pathname.startsWith(link.href)
-                    ? "text-brand-blue"
-                    : "text-foreground/80 hover:text-brand-blue"
+                  ? "text-brand-blue"
+                  : "text-foreground/80 hover:text-brand-blue"
                   }`}
               >
                 {link.label}
               </a>
             ))}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground/80 transition-colors duration-200 hover:border-brand-blue hover:text-brand-blue"
+                >
+                  More
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 rounded-lg">
+                {moreLinks.map((link) => (
+                  <DropdownMenuItem
+                    key={link.label}
+                    onClick={() => handleNavClick(link.href)}
+                    className={`cursor-pointer rounded-md px-3 py-2 ${location.pathname.startsWith(link.href)
+                      ? "font-semibold text-brand-blue"
+                      : "text-foreground/80"
+                      }`}
+                  >
+                    {link.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Keep CTA style consistent with "Enroll" button */}
             {/* <a
@@ -195,7 +240,7 @@ const AdminHeader = () => {
           {/* Mobile menu button */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="lg:hidden p-2 rounded-lg text-brand-blue hover:bg-brand-blue-light transition-colors duration-200"
+            className="rounded-lg p-2 text-brand-blue transition-colors duration-200 hover:bg-brand-blue-light lg:hidden"
             aria-label="Toggle menu"
           >
             {mobileOpen ? <X size={24} /> : <Menu size={24} />}
@@ -204,11 +249,11 @@ const AdminHeader = () => {
 
         {/* Mobile Nav */}
         <div
-          className={`lg:hidden overflow-hidden transition-all duration-300 bg-background border-t border-border ${mobileOpen ? "max-h-[700px] opacity-100" : "max-h-0 opacity-0"
+          className={`lg:hidden overflow-hidden transition-all duration-300 bg-background border-t border-border ${mobileOpen ? "max-h-[960px] opacity-100" : "max-h-0 opacity-0"
             }`}
         >
-          <nav className="container mx-auto px-4 py-4 flex flex-col gap-2">
-            {adminLinks.map((link) => (
+          <nav className="container mx-auto flex flex-col gap-2 px-4 py-4">
+            {primaryLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
@@ -216,11 +261,34 @@ const AdminHeader = () => {
                   e.preventDefault();
                   handleNavClick(link.href);
                 }}
-                className="px-4 py-3 rounded-lg text-sm font-medium text-foreground/80 hover:text-brand-blue hover:bg-brand-blue-light transition-colors duration-200"
+                className="rounded-lg px-4 py-3 text-sm font-medium text-foreground/80 transition-colors duration-200 hover:bg-brand-blue-light hover:text-brand-blue"
               >
                 {link.label}
               </a>
             ))}
+
+            <div className="mt-4 border-t border-border pt-3">
+              <p className="text-xs font-semibold text-muted-foreground px-2">More</p>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {moreLinks.map((link) => (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleNavClick(link.href);
+                    }}
+                    className={`flex min-h-[72px] items-center justify-center rounded-xl border px-2 py-3 text-center text-sm font-medium leading-snug transition-colors duration-200 ${
+                      location.pathname.startsWith(link.href)
+                        ? "border-brand-blue bg-brand-blue/5 text-brand-blue"
+                        : "border-border text-foreground/80 hover:border-brand-blue/40 hover:bg-brand-blue-light hover:text-brand-blue"
+                    }`}
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            </div>
 
             <a
               href="/admin/create/test"

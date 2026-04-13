@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { createApiClient } from "@shared/api/client";
 
 type QuizAttempt = {
   _id: string;
@@ -29,22 +30,14 @@ function ResultPage() {
   const [error, setError] = useState("");
   const [tests, setTests] = useState<TestMap>({});
   const navigate = useNavigate();
+  const api = createApiClient(import.meta.env.VITE_API_URL || "");
 
   useEffect(() => {
     async function fetchQuizAttempts() {
       try {
         setLoading(true);
         setError("");
-        const apiBase = import.meta.env.VITE_API_URL;
-        const response = await fetch(`${apiBase}/students/quiz-attempts`, {
-          credentials: "include",
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch quiz attempts");
-        }
-
-        const data = (await response.json()) as QuizAttempt[];
+        const data = await api.requestJson<QuizAttempt[]>("/students/quiz-attempts");
 
         if (Array.isArray(data)) {
           const formattedAttempts = data.map((attempt) => ({

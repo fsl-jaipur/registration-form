@@ -43,8 +43,16 @@ type Student = {
   remarks?: string;
 };
 
-const AdminStudentDetail = (): JSX.Element => {
-  const { id } = useParams<{ id: string }>();
+type StudentDetailPanelProps = {
+  studentId?: string;
+  embedded?: boolean;
+  onClose?: () => void;
+};
+
+export const StudentDetailPanel = ({
+  studentId,
+  embedded = false,
+}: StudentDetailPanelProps): JSX.Element => {
   const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -64,11 +72,16 @@ const AdminStudentDetail = (): JSX.Element => {
   }, [authChecked, isAuthenticated, role, navigate]);
 
   useEffect(() => {
-    if (!id) return;
+    if (!studentId) {
+      setStudent(null);
+      setLoading(false);
+      return;
+    }
+
     const fetchStudent = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${apiBase}/students/getStudents/${id}`, {
+        const res = await fetch(`${apiBase}/students/getStudents/${studentId}`, {
           credentials: "include",
         });
         if (!res.ok) throw new Error("Failed to fetch student");
@@ -90,13 +103,14 @@ const AdminStudentDetail = (): JSX.Element => {
     };
 
     fetchStudent();
-  }, [apiBase, id, toast]);
+  }, [apiBase, studentId, toast]);
 
   const handleUpdate = async () => {
-    if (!id) return;
+    if (!studentId) return;
+
     try {
       setSaving(true);
-      const res = await fetch(`${apiBase}/students/updateStudent/${id}`, {
+      const res = await fetch(`${apiBase}/students/updateStudent/${studentId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -114,6 +128,7 @@ const AdminStudentDetail = (): JSX.Element => {
             }
           : prev
       );
+
       toast({
         title: "Student updated",
         description: "Additional details saved successfully.",
@@ -151,7 +166,6 @@ const AdminStudentDetail = (): JSX.Element => {
     ? getPublicIdFromUrl(student.aadharBack)
     : null;
 
-  // Use transformed Cloudinary URL when possible; fall back to the original URL so images still render
   const aadharFrontSrc = useMemo(() => {
     if (aadharFrontPublicId) {
       const url = getPNGUrl(aadharFrontPublicId);
@@ -168,254 +182,272 @@ const AdminStudentDetail = (): JSX.Element => {
     return student?.aadharBack ?? "";
   }, [aadharBackPublicId, student?.aadharBack]);
 
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      <main className="container mx-auto px-4 py-10 space-y-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Admin / Students</p>
-            <h1 className="text-3xl font-bold leading-tight bg-gradient-to-r from-brand-blue to-brand-orange bg-clip-text text-transparent">
-              Student Details
-            </h1>
-            <p className="text-sm text-muted-foreground max-w-2xl">
-              Review student profile information and update additional details.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
+  const content = (
+    <>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">Admin / Students</p>
+          <h1
+            className={`${embedded ? "text-2xl" : "text-3xl"} font-bold leading-tight bg-gradient-to-r from-brand-blue to-brand-orange bg-clip-text text-transparent`}
+          >
+            Student Details
+          </h1>
+          <p className="text-sm text-muted-foreground max-w-2xl">
+            Review student profile information and update additional details.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          {embedded ? null : (
             <Link
-              to="/admin/ViewStudent"
+              to="/admin/students"
               className="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold hover:border-brand-blue hover:text-brand-blue transition"
             >
               Back to Students
             </Link>
+          )}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-sm">
+          <Spinner className="mx-auto h-6 w-6 text-brand-blue" />
+          <p className="mt-3 text-sm text-muted-foreground">Loading student...</p>
+        </div>
+      ) : !student ? (
+        <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-sm">
+          <div className="inline-flex items-center gap-2 rounded-full bg-muted px-4 py-2 text-sm">
+            <X className="h-4 w-4" />
+            Student not found.
           </div>
         </div>
-
-        {loading ? (
-            <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-sm">
-            <Spinner className="mx-auto h-6 w-6 text-brand-blue" />
-            <p className="mt-3 text-sm text-muted-foreground">Loading student...</p>
-          </div>
-        ) : !student ? (
-          <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-sm">
-            <div className="inline-flex items-center gap-2 rounded-full bg-muted px-4 py-2 text-sm">
-              <X className="h-4 w-4" />
-              Student not found.
-            </div>
-          </div>
-        ) : (
-          <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-            <div className="space-y-6">
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="h-11 w-11 rounded-xl bg-brand-blue/10 text-brand-blue flex items-center justify-center">
-                    <User2 className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Student</p>
-                    <h2 className="text-xl font-semibold">{student.name}</h2>
-                  </div>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-blue/10 text-brand-blue">
+                  <User2 className="h-5 w-5" />
                 </div>
-
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Email</p>
-                    <p className="text-sm font-medium">{student.email || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Phone</p>
-                    <p className="text-sm font-medium">{student.phone || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">DOB</p>
-                    <p className="text-sm font-medium">{student.dob || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Gender</p>
-                    <p className="text-sm font-medium">{student.gender || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Father's Name</p>
-                    <p className="text-sm font-medium">{fatherName}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Father's Phone</p>
-                    <p className="text-sm font-medium">{fatherPhone}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Local Address</p>
-                    <p className="text-sm font-medium">{localAddress}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Permanent Address</p>
-                    <p className="text-sm font-medium">{permanentAddress}</p>
-                  </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Student</p>
+                  <h2 className="text-xl font-semibold">{student.name}</h2>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="h-11 w-11 rounded-xl bg-brand-orange/10 text-brand-orange flex items-center justify-center">
-                    <FileText className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Academic</p>
-                    <h3 className="text-lg font-semibold">Course Details</h3>
-                  </div>
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs text-muted-foreground">Email</p>
+                  <p className="text-sm font-medium">{student.email || "-"}</p>
                 </div>
-
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Role</p>
-                    <p className="text-sm font-medium">{student.role || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Qualification</p>
-                    <p className="text-sm font-medium">{student.qualification || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Qualification Year</p>
-                    <p className="text-sm font-medium">{qualificationYear}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">College</p>
-                    <p className="text-sm font-medium">{student.college || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Designation</p>
-                    <p className="text-sm font-medium">{student.designation || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Company</p>
-                    <p className="text-sm font-medium">{student.company || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Course</p>
-                    <p className="text-sm font-medium">{student.course || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Other Course</p>
-                    <p className="text-sm font-medium">{student.otherCourse || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Referral</p>
-                    <p className="text-sm font-medium">{student.referral || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Friend's Name</p>
-                    <p className="text-sm font-medium">{friendName}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Registration Date</p>
-                    <p className="text-sm font-medium">{displayDate}</p>
-                  </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Phone</p>
+                  <p className="text-sm font-medium">{student.phone || "-"}</p>
                 </div>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="h-11 w-11 rounded-xl bg-muted text-muted-foreground flex items-center justify-center">
-                    <Calendar className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Additional</p>
-                    <h3 className="text-lg font-semibold">Update Details</h3>
-                  </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">DOB</p>
+                  <p className="text-sm font-medium">{student.dob || "-"}</p>
                 </div>
-
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Fees</label>
-                    <input
-                      value={fees}
-                      onChange={(e) => setFees(e.target.value)}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-blue"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Start Date</label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-blue"
-                    />
-                  </div>
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="text-xs text-muted-foreground">Remarks</label>
-                    <textarea
-                      rows={3}
-                      value={remarks}
-                      onChange={(e) => setRemarks(e.target.value)}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-blue"
-                    />
-                  </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Gender</p>
+                  <p className="text-sm font-medium">{student.gender || "-"}</p>
                 </div>
-
-                <div className="mt-4 flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleUpdate}
-                    disabled={saving}
-                    className="inline-flex items-center gap-2 rounded-lg bg-brand-blue px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 transition disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {saving ? <Spinner className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                    Save Changes
-                  </button>
-                  <div className="text-xs text-muted-foreground">
-                    {student.fees || student.startDate || student.remarks ? (
-                      <span className="inline-flex items-center gap-1">
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        Existing details loaded.
-                      </span>
-                    ) : null}
-                  </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Father's Name</p>
+                  <p className="text-sm font-medium">{fatherName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Father's Phone</p>
+                  <p className="text-sm font-medium">{fatherPhone}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Local Address</p>
+                  <p className="text-sm font-medium">{localAddress}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Permanent Address</p>
+                  <p className="text-sm font-medium">{permanentAddress}</p>
                 </div>
               </div>
             </div>
 
-            <aside className="space-y-6">
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-                <h3 className="text-sm font-semibold mb-4">Aadhar Documents</h3>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-2">Front</p>
-                    {aadharFrontSrc ? (
-                      <img
-                        src={aadharFrontSrc}
-                        alt="Aadhar Front"
-                        className="w-full rounded-xl border border-border"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-                        Not uploaded
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-2">Back</p>
-                    {aadharBackSrc ? (
-                      <img
-                        src={aadharBackSrc}
-                        alt="Aadhar Back"
-                        className="w-full rounded-xl border border-border"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-                        Not uploaded
-                      </div>
-                    )}
-                  </div>
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-orange/10 text-brand-orange">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Academic</p>
+                  <h3 className="text-lg font-semibold">Course Details</h3>
                 </div>
               </div>
-            </aside>
+
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs text-muted-foreground">Role</p>
+                  <p className="text-sm font-medium">{student.role || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Qualification</p>
+                  <p className="text-sm font-medium">{student.qualification || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Qualification Year</p>
+                  <p className="text-sm font-medium">{qualificationYear}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">College</p>
+                  <p className="text-sm font-medium">{student.college || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Designation</p>
+                  <p className="text-sm font-medium">{student.designation || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Company</p>
+                  <p className="text-sm font-medium">{student.company || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Course</p>
+                  <p className="text-sm font-medium">{student.course || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Other Course</p>
+                  <p className="text-sm font-medium">{student.otherCourse || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Referral</p>
+                  <p className="text-sm font-medium">{student.referral || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Friend's Name</p>
+                  <p className="text-sm font-medium">{friendName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Registration Date</p>
+                  <p className="text-sm font-medium">{displayDate}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                  <Calendar className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Additional</p>
+                  <h3 className="text-lg font-semibold">Update Details</h3>
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Fees</label>
+                  <input
+                    value={fees}
+                    onChange={(e) => setFees(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-blue"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Start Date</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-blue"
+                  />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-xs text-muted-foreground">Remarks</label>
+                  <textarea
+                    rows={3}
+                    value={remarks}
+                    onChange={(e) => setRemarks(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-blue"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleUpdate}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand-blue px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 transition disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {saving ? <Spinner className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                  Save Changes
+                </button>
+                <div className="text-xs text-muted-foreground">
+                  {student.fees || student.startDate || student.remarks ? (
+                    <span className="inline-flex items-center gap-1">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      Existing details loaded.
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            </div>
           </div>
-        )}
-      </main>
+
+          <aside className="space-y-6">
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <h3 className="mb-4 text-sm font-semibold">Aadhar Documents</h3>
+              <div className="space-y-4">
+                <div>
+                  <p className="mb-2 text-xs text-muted-foreground">Front</p>
+                  {aadharFrontSrc ? (
+                    <img
+                      src={aadharFrontSrc}
+                      alt="Aadhar Front"
+                      className="w-full rounded-xl border border-border"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+                      Not uploaded
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="mb-2 text-xs text-muted-foreground">Back</p>
+                  {aadharBackSrc ? (
+                    <img
+                      src={aadharBackSrc}
+                      alt="Aadhar Back"
+                      className="w-full rounded-xl border border-border"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+                      Not uploaded
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="space-y-8">{content}</div>;
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <main className="container mx-auto px-4 py-10 space-y-8">{content}</main>
     </div>
   );
+};
+
+const AdminStudentDetail = (): JSX.Element => {
+  const { id } = useParams<{ id: string }>();
+
+  return <StudentDetailPanel studentId={id} />;
 };
 
 export default AdminStudentDetail;

@@ -1,101 +1,158 @@
+import type { ComponentType, MouseEvent } from "react";
 import { Phone, Mail, MapPin, ArrowRight, Linkedin } from "lucide-react";
-import {
-  SiFacebook,
-  SiX,
-  SiInstagram,
-  SiYoutube,
-} from "@icons-pack/react-simple-icons";
-import { useLocation } from "react-router-dom";
+import { SiFacebook, SiInstagram, SiYoutube } from "@icons-pack/react-simple-icons";
+import { useLocation, useNavigate } from "react-router-dom";
 import bundledLogo from "@/assets/logo.png";
+import { useFooter } from "@/hooks/useFooter";
+import { fallbackFooter } from "@/lib/api/footer";
 
-const logoSrc = "/images/logo.png";
 const logoSrcSet = "/images/logo@2x.png 2x, /images/logo.png 1x";
 
-const footerLinks = {
-  "Quick Links": [
-    { label: "Home", href: "#home" },
-    { label: "About Us", href: "#about" },
-    { label: "Courses", href: "#courses" },
-    { label: "Placements", href: "#placements" },
-    { label: "Testimonials", href: "#testimonials" },
-    { label: "Contact", href: "#enquiry" },
-  ],
-  "Our Courses": [
-    { label: "Full Stack Development", href: "#courses" },
-    { label: "Frontend Development", href: "#courses" },
-    { label: "Backend Development", href: "#courses" },
-    { label: "Database Management", href: "#courses" },
-    { label: "React Native", href: "#courses" },
-    { label: "DevOps & Cloud", href: "#courses" },
-  ],
+const iconMap: Record<string, ComponentType<{ size?: number }>> = {
+  Facebook: SiFacebook,
+  Instagram: SiInstagram,
+  Youtube: SiYoutube,
+  LinkedIn: Linkedin,
+  Linkedin: Linkedin,
 };
 
-const socials = [
-  {
-    icon: SiFacebook,
-    href: "https://www.facebook.com/fullstacklearning",
-    label: "Facebook",
-  },
-  { icon: SiX, href: "#", label: "Twitter" },
-  {
-    icon: SiInstagram,
-    href: "https://instagram.com/fullstacklearning1",
-    label: "Instagram",
-  },
-  {
-    icon: Linkedin,
-    href: "https://www.linkedin.com/company/fullstacklearning/",
-    label: "LinkedIn",
-  },
-  {
-    icon: SiYoutube,
-    href: "https://www.youtube.com/@fullstacklearning",
-    label: "YouTube",
-  },
-];
+const shouldRenderSocial = (icon: string, label: string) => {
+  const normalizedIcon = icon.trim().toLowerCase();
+  const normalizedLabel = label.trim().toLowerCase();
 
-const scrollTo = (href: string) => {
-  document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
+  return normalizedIcon !== "x" && normalizedLabel !== "twitter";
+};
+
+const isExternalHref = (href: string) => /^(https?:|mailto:|tel:)/i.test(href);
+const FOOTER_NEW_TAB_HREFS = new Set([
+  "/privacy-policy",
+  "/terms-of-service",
+  "/sitemap",
+]);
+
+const normalizeHref = (href: string) =>
+  href.startsWith("/") || href.startsWith("#") ? href : `/${href}`;
+
+const shouldOpenFooterLinkInNewTab = (href: string) => {
+  const trimmedHref = href.trim();
+
+  if (!trimmedHref || trimmedHref.startsWith("#")) {
+    return false;
+  }
+
+  return FOOTER_NEW_TAB_HREFS.has(normalizeHref(trimmedHref));
+};
+
+const scrollToSection = (href: string) => {
+  if (!href.startsWith("#")) return;
+
+  if (href === "#") {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+
+  requestAnimationFrame(() => {
+    const section = document.querySelector(href);
+    if (section) {
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+};
+
+const openExternalLink = (href: string) => {
+  if (/^(mailto:|tel:)/i.test(href)) {
+    window.location.assign(href);
+    return;
+  }
+
+  window.open(href, "_blank", "noopener,noreferrer");
 };
 
 export default function Footer() {
+  const { data: footerData = fallbackFooter } = useFooter();
+  const footer = footerData ?? fallbackFooter;
   const location = useLocation();
+  const navigate = useNavigate();
   const isRegistrationPage = location.pathname === "/register";
+
+  const handleFooterNavigation = (href: string) => {
+    const trimmedHref = href.trim();
+    if (!trimmedHref) return;
+
+    if (isExternalHref(trimmedHref)) {
+      openExternalLink(trimmedHref);
+      return;
+    }
+
+    if (trimmedHref.startsWith("#")) {
+      if (trimmedHref === "#") {
+        scrollToSection(trimmedHref);
+        return;
+      }
+
+      if (location.pathname !== "/") {
+        navigate({ pathname: "/", hash: trimmedHref });
+        return;
+      }
+
+      scrollToSection(trimmedHref);
+      return;
+    }
+
+    navigate(normalizeHref(trimmedHref));
+  };
+
+  const handleFooterLinkClick = (
+    event: MouseEvent<HTMLAnchorElement>,
+    href: string,
+  ) => {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    if (event.currentTarget.target === "_blank") {
+      return;
+    }
+
+    event.preventDefault();
+    handleFooterNavigation(href);
+  };
 
   return (
     <footer className="bg-foreground text-primary-foreground">
-      
-      {/* CTA Banner - Hidden on registration page */}
       {!isRegistrationPage && (
         <div className="gradient-brand py-12">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-2xl md:text-4xl font-bold text-primary-foreground mb-3">
-              Ready to Start Your Tech Career?
+              {footer.ctaTitle}
             </h2>
             <p className="text-primary-foreground/80 mb-6 text-lg">
-              Join 5000+ students who transformed their lives with FSL
+              {footer.ctaSubtitle}
             </p>
             <a
-              href="#enquiry"
-              onClick={(e) => {
-                e.preventDefault();
-                scrollTo("#enquiry");
-              }}
+              href={footer.ctaButtonHref}
+              onClick={(event) => handleFooterLinkClick(event, footer.ctaButtonHref)}
               className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold bg-primary-foreground text-brand-blue hover:bg-primary-foreground/90 transition-all duration-300 hover:scale-105 shadow-xl"
             >
-              Enroll Now — It's Free to Enquire!
+              {footer.ctaButtonLabel}
               <ArrowRight size={18} />
             </a>
           </div>
         </div>
       )}
-      {/* Main footer */}
+
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Brand */}
           <div>
             <img
-              src={logoSrc}
+              src={footer.logo}
               srcSet={logoSrcSet}
               alt="FullStack Learning"
               loading="eager"
@@ -113,40 +170,42 @@ export default function Footer() {
             />
 
             <p className="text-primary-foreground/60 text-sm leading-relaxed mb-4">
-              FSL is Rajasthan's premier full stack development training
-              institute, helping students launch successful tech careers since
-              2018.
+              {footer.description}
             </p>
             <div className="flex items-center gap-3">
-              {socials.map(({ icon: Icon, href, label }) => (
-                <a
-                  key={label}
-                  href={href}
-                  aria-label={label}
-                  title={label}
-                  className="w-9 h-9 rounded-full bg-primary-foreground/10 flex items-center justify-center hover:bg-brand-orange hover:scale-110 transition-all duration-200"
-                >
-                  <Icon size={16} />
-                </a>
-              ))}
+              {footer.socials
+                .filter(({ icon, label }) => shouldRenderSocial(icon, label))
+                .map(({ icon, href, label, _id }) => {
+                const Icon = iconMap[icon] || Linkedin;
+                return (
+                  <a
+                    key={_id || label}
+                    href={href}
+                    onClick={(event) => handleFooterLinkClick(event, href)}
+                    aria-label={label}
+                    title={label}
+                    target={isExternalHref(href) ? "_blank" : undefined}
+                    rel={isExternalHref(href) ? "noreferrer" : undefined}
+                    className="w-9 h-9 rounded-full bg-primary-foreground/10 flex items-center justify-center hover:bg-brand-orange hover:scale-110 transition-all duration-200"
+                  >
+                    <Icon size={16} />
+                  </a>
+                );
+              })}
             </div>
           </div>
 
-          {/* Links */}
-          {Object.entries(footerLinks).map(([title, links]) => (
-            <div key={title}>
+          {footer.sections.map((section) => (
+            <div key={section._id || section.title}>
               <h4 className="font-bold text-primary-foreground mb-4 pb-2 border-b border-primary-foreground/10">
-                {title}
+                {section.title}
               </h4>
               <ul className="space-y-2">
-                {links.map(({ label, href }) => (
-                  <li key={label}>
+                {section.links.map(({ label, href, _id }) => (
+                  <li key={_id || label}>
                     <a
                       href={href}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        scrollTo(href);
-                      }}
+                      onClick={(event) => handleFooterLinkClick(event, href)}
                       className="text-primary-foreground/60 text-sm hover:text-brand-orange transition-colors duration-200 flex items-center gap-1 group"
                     >
                       <ArrowRight
@@ -161,31 +220,30 @@ export default function Footer() {
             </div>
           ))}
 
-          {/* Contact */}
           <div>
             <h4 className="font-bold text-primary-foreground mb-4 pb-2 border-b border-primary-foreground/10">
               Contact Us
             </h4>
             <div className="space-y-3">
               <a
-                href="tel:918824453320"
+                href={`tel:${footer.contact.phone}`}
                 className="flex items-start gap-3 text-primary-foreground/60 text-sm hover:text-brand-orange transition-colors group"
               >
                 <Phone
                   size={16}
                   className="mt-0.5 flex-shrink-0 group-hover:text-brand-orange"
                 />
-                +91-8824453320
+                {footer.contact.phone}
               </a>
               <a
-                href="mailto:rohit@fullstacklearning.com"
+                href={`mailto:${footer.contact.email}`}
                 className="flex items-start gap-3 text-primary-foreground/60 text-sm hover:text-brand-orange transition-colors group"
               >
                 <Mail
                   size={16}
                   className="mt-0.5 flex-shrink-0 group-hover:text-brand-orange"
                 />
-                rohit@fullstacklearning.com
+                {footer.contact.email}
               </a>
               <div className="flex items-start gap-3 text-primary-foreground/60 text-sm">
                 <MapPin
@@ -193,14 +251,17 @@ export default function Footer() {
                   className="mt-0.5 flex-shrink-0 text-brand-orange"
                 />
                 <a
-                  href="https://maps.app.goo.gl/xbjzCRCa8NAS9YoDA"
+                  href={footer.contact.mapLink}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   <span>
-                    A-20, Murtikala Colony, Tonk Road
-                    <br />
-                    Jaipur, Rajasthan 302018
+                    {footer.contact.address.split("\n").map((line, idx) => (
+                      <span key={idx}>
+                        {line}
+                        <br />
+                      </span>
+                    ))}
                   </span>
                 </a>
               </div>
@@ -209,7 +270,6 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Bottom bar */}
       <div className="border-t border-primary-foreground/10">
         <div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-primary-foreground/40">
           <span>
@@ -217,24 +277,22 @@ export default function Footer() {
             reserved.
           </span>
           <div className="flex items-center gap-4">
-            <a
-              href="#"
-              className="hover:text-primary-foreground/70 transition-colors"
-            >
-              Privacy Policy
-            </a>
-            <a
-              href="#"
-              className="hover:text-primary-foreground/70 transition-colors"
-            >
-              Terms of Service
-            </a>
-            <a
-              href="#"
-              className="hover:text-primary-foreground/70 transition-colors"
-            >
-              Sitemap
-            </a>
+            {footer.bottomLinks.map(({ label, href, _id }) => {
+              const openInNewTab = shouldOpenFooterLinkInNewTab(href);
+
+              return (
+                <a
+                  key={_id || label}
+                  href={href}
+                  onClick={(event) => handleFooterLinkClick(event, href)}
+                  target={openInNewTab ? "_blank" : undefined}
+                  rel={openInNewTab ? "noopener noreferrer" : undefined}
+                  className="hover:text-primary-foreground/70 transition-colors"
+                >
+                  {label}
+                </a>
+              );
+            })}
           </div>
         </div>
       </div>

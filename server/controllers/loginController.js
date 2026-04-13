@@ -2,15 +2,17 @@ import adminModel from "../models/adminModel.js";
 import studentModel from "../models/studentModel.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import crypto from "crypto";
+
 import { sendForgotPasswordEmail } from "../services/forgotPasswordEmail.js";
 import dotenv from "dotenv";
-import { log } from "console";
+
 dotenv.config();
 
+const escapeRegExp = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export async function studentlogin(req, res) {
-  const { email, password, role, firstTimesignin } = req.body;
+  const { email: rawEmail, password } = req.body;
+  const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
   try {
     if (!email || !password) {
       return res
@@ -18,14 +20,24 @@ export async function studentlogin(req, res) {
         .json({ message: "Email and password are required." });
     }
 
-    const user = await studentModel.findOne({ email });
+    let user = await studentModel.findOne({ email });
+    if (!user && email) {
+      user = await studentModel.findOne({
+        email: { $regex: new RegExp(`^${escapeRegExp(email)}$`, "i") },
+      });
+    }
 
     
     if (!user) {
       return res.status(404).json({ message: "Invalid email or password." });
     }
     
-    const isMatch = await bcrypt.compare(password, user.password);
+    let isMatch = false;
+    if (user.firstTimesignin) {
+      isMatch = password === user.password;
+    } else {
+      isMatch = await bcrypt.compare(password, user.password);
+    }
     console.log(isMatch); 
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid email or password." });
@@ -61,21 +73,35 @@ export async function studentlogin(req, res) {
   }
 }
 export async function changePassword(req, res) {
-  const { email, password, newPassword } = req.body;
+  const { email: rawEmail, password, newPassword } = req.body;
   
   try {
+    const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
+
+    if (!email || !password || !newPassword) {
+      return res.status(400).json({ message: "Email, old password, and new password are required." });
+    }
+
     const user = await studentModel.findOne({ email });
     
     if (!user) {
       return res.status(400).json({ message: "Old password is incorrect." });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const storedPassword = typeof user.password === "string" ? user.password : "";
+    const looksHashed = storedPassword.startsWith("$2");
+
+    // Most student passwords are stored as bcrypt hashes.
+    // Keep a plain-text fallback only for any legacy records.
+    const isMatch = looksHashed
+      ? await bcrypt.compare(password, storedPassword)
+      : password === storedPassword;
+
     if (!isMatch) {
       return res.status(400).json({ message: "Old password is incorrect." });
     }
 
-    // Assign plaintext new password; model will hash on save
+    // Assign plaintext new password; the model hashes it on save.
     user.password = newPassword;
     user.firstTimesignin = false;
     await user.save();
@@ -87,8 +113,6 @@ export async function changePassword(req, res) {
     .json({ message: "Error changing password.", error: error.message });
   }
 }
-
-
 export const adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -230,7 +254,7 @@ export const forgotPassword = async (req, res) => {
     // send OTP email using service (it will use dynamic template if configured)
     await sendForgotPasswordEmail({ to: email, name: user.name, otp, expiryMinutes: 60 });
 
-    return res.status(200).json({ message: "Password reset OTP sent" });
+    return res.status(200).json({ message: "Password reset OTP sent on email" });
   } catch (error) {
     console.error("Forgot password error:", error);
     return res.status(500).json({ message: "Error processing forgot password", error: error.message });
@@ -250,15 +274,12 @@ export const resetPassword = async (req, res) => {
       return res.status(400).json({ message: "Token expired" });
     }
 
-    // Assign plaintext new password; model will hash on save
-    user.password = newPassword;
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     user.firstTimesignin = false;
     await user.save();
-
-    console.log(email,newPassword);
-    
 
     return res.status(200).json({ message: "Password has been reset" });
   } catch (error) {

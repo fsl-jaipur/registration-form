@@ -7,8 +7,60 @@ import sendSendgridResults from "../services/acknowledgement.js";
 
 export const createTest = async (req, res) => {
   try {
-    const { title, numQuestions, duration } = req.body;
-    const questions = JSON.parse(req.body.questions); 
+    const rawTitle = typeof req.body.title === "string" ? req.body.title.trim() : "";
+    const parsedNumQuestions = Number(req.body.numQuestions);
+    const parsedDuration = Number(req.body.duration);
+    let questions = [];
+
+    try {
+      const rawQuestions = JSON.parse(req.body.questions ?? "[]");
+
+      if (!rawTitle) {
+        throw new Error("Test title is required.");
+      }
+
+      if (!Number.isInteger(parsedDuration) || parsedDuration <= 0) {
+        throw new Error("Duration must be a positive whole number.");
+      }
+
+      if (!Array.isArray(rawQuestions) || rawQuestions.length === 0) {
+        throw new Error("Add at least one question to the test.");
+      }
+
+      questions = rawQuestions.map((q, index) => {
+        const text = typeof q?.text === "string" ? q.text.trim() : "";
+        const options = Array.isArray(q?.options)
+          ? q.options.map((option) => String(option ?? "").trim())
+          : [];
+        const correctAnswer =
+          typeof q?.correct_answer === "string" ? q.correct_answer.trim() : "";
+        const codeSnippet =
+          typeof q?.codeSnippet === "string" ? q.codeSnippet.trim() : "";
+
+        if (!text) {
+          throw new Error(`Question ${index + 1} is missing text.`);
+        }
+
+        if (!options.length || options.some((option) => !option)) {
+          throw new Error(`Question ${index + 1} must include all answer options.`);
+        }
+
+        if (!correctAnswer || !options.includes(correctAnswer)) {
+          throw new Error(`Question ${index + 1} has an invalid correct answer.`);
+        }
+
+        return {
+          text,
+          options,
+          correct_answer: correctAnswer,
+          codeSnippet: codeSnippet || null,
+        };
+      });
+    } catch (error) {
+      return res.status(400).json({
+        message: error instanceof Error ? error.message : "Invalid test payload.",
+      });
+    }
 
 
     const questionImagesMap = {};
@@ -33,9 +85,12 @@ export const createTest = async (req, res) => {
     }));
 
     const test = new Test({
-      title,
-      numQuestions,
-      duration,
+      title: rawTitle,
+      numQuestions:
+        Number.isInteger(parsedNumQuestions) && parsedNumQuestions > 0
+          ? parsedNumQuestions
+          : questions.length,
+      duration: parsedDuration,
       questions: processedQuestions,
     });
 

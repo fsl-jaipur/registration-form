@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { createApiClient } from "@shared/api/client";
 
 type QuestionText =
   | string
@@ -46,7 +47,7 @@ function QuizPage() {
   const { testId } = useParams<{ testId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const apiBase = import.meta.env.VITE_API_URL as string;
+  const api = createApiClient(import.meta.env.VITE_API_URL || "");
   const locationState = location.state as QuizLocationState | null;
 
   const [quizAttemptId, setQuizAttemptId] = useState<string | null>(null);
@@ -67,23 +68,9 @@ function QuizPage() {
 
   const requestJson = useCallback(
     async <T,>(path: string, init?: RequestInit): Promise<T> => {
-      const response = await fetch(`${apiBase}${path}`, {
-        ...init,
-        credentials: "include",
-        headers: {
-          ...(init?.body ? { "Content-Type": "application/json" } : {}),
-          ...init?.headers,
-        },
-      });
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || `Request failed: ${response.status}`);
-      }
-
-      return (await response.json()) as T;
+      return api.requestJson<T>(path, init);
     },
-    [apiBase]
+    [api]
   );
 
   useEffect(() => {
@@ -463,6 +450,27 @@ function QuizPage() {
     return question.question || "No question text";
   };
 
+  const formatQuestionText = (rawText: string) => {
+    if (!rawText) return rawText;
+    if (rawText.includes("\n")) return rawText;
+
+    const looksLikeCode =
+      rawText.includes("function") ||
+      rawText.includes("=>") ||
+      rawText.includes("{") ||
+      rawText.includes("};") ||
+      rawText.includes("console.log");
+
+    if (!looksLikeCode) return rawText;
+
+    return rawText
+      .replace(/;\s*/g, ";\n")
+      .replace(/\{\s*/g, "{\n")
+      .replace(/\s*\}/g, "\n}")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  };
+
   const getQuestionImage = (question: Question) => {
     return typeof question.question === "object" ? question.question.fileUrl : undefined;
   };
@@ -547,10 +555,13 @@ function QuizPage() {
 
           {currentQuestion ? (
             <div className="space-y-6 p-6">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">
-                  Q{currentQuestionIndex + 1}: {getQuestionText(currentQuestion)}
-                </h2>
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Question {currentQuestionIndex + 1}
+                </p>
+                <pre className="whitespace-pre-wrap break-words rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 font-mono text-sm text-slate-900">
+                  {formatQuestionText(getQuestionText(currentQuestion))}
+                </pre>
 
                 {getQuestionImage(currentQuestion) && (
                   <img

@@ -1,34 +1,62 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ExternalLink,
+  Image as ImageIcon,
   Link as LinkIcon,
+  PenSquare,
   Plus,
+  Upload,
   Trash2,
   Video,
+  X,
 } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminContext } from "@/Context/Admincontext";
 
+type AssignmentType = "video" | "image_text";
+
 type Assignment = {
   _id: string;
   title: string;
+  assignmentType?: AssignmentType;
   videoLink: string;
+  imageUrl?: string | null;
+  contentText?: string;
   thumbnail: string;
   category?: string;
   createdAt: string;
+  trelloCardId?: string | null;
+  trelloCardUrl?: string | null;
+  trelloCardShortUrl?: string | null;
 };
 
 type Category = {
   _id: string;
   name: string;
 };
+
+const DEFAULT_STYLE_TEMPLATE = `Font:
+1. Cormorant Garamond: Headings
+2. Jost: Other texts
+
+Colors:
+Light Brown: rgb(200,162,122)
+Dark Brown: rgb(122,78,45)
+White: rgb(255,255,255)
+
+Testimonials quotes: #c8a27a4d
+Testimonial Stars: rgb(251,191,36)
+Testimonials Background: #7a4e2d0d
+Stay Connected Background: rgb(122,78,45)
+Footer Background: rgb(45,45,45)`;
 
 const AdminAssignments = (): JSX.Element => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -39,13 +67,22 @@ const AdminAssignments = (): JSX.Element => {
   const [assignmentSubmitting, setAssignmentSubmitting] = useState(false);
   const [categorySubmitting, setCategorySubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const imageFileRef = useRef<HTMLInputElement | null>(null);
   const [form, setForm] = useState<{
     title: string;
+    assignmentType: AssignmentType;
     videoLink: string;
+    imageUrl: string;
+    contentText: string;
     category: string;
   }>({
     title: "",
+    assignmentType: "video",
     videoLink: "",
+    imageUrl: "",
+    contentText: DEFAULT_STYLE_TEMPLATE,
     category: "",
   });
 
@@ -62,6 +99,33 @@ const AdminAssignments = (): JSX.Element => {
   const resolveThumbnail = (src: string) =>
     src?.startsWith("http") ? src : `${apiOrigin}${src}`;
 
+  const normalizeAssignment = (raw: any): Assignment => ({
+    ...raw,
+    assignmentType: raw.assignmentType === "image_text" ? "image_text" : "video",
+    thumbnail: raw.thumbnail ? resolveThumbnail(raw.thumbnail) : "",
+  });
+
+  const getTrelloStatus = (assignment: Assignment) =>
+    assignment.trelloCardUrl ? "Synced" : "Not synced";
+
+  const clearSelectedImageFile = () => {
+    if (imagePreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setImagePreview(null);
+    setImageFile(null);
+    if (imageFileRef.current) {
+      imageFileRef.current.value = "";
+    }
+  };
+
+  const handleImageFileChange = (file: File | null) => {
+    clearSelectedImageFile();
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
   useEffect(() => {
     if (authChecked && (!isAuthenticated || role !== "admin")) {
       navigate("/admin/login", { replace: true });
@@ -77,10 +141,9 @@ const AdminAssignments = (): JSX.Element => {
         });
         if (!res.ok) throw new Error("Failed to fetch assignments");
         const data = await res.json();
-        const mapped: Assignment[] = (data.assignments ?? []).map((a: any) => ({
-          ...a,
-          thumbnail: resolveThumbnail(a.thumbnail),
-        }));
+        const mapped: Assignment[] = (data.assignments ?? []).map((a: any) =>
+          normalizeAssignment(a),
+        );
         setAssignments(mapped);
       } catch (error) {
         console.error(error);
@@ -117,28 +180,66 @@ const AdminAssignments = (): JSX.Element => {
 
   const resetForm = () => {
     setEditingId(null);
-    setForm({ title: "", videoLink: "", category: "" });
+    setForm({
+      title: "",
+      assignmentType: "video",
+      videoLink: "",
+      imageUrl: "",
+      contentText: DEFAULT_STYLE_TEMPLATE,
+      category: "",
+    });
+    clearSelectedImageFile();
   };
 
   const startEdit = (assignment: Assignment) => {
     resetForm();
+    const assignmentType = assignment.assignmentType === "image_text" ? "image_text" : "video";
     setEditingId(assignment._id);
     setForm({
       title: assignment.title,
-      videoLink: assignment.videoLink,
+      assignmentType,
+      videoLink: assignment.videoLink || "",
+      imageUrl: assignment.imageUrl || "",
+      contentText: assignment.contentText || DEFAULT_STYLE_TEMPLATE,
       category: assignment.category || "",
     });
+    clearSelectedImageFile();
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (
-      !form.title.trim() ||
-      !form.videoLink.trim()
-    ) {
+
+    if (!form.title.trim()) {
       toast({
         title: "Missing fields",
-        description: "Title and video link are required.",
+        description: "Title is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (form.assignmentType === "video" && !form.videoLink.trim()) {
+      toast({
+        title: "Missing fields",
+        description: "Video link is required for video assignments.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (form.assignmentType === "image_text" && (!form.imageUrl.trim() && !imageFile)) {
+      toast({
+        title: "Missing fields",
+        description: "Add image URL or upload an image file for image assignments.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (form.assignmentType === "image_text" && !form.contentText.trim()) {
+      toast({
+        title: "Missing fields",
+        description: "Assignment text is required for image assignments.",
         variant: "destructive",
       });
       return;
@@ -146,11 +247,16 @@ const AdminAssignments = (): JSX.Element => {
 
     try {
       setAssignmentSubmitting(true);
-      const body = JSON.stringify({
-        title: form.title.trim(),
-        videoLink: form.videoLink.trim(),
-        category: form.category.trim(),
-      });
+      const payload = new FormData();
+      payload.append("title", form.title.trim());
+      payload.append("assignmentType", form.assignmentType);
+      payload.append("videoLink", form.assignmentType === "video" ? form.videoLink.trim() : "");
+      payload.append("imageUrl", form.assignmentType === "image_text" ? form.imageUrl.trim() : "");
+      payload.append("contentText", form.assignmentType === "image_text" ? form.contentText.trim() : "");
+      payload.append("category", form.category.trim());
+      if (form.assignmentType === "image_text" && imageFile) {
+        payload.append("imageFile", imageFile);
+      }
 
       const isEdit = Boolean(editingId);
       const url = isEdit
@@ -160,9 +266,8 @@ const AdminAssignments = (): JSX.Element => {
 
       const res = await fetch(url, {
         method,
-        body,
+        body: payload,
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
       });
 
       if (!res.ok) {
@@ -171,7 +276,7 @@ const AdminAssignments = (): JSX.Element => {
       }
 
       const { assignment } = await res.json();
-      const normalized = { ...assignment, thumbnail: resolveThumbnail(assignment.thumbnail) };
+      const normalized = normalizeAssignment(assignment);
 
       setAssignments((prev) =>
         isEdit
@@ -311,21 +416,38 @@ const AdminAssignments = (): JSX.Element => {
               Assignments Dashboard
             </h1>
             <p className="text-sm text-muted-foreground max-w-2xl">
-              Upload once: title, video link, and category. Thumbnails are generated automatically from YouTube links.
+              Add video assignments or image + text assignments for design instructions and references.
             </p>
-          </div>
-          <div className="flex items-center gap-2 rounded-full border border-border bg-muted/60 px-4 py-2 text-sm text-muted-foreground">
-            <Video className="h-4 w-4 text-brand-orange" />
-            Admin-only for now. Student view will be wired next.
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr,0.9fr]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
           <form
             onSubmit={handleSubmit}
             className="space-y-4 rounded-xl border border-border bg-white p-5 shadow-sm"
           >
-            {/* Thumbnail now auto-generated from video link (YouTube) */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Assignment Type</label>
+              <select
+                value={form.assignmentType}
+                onChange={(e) =>
+                  {
+                    const nextType = e.target.value as AssignmentType;
+                    if (nextType !== "image_text") {
+                      clearSelectedImageFile();
+                    }
+                    setForm((prev) => ({
+                      ...prev,
+                      assignmentType: nextType,
+                    }));
+                  }
+                }
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm shadow-sm focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+              >
+                <option value="video">Video Assignment</option>
+                <option value="image_text">Image + Text Assignment</option>
+              </select>
+            </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Title</label>
@@ -335,7 +457,7 @@ const AdminAssignments = (): JSX.Element => {
                   type="text"
                   value={form.title}
                   onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-                  placeholder="e.g., React State Management Deep Dive"
+                  placeholder="e.g., Homepage Visual Style Assignment"
                   className="w-full bg-transparent text-sm focus:outline-none"
                 />
               </div>
@@ -357,23 +479,92 @@ const AdminAssignments = (): JSX.Element => {
               </select>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Video Link</label>
-              <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 shadow-sm focus-within:border-brand-orange focus-within:ring-2 focus-within:ring-brand-orange/20">
-                <LinkIcon className="h-4 w-4 text-muted-foreground" />
-                <input
-                  type="url"
-                  value={form.videoLink}
-                  onChange={(e) => setForm((prev) => ({ ...prev, videoLink: e.target.value }))}
-                  placeholder="https://..."
-                  className="w-full bg-transparent text-sm focus:outline-none"
-                />
+            {form.assignmentType === "video" ? (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Video Link</label>
+                <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 shadow-sm focus-within:border-brand-orange focus-within:ring-2 focus-within:ring-brand-orange/20">
+                  <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="url"
+                    value={form.videoLink}
+                    onChange={(e) => setForm((prev) => ({ ...prev, videoLink: e.target.value }))}
+                    placeholder="https://..."
+                    className="w-full bg-transparent text-sm focus:outline-none"
+                  />
+                </div>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Image URL</label>
+                  <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 shadow-sm focus-within:border-brand-orange focus-within:ring-2 focus-within:ring-brand-orange/20">
+                    <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="url"
+                      value={form.imageUrl}
+                      onChange={(e) => setForm((prev) => ({ ...prev, imageUrl: e.target.value }))}
+                      placeholder="https://..."
+                      className="w-full bg-transparent text-sm focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Or Upload Image</label>
+                  <input
+                    ref={imageFileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleImageFileChange(e.target.files?.[0] ?? null)}
+                  />
+                  {imagePreview ? (
+                    <div className="relative overflow-hidden rounded-lg border border-border">
+                      <img
+                        src={imagePreview}
+                        alt="Uploaded assignment preview"
+                        className="h-40 w-full object-contain bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={clearSelectedImageFile}
+                        className="absolute right-2 top-2 rounded-full bg-destructive p-1 text-destructive-foreground hover:opacity-80"
+                        aria-label="Remove uploaded image"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => imageFileRef.current?.click()}
+                      className="flex h-40 w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-accent/30 transition-colors hover:border-primary hover:bg-accent/50"
+                    >
+                      <Upload className="mb-2 h-8 w-8 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Click to upload</span>
+                    </button>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Fill either image URL or upload an image file.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Assignment Text / Style Notes</label>
+                  <textarea
+                    value={form.contentText}
+                    onChange={(e) => setForm((prev) => ({ ...prev, contentText: e.target.value }))}
+                    rows={10}
+                    placeholder="Add fonts, colors, quote styles, and layout direction..."
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm shadow-sm focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                  />
+                </div>
+              </>
+            )}
 
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs text-muted-foreground">
-                Hooked to MongoDB via the assignments API. Ready for student panel consumption.
+                Assignments are stored in MongoDB and shown in the student panel.
               </p>
               <div className="flex items-center gap-2">
                 {editingId && (
@@ -401,8 +592,8 @@ const AdminAssignments = (): JSX.Element => {
             </div>
           </form>
 
-          <div className="rounded-xl border border-border bg-white p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="space-y-5 rounded-2xl border border-border bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-foreground">All Assignments</h3>
                 <p className="text-xs text-muted-foreground">
@@ -415,74 +606,140 @@ const AdminAssignments = (): JSX.Element => {
             </div>
 
             {loading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Spinner className="h-4 w-4" />
-                  Loading assignments...
-                </div>
+              <div className="flex min-h-[120px] items-center gap-2 rounded-xl border border-dashed border-border bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+                <Spinner className="h-4 w-4" />
+                Loading assignments...
+              </div>
             ) : assignments.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border bg-muted/40 px-4 py-6 text-sm text-muted-foreground">
                 No assignments yet. Add one to populate this list.
               </div>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {assignments.map((item) => (
-                  <article
-                    key={item._id}
-                    className="relative flex gap-3 rounded-lg border border-border bg-muted/30 p-3"
-                  >
-                    <div className="h-20 w-28 overflow-hidden rounded-md bg-muted flex items-center justify-center">
-                      {item.thumbnail ? (
-                        <img
-                          src={resolveThumbnail(item.thumbnail)}
-                          alt={`${item.title} thumbnail`}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <Video className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <p className="text-sm font-semibold text-foreground truncate" title={item.title}>
-                        {item.title}
-                      </p>
-                      {item.category && (
-                        <span className="inline-flex items-center rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-brand-blue ring-1 ring-brand-blue/20">
-                          {item.category}
-                        </span>
-                      )}
-                      <a
-                        href={item.videoLink}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-brand-blue hover:underline break-all"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        {item.videoLink}
-                      </a>
-                      <p className="text-[11px] text-muted-foreground">
-                        Added {new Date(item.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="absolute top-2 right-2 flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => startEdit(item)}
-                        className="rounded-full bg-white/90 px-2 py-1 text-xs font-semibold text-brand-blue hover:bg-brand-blue/10 border border-border shadow-sm"
-                        aria-label="Edit assignment"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(item._id)}
-                        className="rounded-full bg-white/90 p-1 text-red-600 hover:bg-red-50 border border-red-200 shadow-sm"
-                        aria-label="Delete assignment"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </article>
-                ))}
+              <div className="grid gap-4 xl:grid-cols-2">
+                {assignments.map((item) => {
+                  const itemType = item.assignmentType === "image_text" ? "image_text" : "video";
+                  return (
+                    <article
+                      key={item._id}
+                      className="overflow-hidden rounded-2xl border border-border bg-muted/20 shadow-sm transition hover:border-brand-blue/30 hover:shadow-md"
+                    >
+                      <div className="aspect-video overflow-hidden bg-muted">
+                        {item.thumbnail ? (
+                          <img
+                            src={resolveThumbnail(item.thumbnail)}
+                            alt={`${item.title} thumbnail`}
+                            className="h-full w-full object-cover object-center"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center">
+                            <Video className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex min-h-[220px] flex-col gap-3 p-4">
+                        <div className="space-y-2">
+                          <p className="line-clamp-2 text-base font-semibold leading-snug text-foreground" title={item.title}>
+                            {item.title}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {item.category && (
+                              <span className="inline-flex items-center rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-brand-blue ring-1 ring-brand-blue/20">
+                                {item.category}
+                              </span>
+                            )}
+                            <span
+                              className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                                itemType === "video"
+                                  ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200"
+                                  : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+                              }`}
+                            >
+                              {itemType === "video" ? "Video" : "Image + Text"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {itemType === "image_text" && item.contentText && (
+                          <p className="line-clamp-4 whitespace-pre-line text-xs text-muted-foreground">
+                            {item.contentText}
+                          </p>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                              item.trelloCardUrl
+                                ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                                : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+                            }`}
+                          >
+                            {getTrelloStatus(item)}
+                          </span>
+                          {item.trelloCardUrl && (
+                            <a
+                              href={item.trelloCardUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:underline"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              View in Trello
+                            </a>
+                          )}
+                        </div>
+
+                        {itemType === "video" && item.videoLink ? (
+                          <a
+                            href={item.videoLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-start gap-1 break-all text-xs text-brand-blue hover:underline"
+                          >
+                            <ExternalLink className="mt-0.5 h-3 w-3 flex-shrink-0" />
+                            <span>{item.videoLink}</span>
+                          </a>
+                        ) : item.imageUrl ? (
+                          <a
+                            href={item.imageUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-start gap-1 break-all text-xs text-brand-blue hover:underline"
+                          >
+                            <ExternalLink className="mt-0.5 h-3 w-3 flex-shrink-0" />
+                            <span>{item.imageUrl}</span>
+                          </a>
+                        ) : null}
+
+                        <div className="mt-auto flex flex-col gap-3 border-t border-border/80 pt-3">
+                          <p className="text-[11px] text-muted-foreground">
+                            Added {new Date(item.createdAt).toLocaleString()}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => startEdit(item)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-border bg-white px-3 py-2 text-xs font-semibold text-brand-blue shadow-sm transition hover:bg-brand-blue/5"
+                              aria-label="Edit assignment"
+                            >
+                              <PenSquare className="h-3.5 w-3.5" />
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(item._id)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 shadow-sm transition hover:bg-red-50"
+                              aria-label="Delete assignment"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -569,4 +826,3 @@ const AdminAssignments = (): JSX.Element => {
 };
 
 export default AdminAssignments;
-

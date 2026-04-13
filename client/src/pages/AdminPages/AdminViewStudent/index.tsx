@@ -13,6 +13,8 @@ import {
 import Spinner from "@/components/ui/Spinner";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminContext } from "@/Context/Admincontext";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { StudentDetailPanel } from "@/pages/AdminPages/AdminStudentDetail";
 
 type Student = {
   _id: string;
@@ -27,11 +29,21 @@ const sortOptions = [
   { value: "oldest", label: "Oldest First", icon: <SortAsc className="h-4 w-4" /> },
 ];
 
+const formatRegistrationDate = (value?: string): string => {
+  if (!value) return "-";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "-";
+
+  return parsed.toLocaleDateString("en-GB");
+};
+
 const AdminViewStudent = (): JSX.Element => {
   const [students, setStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<string>("name");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
 
@@ -270,15 +282,16 @@ const AdminViewStudent = (): JSX.Element => {
                         {index + 1}
                       </td>
                       <td className="px-6 py-4 font-medium text-foreground">
-                        <Link
-                          to={`/admin/students/${student._id}`}
+                        <button
+                          type="button"
+                          onClick={() => setActiveStudentId(student._id)}
                           className="text-brand-blue hover:underline"
                         >
                           {student.name}
-                        </Link>
+                        </button>
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
-                        {new Date(student.createdAt).toLocaleDateString()}
+                        {formatRegistrationDate(student.createdAt)}
                       </td>
                       <td className="px-6 py-4">
                         <label className="inline-flex items-center gap-2 cursor-pointer">
@@ -308,6 +321,23 @@ const AdminViewStudent = (): JSX.Element => {
           </div>
         </div>
       </main>
+
+      <Dialog
+        open={Boolean(activeStudentId)}
+        onOpenChange={(open) => {
+          if (!open) setActiveStudentId(null);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto p-6">
+          {activeStudentId ? (
+            <StudentDetailPanel
+              studentId={activeStudentId}
+              embedded
+              onClose={() => setActiveStudentId(null)}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
