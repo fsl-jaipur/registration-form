@@ -1,3 +1,6 @@
+import { Link } from "react-router-dom";
+import { User } from "lucide-react";
+
 const teamMembers = [
   {
     name: "Rohit Jain",
@@ -13,12 +16,7 @@ const teamMembers = [
     name: "Dheeraj Jangid",
     title: "Our DevOps Guy",
     img: "/images/employees/dheeraj.jpg ",
-  },
-  {
-    name: "Anant Tiwari",
-    title: "Our Backend Magician",
-    img: "/images/employees/anant.jpg ",
-  },
+  }
 ];
 
 export default function DeveloperTeam() {
@@ -76,6 +74,28 @@ export default function DeveloperTeam() {
               </div>
             </div>
           ))}
+
+          {/* "This could be you" placeholder card */}
+          <div className="w-full max-w-xs sm:max-w-[320px] md:max-w-[270px] lg:max-w-[280px] h-[340px] border border-border rounded-lg overflow-hidden shadow-lg flex flex-col bg-white dark:bg-slate-900">
+            <div className="flex-1 flex items-center justify-center bg-slate-100 dark:bg-slate-800">
+              <div className="w-24 h-24 rounded-full bg-slate-300 dark:bg-slate-600 flex items-center justify-center">
+                <User className="w-14 h-14 text-blue-400" strokeWidth={1.5} />
+              </div>
+            </div>
+            <div className="flex flex-col items-center gap-1 px-4 py-5">
+              <h1 className="font-bold text-[1.15rem] text-foreground">This could be you</h1>
+              <p className="text-muted-foreground text-sm">Your Designation</p>
+              <Link
+                to="/career"
+                className="mt-3 w-full text-center text-sm font-semibold text-white py-2 px-4 rounded-md"
+                style={{
+                  background: "linear-gradient(to right, #1e3a5f, #c0522a)",
+                }}
+              >
+                Launch your career with us
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </section>
