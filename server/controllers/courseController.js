@@ -21,6 +21,45 @@ const normalizeList = (value) => {
   return [];
 };
 
+const normalizeSyllabus = (value) => {
+  if (!value) return [];
+  
+  if (Array.isArray(value)) {
+    // Check if it's already in the new format (array of module objects)
+    if (value.length > 0 && typeof value[0] === 'object' && value[0].title) {
+      return value.map(module => ({
+        title: String(module.title || '').trim(),
+        points: Array.isArray(module.points) 
+          ? module.points.map(p => String(p || '').trim()).filter(Boolean)
+          : ["Hands-on exercises", "Mini-projects", "Quizzes & assessments", "Revision and Q&A"]
+      })).filter(module => module.title);
+    }
+    // Old format (array of strings) - convert to new format
+    else {
+      return value
+        .map((item) => String(item).trim())
+        .filter(Boolean)
+        .map(title => ({
+          title,
+          points: ["Hands-on exercises", "Mini-projects", "Quizzes & assessments", "Revision and Q&A"]
+        }));
+    }
+  }
+  
+  if (typeof value === "string") {
+    return value
+      .split(/[,\n]/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map(title => ({
+        title,
+        points: ["Hands-on exercises", "Mini-projects", "Quizzes & assessments", "Revision and Q&A"]
+      }));
+  }
+  
+  return [];
+};
+
 const buildPayload = (body = {}) => {
   const payload = {
     title: body.title,
@@ -39,7 +78,7 @@ const buildPayload = (body = {}) => {
     iconName: body.iconName ?? "",
     fee: body.fee ?? "",
     tags: normalizeList(body.tags),
-    syllabus: normalizeList(body.syllabus ?? body.modules),
+    syllabus: normalizeSyllabus(body.syllabus ?? body.modules),
     order:
       body.order === undefined || body.order === null || body.order === ""
         ? undefined

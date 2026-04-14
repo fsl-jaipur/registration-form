@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Course } from "@/lib/courses";
+import { Course, normalizeSyllabusModules } from "@/lib/courses";
 
 type CourseLayoutProps = {
   course: Course;
@@ -17,7 +17,7 @@ export default function CourseLayout({ course }: CourseLayoutProps) {
   if (!course) return null;
 
   const title = course.title ?? "Course";
-  const syllabus = course.syllabus ?? [];
+  const syllabusModules = normalizeSyllabusModules(course.syllabus);
   const description = course.description || course.overview || "Course details will be updated soon.";
 
   const handleContactNavigation = () => {
@@ -68,14 +68,7 @@ export default function CourseLayout({ course }: CourseLayoutProps) {
             </div> */}
           </div>
 
-          <div className="hidden md:block md:w-1/3">
-            <div className="h-40 md:h-36 rounded-xl bg-gradient-to-tr from-white/30 to-muted/30 flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <div className="text-sm">Course</div>
-                <div className="text-lg font-semibold mt-2">{title.split(" ")[0]}</div>
-              </div>
-            </div>
-          </div>
+         
         </div>
       </section>
 
@@ -88,12 +81,12 @@ export default function CourseLayout({ course }: CourseLayoutProps) {
 
           <section className="bg-card rounded-2xl p-6 shadow-sm border border-border">
             <h2 className="text-2xl font-semibold">What You'll Learn</h2>
-            {syllabus.length ? (
+            {syllabusModules.length ? (
               <ul className="grid md:grid-cols-2 gap-3 mt-4">
-                {syllabus.slice(0, 6).map((s, i) => (
+                {syllabusModules.slice(0, 6).map((module, i) => (
                   <li key={i} className="flex items-start gap-3 text-muted-foreground">
                     <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-sm">*</span>
-                    <span>{s}</span>
+                    <span>{module.title}</span>
                   </li>
                 ))}
               </ul>
@@ -108,19 +101,18 @@ export default function CourseLayout({ course }: CourseLayoutProps) {
 
             <div className="mt-4">
               <Accordion type="single" collapsible>
-                {syllabus.length ? (
-                  syllabus.map((s, i) => (
+                {syllabusModules.length ? (
+                  syllabusModules.map((module, i) => (
                     <AccordionItem key={i} value={`item-${i}`}>
                       <AccordionTrigger className="text-foreground">
-                        Module {i + 1}: {s.length > 60 ? `${s.slice(0, 60)}...` : s}
+                        Module {i + 1}: {module.title.length > 60 ? `${module.title.slice(0, 60)}...` : module.title}
                       </AccordionTrigger>
                       <AccordionContent>
-                        <div className="text-muted-foreground">{s}</div>
+                        <div className="text-muted-foreground">{module.title}</div>
                         <ul className="mt-3 text-sm text-muted-foreground grid md:grid-cols-2 gap-2">
-                          <li>- Hands-on exercises</li>
-                          <li>- Mini-projects</li>
-                          <li>- Quizzes & assessments</li>
-                          <li>- Revision and Q&A</li>
+                          {module.points.map((point, pointIndex) => (
+                            <li key={pointIndex}>- {point}</li>
+                          ))}
                         </ul>
                       </AccordionContent>
                     </AccordionItem>

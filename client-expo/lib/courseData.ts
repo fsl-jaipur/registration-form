@@ -1,5 +1,10 @@
 import { getApiBaseUrl } from "@shared/config/api";
 
+export type SyllabusModule = {
+  title: string;
+  points: string[];
+};
+
 export type Course = {
   _id?: string;
   slug?: string;
@@ -13,7 +18,8 @@ export type Course = {
   description?: string;
   overview?: string;
   fee?: string;
-  syllabus?: string[];
+  // Support both old format (string[]) and new format (SyllabusModule[])
+  syllabus?: string[] | SyllabusModule[];
   badge?: string | null;
   badgeColor?: string;
   color?: string;
@@ -141,6 +147,30 @@ export const fallbackCourses: Course[] = [
 
 const sortByOrder = (items: Course[]) => [...items].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
+const normalizeSyllabus = (syllabus: any): SyllabusModule[] => {
+  if (!syllabus || !Array.isArray(syllabus)) return [];
+  
+  // If it's already in new format (array of objects with title and points)
+  if (syllabus.length > 0 && typeof syllabus[0] === 'object' && syllabus[0].title) {
+    return syllabus.map((module: any) => ({
+      title: module.title || '',
+      points: Array.isArray(module.points) ? module.points : ["Hands-on exercises", "Mini-projects", "Quizzes & assessments", "Revision and Q&A"]
+    }));
+  }
+  
+  // Convert old format (string array) to new format
+  const stringArray = Array.isArray(syllabus)
+    ? syllabus
+    : typeof syllabus === "string"
+      ? syllabus.split(/[,\n]/).map((t: string) => t.trim()).filter(Boolean)
+      : [];
+
+  return stringArray.map((title: string) => ({
+    title: title || '',
+    points: ["Hands-on exercises", "Mini-projects", "Quizzes & assessments", "Revision and Q&A"]
+  }));
+};
+
 const normalizeCourse = (course: any = {}): Course => ({
   ...course,
   slug: course.slug || (course.title ? slugify(course.title) : undefined),
@@ -149,11 +179,7 @@ const normalizeCourse = (course: any = {}): Course => ({
     : typeof course.tags === "string"
       ? course.tags.split(/[,\n]/).map((t: string) => t.trim()).filter(Boolean)
       : [],
-  syllabus: Array.isArray(course.syllabus)
-    ? course.syllabus
-    : typeof course.syllabus === "string"
-      ? course.syllabus.split(/[,\n]/).map((t: string) => t.trim()).filter(Boolean)
-      : [],
+  syllabus: normalizeSyllabus(course.syllabus),
   rating: course.rating ? Number(course.rating) : course.rating,
 });
 
