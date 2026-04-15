@@ -32,7 +32,7 @@ import AppLayout from "@/components/AppLayout/index";
 import StudentResult from "@/pages/StudentPages/StudentResult";
 import ResultDetailPage from "@/pages/StudentPages/ResultDetailPage";
 import StudentQuiz from "@/pages/StudentPages/StudentQuiz";
-import StudentAssignments from "@/pages/StudentPages/StudentAssignments";
+import { StudentAssignments } from "@/pages/StudentPages/StudentAssignments";
 import StudentDailyUpdates from "@/pages/StudentPages/StudentDailyUpdates";
 import Login from "@/pages/Login";
 import AdminLayout from "@/components/AdminLayout";
@@ -85,9 +85,37 @@ const AppRoutes = () => {
   }, [location.pathname]);
 
   useEffect(() => {
-    console.log("scroll useEffect");
+    if (location.hash) {
+      return;
+    }
+
     window.scrollTo(0, 0);
-  }, [location.pathname]);
+  }, [location.hash, location.pathname]);
+
+  useEffect(() => {
+    if (!location.hash || showLoader) {
+      return;
+    }
+
+    let attempts = 0;
+    const maxAttempts = 20;
+
+    const scrollToHashTarget = () => {
+      const target = document.querySelector(location.hash);
+
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+
+      attempts += 1;
+      if (attempts < maxAttempts) {
+        window.setTimeout(scrollToHashTarget, 150);
+      }
+    };
+
+    scrollToHashTarget();
+  }, [location.hash, showLoader]);
 
   useEffect(() => {
     document.title = getDocumentTitle(location.pathname);

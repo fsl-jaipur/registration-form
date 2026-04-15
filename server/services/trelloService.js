@@ -11,16 +11,39 @@ const getEnv = () => {
   return { key, token, listId, dailyListId, todoListId, doingListId, doneListId };
 };
 
-const buildDesc = ({ videoLink, category, thumbnail, assignmentId }) => {
+const buildDesc = ({
+  assignmentType,
+  videoLink,
+  imageUrl,
+  contentText,
+  category,
+  thumbnail,
+  assignmentId,
+}) => {
   const lines = [];
   if (assignmentId) lines.push(`Assignment ID: ${assignmentId}`);
+  if (assignmentType) lines.push(`Type: ${assignmentType}`);
   if (category) lines.push(`Category: ${category}`);
   if (videoLink) lines.push(`Video: ${videoLink}`);
+  if (imageUrl) lines.push(`Image: ${imageUrl}`);
   if (thumbnail) lines.push(`Thumbnail: ${thumbnail}`);
+  if (contentText) {
+    lines.push("Details:");
+    lines.push(contentText.slice(0, 900));
+  }
   return lines.join("\n");
 };
 
-export const createTrelloCard = async ({ title, videoLink, category, thumbnail, assignmentId }) => {
+export const createTrelloCard = async ({
+  title,
+  assignmentType,
+  videoLink,
+  imageUrl,
+  contentText,
+  category,
+  thumbnail,
+  assignmentId,
+}) => {
   const { key, token, listId } = getEnv();
   if (!key || !token || !listId) {
     console.warn("Trello not configured (missing TRELLO_KEY, TRELLO_TOKEN, or TRELLO_LIST_ID). Skipping card creation.");
@@ -35,7 +58,7 @@ export const createTrelloCard = async ({ title, videoLink, category, thumbnail, 
     token,
     idList: listId,
     name: title,
-    desc: buildDesc({ videoLink, category, thumbnail, assignmentId }),
+    desc: buildDesc({ assignmentType, videoLink, imageUrl, contentText, category, thumbnail, assignmentId }),
   });
 
   const url = `${TRELLO_BASE_URL}/cards?${params.toString()}`;

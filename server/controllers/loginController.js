@@ -73,28 +73,36 @@ export async function studentlogin(req, res) {
   }
 }
 export async function changePassword(req, res) {
-  const { email, password, newPassword } = req.body;
+  const { email: rawEmail, password, newPassword } = req.body;
   
   try {
+    const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
+
+    if (!email || !password || !newPassword) {
+      return res.status(400).json({ message: "Email, old password, and new password are required." });
+    }
+
     const user = await studentModel.findOne({ email });
     
     if (!user) {
       return res.status(400).json({ message: "Old password is incorrect." });
     }
 
-    let isMatch = false;
-    if (user.firstTimesignin) {
-      isMatch = password === user.password;
-    } else {
-      isMatch = await bcrypt.compare(password, user.password);
-    }
+    const storedPassword = typeof user.password === "string" ? user.password : "";
+    const looksHashed = storedPassword.startsWith("$2");
+
+    // Most student passwords are stored as bcrypt hashes.
+    // Keep a plain-text fallback only for any legacy records.
+    const isMatch = looksHashed
+      ? await bcrypt.compare(password, storedPassword)
+      : password === storedPassword;
+
     if (!isMatch) {
       return res.status(400).json({ message: "Old password is incorrect." });
     }
 
-      const updatedPassword = await bcrypt.hash(newPassword, 10);
-    // Assign plaintext new password; model will hash on save
-    user.password = updatedPassword;
+    // Assign plaintext new password; the model hashes it on save.
+    user.password = newPassword;
     user.firstTimesignin = false;
     await user.save();
     
@@ -246,7 +254,7 @@ export const forgotPassword = async (req, res) => {
     // send OTP email using service (it will use dynamic template if configured)
     await sendForgotPasswordEmail({ to: email, name: user.name, otp, expiryMinutes: 60 });
 
-    return res.status(200).json({ message: "Password reset OTP sent" });
+    return res.status(200).json({ message: "Password reset OTP sent on email" });
   } catch (error) {
     console.error("Forgot password error:", error);
     return res.status(500).json({ message: "Error processing forgot password", error: error.message });
