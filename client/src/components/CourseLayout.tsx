@@ -42,7 +42,7 @@ export default function CourseLayout({ course }: CourseLayoutProps) {
           <div className="md:w-2/3">
             <nav className="text-sm text-muted-foreground mb-4">
               <Link to="/" className="inline-flex items-center gap-2 hover:underline">
-                ← Back to Courses
+                ← Back to Courses 1
               </Link>
             </nav>
 
