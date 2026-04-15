@@ -87,7 +87,7 @@ export default function CourseLayout({ course }: CourseLayoutProps) {
           </section>
 
           <section className="bg-card rounded-2xl p-6 shadow-sm border border-border">
-            <h2 className="text-2xl font-semibold">What You'll Learn</h2>
+            <h2 className="text-2xl font-semibold">What You will Learn</h2>
             {syllabus.length ? (
               <ul className="grid md:grid-cols-2 gap-3 mt-4">
                 {syllabus.slice(0, 6).map((s, i) => (
