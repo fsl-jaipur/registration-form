@@ -34,11 +34,15 @@ export async function studentlogin(req, res) {
     
     let isMatch = false;
     if (user.firstTimesignin) {
-      isMatch = password === user.password;
+      // password may be plain-text (legacy) or bcrypt-hashed (new registrations)
+      if (user.password.startsWith("$2")) {
+        isMatch = await bcrypt.compare(password, user.password);
+      } else {
+        isMatch = password === user.password;
+      }
     } else {
       isMatch = await bcrypt.compare(password, user.password);
     }
-    console.log(isMatch); 
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid email or password." });
     }
