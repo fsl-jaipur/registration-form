@@ -19,7 +19,7 @@ const primaryLinks = [
   { label: "Students", href: "/admin/students" },
   { label: "Results", href: "/admin/tests" },
   { label: "Resumes", href: "/admin/resumes" },
-
+  { label: "Workshops", href: "/admin/workshops" },
 ];
 
 const moreLinks = [
