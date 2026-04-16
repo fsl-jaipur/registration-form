@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import {
-  ArrowDown,
-  ArrowUp,
   ChevronDown,
   Download,
   FileJson,
+  GripVertical,
   Link2,
   Loader2,
+  Minus,
+  MoreVertical,
+  Pencil,
   Plus,
   Save,
   Share2,
@@ -45,11 +47,13 @@ import type {
 } from "@/features/resume/types";
 import {
   createResumeFilename,
+  createResumePdfFilename,
   createResumePayload,
   decodeLinkedInPayload,
+  downloadResumeElementPdf,
+  downloadResumePdf,
   downloadJsonFile,
   getShareUrl,
-  printResume,
   withResumeDefaults,
 } from "@/features/resume/utils";
 import {
@@ -59,6 +63,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -187,9 +197,51 @@ export default function StudentResumeBuilder() {
   const [linkedInLoading, setLinkedInLoading] = useState(false);
   const [linkedInForm, setLinkedInForm] = useState(initialLinkedInForm);
   const [creatingResume, setCreatingResume] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [showGuestInfo, setShowGuestInfo] = useState(false);
   const [guestResumes, setGuestResumes] = useState<(ResumeFormValues & { _id: string; updatedAt: string })[]>([]);
   const [guestActiveId, setGuestActiveId] = useState("");
+  const [draggedSection, setDraggedSection] = useState<string | null>(null);
+  const [dragOverSection, setDragOverSection] = useState<string | null>(null);
+  const [editingSocialLinkIndex, setEditingSocialLinkIndex] = useState<number | null>(null);
+  const [draggedSocialLinkIndex, setDraggedSocialLinkIndex] = useState<number | null>(null);
+  const [dragOverSocialLinkIndex, setDragOverSocialLinkIndex] = useState<number | null>(null);
+  const [editingSkillIndex, setEditingSkillIndex] = useState<number | null>(null);
+  const [draggedSkillIndex, setDraggedSkillIndex] = useState<number | null>(null);
+  const [dragOverSkillIndex, setDragOverSkillIndex] = useState<number | null>(null);
+  const [editingProjectIndex, setEditingProjectIndex] = useState<number | null>(null);
+  const [draggedProjectIndex, setDraggedProjectIndex] = useState<number | null>(null);
+  const [dragOverProjectIndex, setDragOverProjectIndex] = useState<number | null>(null);
+  const [editingExperienceIndex, setEditingExperienceIndex] = useState<number | null>(null);
+  const [draggedExperienceIndex, setDraggedExperienceIndex] = useState<number | null>(null);
+  const [dragOverExperienceIndex, setDragOverExperienceIndex] = useState<number | null>(null);
+  const [editingEducationIndex, setEditingEducationIndex] = useState<number | null>(null);
+  const [draggedEducationIndex, setDraggedEducationIndex] = useState<number | null>(null);
+  const [dragOverEducationIndex, setDragOverEducationIndex] = useState<number | null>(null);
+  const [editingCertificationIndex, setEditingCertificationIndex] = useState<number | null>(null);
+  const [draggedCertificationIndex, setDraggedCertificationIndex] = useState<number | null>(null);
+  const [dragOverCertificationIndex, setDragOverCertificationIndex] = useState<number | null>(null);
+  const [editingAchievementIndex, setEditingAchievementIndex] = useState<number | null>(null);
+  const [draggedAchievementIndex, setDraggedAchievementIndex] = useState<number | null>(null);
+  const [dragOverAchievementIndex, setDragOverAchievementIndex] = useState<number | null>(null);
+  const [editingCustomSectionIndex, setEditingCustomSectionIndex] = useState<number | null>(null);
+  const [draggedCustomSectionIndex, setDraggedCustomSectionIndex] = useState<number | null>(null);
+  const [dragOverCustomSectionIndex, setDragOverCustomSectionIndex] = useState<number | null>(null);
+  const [previewScale, setPreviewScale] = useState(0.8);
+  const [previewPan, setPreviewPan] = useState({ x: 0, y: 0 });
+  const [isPreviewDragging, setIsPreviewDragging] = useState(false);
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const previewLastTapRef = useRef(0);
+  const previewHoldTimerRef = useRef<number | null>(null);
+  const previewHoldBaseScaleRef = useRef(previewScale);
+  const previewHoldActiveRef = useRef(false);
+  const previewDragRef = useRef({
+    pointerId: -1,
+    startX: 0,
+    startY: 0,
+    originX: 0,
+    originY: 0,
+  });
   const isStudentAuthenticated = authChecked && isAuthenticated && role === "student";
 
   const activeSummary = resumes.find((item) => item._id === activeResumeId);
@@ -239,6 +291,223 @@ export default function StudentResumeBuilder() {
     syncSummary(response);
     setInitialLoaded(true);
     setSaveState("idle");
+  };
+
+  const handleDownloadPdf = async () => {
+    if (downloadingPdf) return;
+
+    try {
+      setDownloadingPdf(true);
+      const resumePage = previewRef.current?.querySelector<HTMLElement>("[data-resume-page]");
+      const filename = createResumePdfFilename({ title: draft.title });
+
+      if (resumePage) {
+        await downloadResumeElementPdf(resumePage, filename);
+      } else {
+        await downloadResumePdf(draft, filename);
+      }
+    } catch (error) {
+      console.error("resume pdf download error", error);
+      toast({
+        title: "PDF download failed",
+        description: "We could not generate the PDF. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  const updatePreviewScale = (nextScale: number) => {
+    setPreviewScale(Math.min(1.4, Math.max(0.5, Number(nextScale.toFixed(2)))));
+  };
+
+  const clearPreviewHoldTimer = () => {
+    if (previewHoldTimerRef.current !== null) {
+      window.clearTimeout(previewHoldTimerRef.current);
+      previewHoldTimerRef.current = null;
+    }
+  };
+
+  const endPreviewHold = () => {
+    clearPreviewHoldTimer();
+    if (previewHoldActiveRef.current) {
+      previewHoldActiveRef.current = false;
+      updatePreviewScale(previewHoldBaseScaleRef.current);
+    }
+  };
+
+  const handlePreviewPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (!event.isPrimary) return;
+
+    previewDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: previewPan.x,
+      originY: previewPan.y,
+    };
+    setIsPreviewDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+
+    const now = Date.now();
+    const isDoubleTap = now - previewLastTapRef.current < 320;
+    previewLastTapRef.current = now;
+
+    if (!isDoubleTap || event.pointerType === "mouse") return;
+
+    event.preventDefault();
+    clearPreviewHoldTimer();
+    previewHoldBaseScaleRef.current = previewScale;
+    previewHoldTimerRef.current = window.setTimeout(() => {
+      previewHoldActiveRef.current = true;
+      updatePreviewScale(Math.max(previewScale + 0.25, 1));
+    }, 120);
+  };
+
+  const handlePreviewPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (!isPreviewDragging || previewDragRef.current.pointerId !== event.pointerId) return;
+
+    const deltaX = event.clientX - previewDragRef.current.startX;
+    const deltaY = event.clientY - previewDragRef.current.startY;
+    if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) {
+      clearPreviewHoldTimer();
+    }
+
+    setPreviewPan({
+      x: previewDragRef.current.originX + deltaX,
+      y: previewDragRef.current.originY + deltaY,
+    });
+  };
+
+  const handlePreviewPointerEnd = (event: PointerEvent<HTMLDivElement>) => {
+    if (previewDragRef.current.pointerId === event.pointerId) {
+      previewDragRef.current.pointerId = -1;
+      setIsPreviewDragging(false);
+    }
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    endPreviewHold();
+  };
+
+  useEffect(() => {
+    return () => clearPreviewHoldTimer();
+  }, []);
+
+  const moveSectionOrder = (fromSection: string, toSection: string) => {
+    if (fromSection === toSection) return;
+
+    setDraft((current) => {
+      const fromIndex = current.sectionOrder.indexOf(fromSection);
+      const toIndex = current.sectionOrder.indexOf(toSection);
+
+      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) {
+        return current;
+      }
+
+      return {
+        ...current,
+        sectionOrder: arrayMove(current.sectionOrder, fromIndex, toIndex),
+      };
+    });
+  };
+
+  const moveSocialLink = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+
+    setDraft((current) => ({
+      ...current,
+      socialLinks: arrayMove(current.socialLinks, fromIndex, toIndex),
+    }));
+
+    if (editingSocialLinkIndex === fromIndex) {
+      setEditingSocialLinkIndex(toIndex);
+    } else if (editingSocialLinkIndex === toIndex) {
+      setEditingSocialLinkIndex(fromIndex);
+    }
+  };
+
+  const moveSkill = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+
+    setDraft((current) => ({
+      ...current,
+      skills: arrayMove(current.skills, fromIndex, toIndex),
+    }));
+
+    if (editingSkillIndex === fromIndex) {
+      setEditingSkillIndex(toIndex);
+    } else if (editingSkillIndex === toIndex) {
+      setEditingSkillIndex(fromIndex);
+    }
+  };
+
+  const moveProject = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+
+    setDraft((current) => ({
+      ...current,
+      projects: arrayMove(current.projects, fromIndex, toIndex),
+    }));
+
+    if (editingProjectIndex === fromIndex) {
+      setEditingProjectIndex(toIndex);
+    } else if (editingProjectIndex === toIndex) {
+      setEditingProjectIndex(fromIndex);
+    }
+  };
+
+  const moveExperience = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    setDraft((current) => ({
+      ...current,
+      experience: arrayMove(current.experience, fromIndex, toIndex),
+    }));
+    if (editingExperienceIndex === fromIndex) setEditingExperienceIndex(toIndex);
+    else if (editingExperienceIndex === toIndex) setEditingExperienceIndex(fromIndex);
+  };
+
+  const moveEducation = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    setDraft((current) => ({
+      ...current,
+      education: arrayMove(current.education, fromIndex, toIndex),
+    }));
+    if (editingEducationIndex === fromIndex) setEditingEducationIndex(toIndex);
+    else if (editingEducationIndex === toIndex) setEditingEducationIndex(fromIndex);
+  };
+
+  const moveCertification = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    setDraft((current) => ({
+      ...current,
+      certifications: arrayMove(current.certifications, fromIndex, toIndex),
+    }));
+    if (editingCertificationIndex === fromIndex) setEditingCertificationIndex(toIndex);
+    else if (editingCertificationIndex === toIndex) setEditingCertificationIndex(fromIndex);
+  };
+
+  const moveAchievement = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    setDraft((current) => ({
+      ...current,
+      achievements: arrayMove(current.achievements, fromIndex, toIndex),
+    }));
+    if (editingAchievementIndex === fromIndex) setEditingAchievementIndex(toIndex);
+    else if (editingAchievementIndex === toIndex) setEditingAchievementIndex(fromIndex);
+  };
+
+  const moveCustomSection = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    setDraft((current) => ({
+      ...current,
+      customSections: arrayMove(current.customSections, fromIndex, toIndex),
+    }));
+    if (editingCustomSectionIndex === fromIndex) setEditingCustomSectionIndex(toIndex);
+    else if (editingCustomSectionIndex === toIndex) setEditingCustomSectionIndex(fromIndex);
   };
 
   useEffect(() => {
@@ -496,8 +765,10 @@ export default function StudentResumeBuilder() {
   };
 
   const deleteResume = async () => {
+    const resumeNameForDelete = draft.title || draft.name || "Untitled Resume";
+
     if (!isStudentAuthenticated) {
-      if (!window.confirm("Delete this resume?")) return;
+      if (!window.confirm(`Delete "${resumeNameForDelete}"?`)) return;
       setGuestResumes((current) => {
         const filtered = current.filter((r) => r._id !== guestActiveId);
         const next = filtered.length
@@ -515,7 +786,7 @@ export default function StudentResumeBuilder() {
     }
 
     if (!activeResumeId) return;
-    if (!window.confirm("Delete this resume draft?")) return;
+    if (!window.confirm(`Delete "${resumeNameForDelete}"?`)) return;
 
     try {
       await api.request(`/resumes/${activeResumeId}`, {
@@ -744,11 +1015,12 @@ export default function StudentResumeBuilder() {
               ) : null}
               <button
                 type="button"
-                onClick={() => printResume(draft)}
+                onClick={() => void handleDownloadPdf()}
+                disabled={downloadingPdf}
                 className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium"
               >
                 <Download className="h-4 w-4" />
-                Download PDF
+                {downloadingPdf ? "Preparing PDF..." : "Download PDF"}
               </button>
               <button
                 type="button"
@@ -786,11 +1058,83 @@ export default function StudentResumeBuilder() {
                 )}
                 New resume
               </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium"
+                  >
+                    My resume
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="max-h-80 w-72 overflow-y-auto rounded-2xl">
+                  {isStudentAuthenticated ? (
+                    resumes.length ? (
+                      resumes.map((resume) => (
+                        <DropdownMenuItem
+                          key={resume._id}
+                          onClick={() => void loadResume(resume._id)}
+                          className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 ${
+                            resume._id === activeResumeId
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-transparent"
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold">{resume.title}</p>
+                            <p className="text-xs capitalize text-muted-foreground">
+                              {resume.template} template
+                            </p>
+                          </div>
+                          <span
+                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: resume.accentColor }}
+                          />
+                        </DropdownMenuItem>
+                      ))
+                    ) : (
+                      <div className="p-3 text-sm text-muted-foreground">
+                        No saved resumes yet.
+                      </div>
+                    )
+                  ) : guestResumes.length ? (
+                    guestResumes.map((resume) => (
+                      <DropdownMenuItem
+                        key={resume._id}
+                        onClick={() => loadGuestResume(resume._id)}
+                        className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 ${
+                          resume._id === guestActiveId
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-transparent"
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold">
+                            {resume.title || "Untitled Resume"}
+                          </p>
+                          <p className="text-xs capitalize text-muted-foreground">
+                            {resume.template} template
+                          </p>
+                        </div>
+                        <span
+                          className="h-2.5 w-2.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: resume.accentColor }}
+                        />
+                      </DropdownMenuItem>
+                    ))
+                  ) : (
+                    <div className="p-3 text-sm text-muted-foreground">
+                      No local resumes yet.
+                    </div>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </section>
 
-          <section className="grid gap-4 items-start lg:grid-cols-[320px_minmax(0,1fr)_320px]">
-            <div className="space-y-5">
+          <section className="grid gap-4 items-start lg:grid-cols-[320px_minmax(0,1fr)]">
+            <div className="resume-editor-scroll max-h-[calc(100vh-2rem)] space-y-5 overflow-y-auto pr-2 lg:sticky lg:top-8 lg:max-h-[calc(100vh-4rem)]">
                 <EditorCard title="Essentials">
                   <TextInput
                     label="Resume Title"
@@ -856,7 +1200,7 @@ export default function StudentResumeBuilder() {
                 </EditorCard>
 
                 <EditorCard title="Templates and Theme">
-                  <div className="grid gap-3 md:grid-cols-3">
+                  <div className="flex flex-wrap gap-3">
                     {resumeTemplates.map((template) => (
                       <button
                         type="button"
@@ -871,7 +1215,7 @@ export default function StudentResumeBuilder() {
                           draft.template === template.id
                             ? "border-primary bg-primary/5"
                             : "border-border hover:border-primary/50"
-                        }`}
+                        } min-w-[180px] flex-1`}
                       >
                         <p className="font-semibold">{template.label}</p>
                         <p className="mt-2 text-xs leading-5 text-muted-foreground">
@@ -880,10 +1224,10 @@ export default function StudentResumeBuilder() {
                       </button>
                     ))}
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-4">
                     <div>
                       <p className="mb-2 text-sm font-medium">Theme mode</p>
-                      <div className="flex gap-3">
+                      <div className="flex flex-wrap gap-3">
                         {(["light", "dark"] as const).map((mode) => (
                           <button
                             key={mode}
@@ -904,7 +1248,7 @@ export default function StudentResumeBuilder() {
                     </div>
                     <div>
                       <p className="mb-2 text-sm font-medium">Accent color</p>
-                      <div className="flex flex-wrap gap-3">
+                      <div className="flex flex-wrap items-center gap-3">
                         {themeColors.map((color) => (
                           <button
                             key={color}
@@ -938,48 +1282,57 @@ export default function StudentResumeBuilder() {
 
                 <EditorCard
                   title="Section Order"
-                  action={<span className="text-xs text-muted-foreground">Bonus: reorder</span>}
+                  action={<span className="text-xs text-muted-foreground">Drag to reorder</span>}
                 >
                   <div className="space-y-2">
                     {draft.sectionOrder.map((section, index) => (
                       <div
                         key={section}
-                        className="flex items-center justify-between rounded-2xl border border-border bg-background px-4 py-3"
+                        draggable
+                        onDragStart={(event) => {
+                          setDraggedSection(section);
+                          setDragOverSection(section);
+                          event.dataTransfer.effectAllowed = "move";
+                          event.dataTransfer.setData("text/plain", section);
+                        }}
+                        onDragOver={(event) => {
+                          event.preventDefault();
+                          event.dataTransfer.dropEffect = "move";
+                          if (dragOverSection !== section) {
+                            setDragOverSection(section);
+                          }
+                        }}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          const sourceSection =
+                            draggedSection || event.dataTransfer.getData("text/plain");
+
+                          if (sourceSection) {
+                            moveSectionOrder(sourceSection, section);
+                          }
+
+                          setDraggedSection(null);
+                          setDragOverSection(null);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedSection(null);
+                          setDragOverSection(null);
+                        }}
+                        className={`flex items-center justify-between rounded-2xl border bg-background px-4 py-3 transition ${
+                          draggedSection === section
+                            ? "border-primary bg-primary/5 opacity-70"
+                            : dragOverSection === section
+                              ? "border-primary/70 bg-primary/5"
+                              : "border-border"
+                        }`}
                       >
-                        <span className="text-sm font-medium">
-                          {sectionLabels[section] || section}
-                        </span>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setDraft((current) => ({
-                                ...current,
-                                sectionOrder:
-                                  index === 0
-                                    ? current.sectionOrder
-                                    : arrayMove(current.sectionOrder, index, index - 1),
-                              }))
-                            }
-                            className="rounded-xl border border-border p-2"
-                          >
-                            <ArrowUp className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setDraft((current) => ({
-                                ...current,
-                                sectionOrder:
-                                  index === current.sectionOrder.length - 1
-                                    ? current.sectionOrder
-                                    : arrayMove(current.sectionOrder, index, index + 1),
-                              }))
-                            }
-                            className="rounded-xl border border-border p-2"
-                          >
-                            <ArrowDown className="h-4 w-4" />
-                          </button>
+                        <div className="flex items-center gap-3">
+                          <span className="cursor-grab text-muted-foreground active:cursor-grabbing">
+                            <GripVertical className="h-4 w-4" />
+                          </span>
+                          <span className="text-sm font-medium">
+                            {sectionLabels[section] || section}
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -987,74 +1340,292 @@ export default function StudentResumeBuilder() {
                 </EditorCard>
 
                 <EditorCard
-                  title="Social Links"
+                  title="Profiles"
                   action={
                     <button
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
                         setDraft((current) => ({
                           ...current,
                           socialLinks: [...current.socialLinks, defaultSocialLink()],
-                        }))
-                      }
+                        }));
+                        setEditingSocialLinkIndex(draft.socialLinks.length);
+                      }}
                       className="rounded-2xl border border-border px-3 py-2 text-sm font-medium"
                     >
-                      Add link
+                      Add new
                     </button>
                   }
                 >
-                  {draft.socialLinks.map((link, index) => (
-                    <div key={`${index}-${link.label}`} className="rounded-3xl border border-border p-4">
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <TextInput
-                          label="Label"
-                          value={link.label}
-                          onChange={(value) =>
-                            setDraft((current) => ({
-                              ...current,
-                              socialLinks: updateListField<SocialLink>(
-                                current.socialLinks,
-                                index,
-                                (item) => ({ ...item, label: value })
-                              ),
-                            }))
-                          }
-                        />
-                        <TextInput
-                          label="URL"
-                          value={link.url}
-                          onChange={(value) =>
-                            setDraft((current) => ({
-                              ...current,
-                              socialLinks: updateListField<SocialLink>(
-                                current.socialLinks,
-                                index,
-                                (item) => ({ ...item, url: value })
-                              ),
-                            }))
-                          }
-                        />
+                  <div className="space-y-2">
+                    {draft.socialLinks.map((link, index) => (
+                      <div key={`social-link-${index}`}>
+                        <div
+                          draggable
+                          onDragStart={(event) => {
+                            setDraggedSocialLinkIndex(index);
+                            setDragOverSocialLinkIndex(index);
+                            event.dataTransfer.effectAllowed = "move";
+                            event.dataTransfer.setData("text/plain", String(index));
+                          }}
+                          onDragOver={(event) => {
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = "move";
+                            if (dragOverSocialLinkIndex !== index) {
+                              setDragOverSocialLinkIndex(index);
+                            }
+                          }}
+                          onDrop={(event) => {
+                            event.preventDefault();
+                            const sourceIndex = draggedSocialLinkIndex ?? Number(event.dataTransfer.getData("text/plain"));
+                            if (Number.isInteger(sourceIndex)) {
+                              moveSocialLink(sourceIndex, index);
+                            }
+                            setDraggedSocialLinkIndex(null);
+                            setDragOverSocialLinkIndex(null);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedSocialLinkIndex(null);
+                            setDragOverSocialLinkIndex(null);
+                          }}
+                          className={`flex items-center justify-between rounded-2xl border bg-background px-4 py-3 transition ${
+                            draggedSocialLinkIndex === index
+                              ? "border-primary bg-primary/5 opacity-70"
+                              : dragOverSocialLinkIndex === index
+                                ? "border-primary/70 bg-primary/5"
+                                : "border-border"
+                          }`}
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="cursor-grab text-muted-foreground active:cursor-grabbing">
+                              <GripVertical className="h-4 w-4" />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold">
+                                {link.label || "Untitled profile"}
+                              </p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {link.url || "Add profile URL"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className="rounded-xl border border-border p-2 text-muted-foreground transition hover:border-primary/50 hover:text-foreground"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40 rounded-xl">
+                              <DropdownMenuItem onClick={() => setEditingSocialLinkIndex(index)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Update
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setDraft((current) => ({
+                                    ...current,
+                                    socialLinks: current.socialLinks.filter((_, itemIndex) => itemIndex !== index),
+                                  }));
+                                  setEditingSocialLinkIndex((current) => {
+                                    if (current === null) return null;
+                                    if (current === index) return null;
+                                    return current > index ? current - 1 : current;
+                                  });
+                                }}
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+
+                        {editingSocialLinkIndex === index ? (
+                          <div className="mt-2 rounded-3xl border border-border bg-background/60 p-4">
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <TextInput
+                                label="Label"
+                                value={link.label}
+                                onChange={(value) =>
+                                  setDraft((current) => ({
+                                    ...current,
+                                    socialLinks: updateListField<SocialLink>(
+                                      current.socialLinks,
+                                      index,
+                                      (item) => ({ ...item, label: value })
+                                    ),
+                                  }))
+                                }
+                              />
+                              <TextInput
+                                label="URL"
+                                value={link.url}
+                                onChange={(value) =>
+                                  setDraft((current) => ({
+                                    ...current,
+                                    socialLinks: updateListField<SocialLink>(
+                                      current.socialLinks,
+                                      index,
+                                      (item) => ({ ...item, url: value })
+                                    ),
+                                  }))
+                                }
+                              />
+                            </div>
+                            <div className="mt-3 flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => setEditingSocialLinkIndex(null)}
+                                className="rounded-2xl border border-border px-4 py-2 text-sm font-medium"
+                              >
+                                Done
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </EditorCard>
 
-                <EditorCard title="Skills">
-                  <TextArea
-                    label="Skills"
-                    value={draft.skills.join(", ")}
-                    onChange={(value) =>
-                      setDraft((current) => ({
-                        ...current,
-                        skills: value
-                          .split(",")
-                          .map((item) => item.trim())
-                          .filter(Boolean),
-                      }))
-                    }
-                    placeholder="React, TypeScript, Node.js, MongoDB"
-                    rows={3}
-                  />
+                <EditorCard
+                  title="Skills"
+                  action={
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDraft((current) => ({
+                          ...current,
+                          skills: [...current.skills, ""],
+                        }));
+                        setEditingSkillIndex(draft.skills.length);
+                      }}
+                      className="rounded-2xl border border-border px-3 py-2 text-sm font-medium"
+                    >
+                      Add new
+                    </button>
+                  }
+                >
+                  <div className="space-y-2">
+                    {draft.skills.map((skill, index) => (
+                      <div key={`skill-${index}`}>
+                        <div
+                          draggable
+                          onDragStart={(event) => {
+                            setDraggedSkillIndex(index);
+                            setDragOverSkillIndex(index);
+                            event.dataTransfer.effectAllowed = "move";
+                            event.dataTransfer.setData("text/plain", String(index));
+                          }}
+                          onDragOver={(event) => {
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = "move";
+                            if (dragOverSkillIndex !== index) {
+                              setDragOverSkillIndex(index);
+                            }
+                          }}
+                          onDrop={(event) => {
+                            event.preventDefault();
+                            const sourceIndex =
+                              draggedSkillIndex ?? Number(event.dataTransfer.getData("text/plain"));
+                            if (Number.isInteger(sourceIndex)) {
+                              moveSkill(sourceIndex, index);
+                            }
+                            setDraggedSkillIndex(null);
+                            setDragOverSkillIndex(null);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedSkillIndex(null);
+                            setDragOverSkillIndex(null);
+                          }}
+                          className={`flex items-center justify-between rounded-2xl border bg-background px-4 py-3 transition ${
+                            draggedSkillIndex === index
+                              ? "border-primary bg-primary/5 opacity-70"
+                              : dragOverSkillIndex === index
+                                ? "border-primary/70 bg-primary/5"
+                                : "border-border"
+                          }`}
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="cursor-grab text-muted-foreground active:cursor-grabbing">
+                              <GripVertical className="h-4 w-4" />
+                            </span>
+                            <p className="truncate text-sm font-semibold">
+                              {skill || "Untitled skill"}
+                            </p>
+                          </div>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className="rounded-xl border border-border p-2 text-muted-foreground transition hover:border-primary/50 hover:text-foreground"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40 rounded-xl">
+                              <DropdownMenuItem onClick={() => setEditingSkillIndex(index)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Update
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setDraft((current) => ({
+                                    ...current,
+                                    skills: current.skills.filter((_, itemIndex) => itemIndex !== index),
+                                  }));
+                                  setEditingSkillIndex((current) => {
+                                    if (current === null) return null;
+                                    if (current === index) return null;
+                                    return current > index ? current - 1 : current;
+                                  });
+                                }}
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+
+                        {editingSkillIndex === index ? (
+                          <div className="mt-2 rounded-3xl border border-border bg-background/60 p-4">
+                            <TextInput
+                              label="Skill"
+                              value={skill}
+                              onChange={(value) =>
+                                setDraft((current) => ({
+                                  ...current,
+                                  skills: updateListField<string>(
+                                    current.skills,
+                                    index,
+                                    () => value
+                                  ),
+                                }))
+                              }
+                              placeholder="React, Figma, Node.js"
+                            />
+                            <div className="mt-3 flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => setEditingSkillIndex(null)}
+                                className="rounded-2xl border border-border px-4 py-2 text-sm font-medium"
+                              >
+                                Done
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
                 </EditorCard>
 
                 <EditorCard
@@ -1062,102 +1633,182 @@ export default function StudentResumeBuilder() {
                   action={
                     <button
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
                         setDraft((current) => ({
                           ...current,
                           projects: [...current.projects, defaultProject()],
-                        }))
-                      }
+                        }));
+                        setEditingProjectIndex(draft.projects.length);
+                      }}
                       className="rounded-2xl border border-border px-3 py-2 text-sm font-medium"
                     >
-                      Add project
+                      Add new project
                     </button>
                   }
                 >
-                  {draft.projects.map((project, index) => (
-                    <div key={index} className="rounded-3xl border border-border p-4">
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <TextInput
-                          label="Project title"
-                          value={project.title}
-                          onChange={(value) =>
-                            setDraft((current) => ({
-                              ...current,
-                              projects: updateListField<ResumeProject>(
-                                current.projects,
-                                index,
-                                (item) => ({ ...item, title: value })
-                              ),
-                            }))
-                          }
-                        />
-                        <TextInput
-                          label="Tech stack"
-                          value={project.techStack.join(", ")}
-                          onChange={(value) =>
-                            setDraft((current) => ({
-                              ...current,
-                              projects: updateListField<ResumeProject>(
-                                current.projects,
-                                index,
-                                (item) => ({
-                                  ...item,
-                                  techStack: value
-                                    .split(",")
-                                    .map((tech) => tech.trim())
-                                    .filter(Boolean),
-                                })
-                              ),
-                            }))
-                          }
-                        />
+                  <div className="space-y-2">
+                    {draft.projects.map((project, index) => (
+                      <div key={`project-${index}`}>
+                        <div
+                          draggable
+                          onDragStart={(event) => {
+                            setDraggedProjectIndex(index);
+                            setDragOverProjectIndex(index);
+                            event.dataTransfer.effectAllowed = "move";
+                            event.dataTransfer.setData("text/plain", String(index));
+                          }}
+                          onDragOver={(event) => {
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = "move";
+                            if (dragOverProjectIndex !== index) {
+                              setDragOverProjectIndex(index);
+                            }
+                          }}
+                          onDrop={(event) => {
+                            event.preventDefault();
+                            const sourceIndex =
+                              draggedProjectIndex ?? Number(event.dataTransfer.getData("text/plain"));
+                            if (Number.isInteger(sourceIndex)) {
+                              moveProject(sourceIndex, index);
+                            }
+                            setDraggedProjectIndex(null);
+                            setDragOverProjectIndex(null);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedProjectIndex(null);
+                            setDragOverProjectIndex(null);
+                          }}
+                          className={`flex items-center justify-between rounded-2xl border bg-background px-4 py-3 transition ${
+                            draggedProjectIndex === index
+                              ? "border-primary bg-primary/5 opacity-70"
+                              : dragOverProjectIndex === index
+                                ? "border-primary/70 bg-primary/5"
+                                : "border-border"
+                          }`}
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="cursor-grab text-muted-foreground active:cursor-grabbing">
+                              <GripVertical className="h-4 w-4" />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold">
+                                {project.title || "Untitled project"}
+                              </p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {project.linkUrl || project.description || "Add project details"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className="rounded-xl border border-border p-2 text-muted-foreground transition hover:border-primary/50 hover:text-foreground"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40 rounded-xl">
+                              <DropdownMenuItem onClick={() => setEditingProjectIndex(index)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Update
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setDraft((current) => ({
+                                    ...current,
+                                    projects: current.projects.filter((_, itemIndex) => itemIndex !== index),
+                                  }));
+                                  setEditingProjectIndex((current) => {
+                                    if (current === null) return null;
+                                    if (current === index) return null;
+                                    return current > index ? current - 1 : current;
+                                  });
+                                }}
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+
+                        {editingProjectIndex === index ? (
+                          <div className="mt-2 rounded-3xl border border-border bg-background/60 p-4">
+                            <TextInput
+                              label="Project title"
+                              value={project.title}
+                              onChange={(value) =>
+                                setDraft((current) => ({
+                                  ...current,
+                                  projects: updateListField<ResumeProject>(
+                                    current.projects,
+                                    index,
+                                    (item) => ({ ...item, title: value })
+                                  ),
+                                }))
+                              }
+                            />
+                            <TextArea
+                              label="Description"
+                              value={project.description}
+                              onChange={(value) =>
+                                setDraft((current) => ({
+                                  ...current,
+                                  projects: updateListField<ResumeProject>(
+                                    current.projects,
+                                    index,
+                                    (item) => ({ ...item, description: value })
+                                  ),
+                                }))
+                              }
+                            />
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <TextInput
+                                label="Link label"
+                                value={project.linkLabel}
+                                onChange={(value) =>
+                                  setDraft((current) => ({
+                                    ...current,
+                                    projects: updateListField<ResumeProject>(
+                                      current.projects,
+                                      index,
+                                      (item) => ({ ...item, linkLabel: value })
+                                    ),
+                                  }))
+                                }
+                              />
+                              <TextInput
+                                label="Link URL"
+                                value={project.linkUrl}
+                                onChange={(value) =>
+                                  setDraft((current) => ({
+                                    ...current,
+                                    projects: updateListField<ResumeProject>(
+                                      current.projects,
+                                      index,
+                                      (item) => ({ ...item, linkUrl: value })
+                                    ),
+                                  }))
+                                }
+                              />
+                            </div>
+                            <div className="mt-3 flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => setEditingProjectIndex(null)}
+                                className="rounded-2xl border border-border px-4 py-2 text-sm font-medium"
+                              >
+                                Done
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
-                      <TextArea
-                        label="Description"
-                        value={project.description}
-                        onChange={(value) =>
-                          setDraft((current) => ({
-                            ...current,
-                            projects: updateListField<ResumeProject>(
-                              current.projects,
-                              index,
-                              (item) => ({ ...item, description: value })
-                            ),
-                          }))
-                        }
-                      />
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <TextInput
-                          label="Link label"
-                          value={project.linkLabel}
-                          onChange={(value) =>
-                            setDraft((current) => ({
-                              ...current,
-                              projects: updateListField<ResumeProject>(
-                                current.projects,
-                                index,
-                                (item) => ({ ...item, linkLabel: value })
-                              ),
-                            }))
-                          }
-                        />
-                        <TextInput
-                          label="Link URL"
-                          value={project.linkUrl}
-                          onChange={(value) =>
-                            setDraft((current) => ({
-                              ...current,
-                              projects: updateListField<ResumeProject>(
-                                current.projects,
-                                index,
-                                (item) => ({ ...item, linkUrl: value })
-                              ),
-                            }))
-                          }
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </EditorCard>
 
                 <EditorCard
@@ -1165,80 +1816,98 @@ export default function StudentResumeBuilder() {
                   action={
                     <button
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
                         setDraft((current) => ({
                           ...current,
                           experience: [...current.experience, defaultExperience()],
-                        }))
-                      }
+                        }));
+                        setEditingExperienceIndex(draft.experience.length);
+                      }}
                       className="rounded-2xl border border-border px-3 py-2 text-sm font-medium"
                     >
-                      Add experience
+                      Add new experience
                     </button>
                   }
                 >
-                  {draft.experience.map((experience, index) => (
-                    <div key={index} className="rounded-3xl border border-border p-4">
-                      <div className="grid gap-4 md:grid-cols-3">
-                        <TextInput
-                          label="Company"
-                          value={experience.company}
-                          onChange={(value) =>
-                            setDraft((current) => ({
-                              ...current,
-                              experience: updateListField<ResumeExperience>(
-                                current.experience,
-                                index,
-                                (item) => ({ ...item, company: value })
-                              ),
-                            }))
-                          }
-                        />
-                        <TextInput
-                          label="Role"
-                          value={experience.role}
-                          onChange={(value) =>
-                            setDraft((current) => ({
-                              ...current,
-                              experience: updateListField<ResumeExperience>(
-                                current.experience,
-                                index,
-                                (item) => ({ ...item, role: value })
-                              ),
-                            }))
-                          }
-                        />
-                        <TextInput
-                          label="Duration"
-                          value={experience.duration}
-                          onChange={(value) =>
-                            setDraft((current) => ({
-                              ...current,
-                              experience: updateListField<ResumeExperience>(
-                                current.experience,
-                                index,
-                                (item) => ({ ...item, duration: value })
-                              ),
-                            }))
-                          }
-                        />
+                  <div className="space-y-2">
+                    {draft.experience.map((experience, index) => (
+                      <div key={`experience-${index}`}>
+                        <div
+                          draggable
+                          onDragStart={(event) => {
+                            setDraggedExperienceIndex(index);
+                            setDragOverExperienceIndex(index);
+                            event.dataTransfer.effectAllowed = "move";
+                            event.dataTransfer.setData("text/plain", String(index));
+                          }}
+                          onDragOver={(event) => {
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = "move";
+                            if (dragOverExperienceIndex !== index) setDragOverExperienceIndex(index);
+                          }}
+                          onDrop={(event) => {
+                            event.preventDefault();
+                            const sourceIndex = draggedExperienceIndex ?? Number(event.dataTransfer.getData("text/plain"));
+                            if (Number.isInteger(sourceIndex)) moveExperience(sourceIndex, index);
+                            setDraggedExperienceIndex(null);
+                            setDragOverExperienceIndex(null);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedExperienceIndex(null);
+                            setDragOverExperienceIndex(null);
+                          }}
+                          className={`flex items-center justify-between rounded-2xl border bg-background px-4 py-3 transition ${
+                            draggedExperienceIndex === index
+                              ? "border-primary bg-primary/5 opacity-70"
+                              : dragOverExperienceIndex === index
+                                ? "border-primary/70 bg-primary/5"
+                                : "border-border"
+                          }`}
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="cursor-grab text-muted-foreground active:cursor-grabbing"><GripVertical className="h-4 w-4" /></span>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold">{experience.role || "Untitled experience"}</p>
+                              <p className="truncate text-xs text-muted-foreground">{[experience.company, experience.duration].filter(Boolean).join(" • ") || "Add experience details"}</p>
+                            </div>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button type="button" className="rounded-xl border border-border p-2 text-muted-foreground transition hover:border-primary/50 hover:text-foreground">
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40 rounded-xl">
+                              <DropdownMenuItem onClick={() => setEditingExperienceIndex(index)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Update
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                setDraft((current) => ({ ...current, experience: current.experience.filter((_, itemIndex) => itemIndex !== index) }));
+                                setEditingExperienceIndex((current) => current === null ? null : current === index ? null : current > index ? current - 1 : current);
+                              }} className="text-red-600 focus:text-red-600">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        {editingExperienceIndex === index ? (
+                          <div className="mt-2 rounded-3xl border border-border bg-background/60 p-4">
+                            <div className="grid gap-4 md:grid-cols-3">
+                              <TextInput label="Company" value={experience.company} onChange={(value) => setDraft((current) => ({ ...current, experience: updateListField<ResumeExperience>(current.experience, index, (item) => ({ ...item, company: value })) }))} />
+                              <TextInput label="Role" value={experience.role} onChange={(value) => setDraft((current) => ({ ...current, experience: updateListField<ResumeExperience>(current.experience, index, (item) => ({ ...item, role: value })) }))} />
+                              <TextInput label="Duration" value={experience.duration} onChange={(value) => setDraft((current) => ({ ...current, experience: updateListField<ResumeExperience>(current.experience, index, (item) => ({ ...item, duration: value })) }))} />
+                            </div>
+                            <TextArea label="Description" value={experience.description} onChange={(value) => setDraft((current) => ({ ...current, experience: updateListField<ResumeExperience>(current.experience, index, (item) => ({ ...item, description: value })) }))} />
+                            <div className="mt-3 flex justify-end">
+                              <button type="button" onClick={() => setEditingExperienceIndex(null)} className="rounded-2xl border border-border px-4 py-2 text-sm font-medium">Done</button>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
-                      <TextArea
-                        label="Description"
-                        value={experience.description}
-                        onChange={(value) =>
-                          setDraft((current) => ({
-                            ...current,
-                            experience: updateListField<ResumeExperience>(
-                              current.experience,
-                              index,
-                              (item) => ({ ...item, description: value })
-                            ),
-                          }))
-                        }
-                      />
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </EditorCard>
 
                 <EditorCard
@@ -1246,66 +1915,97 @@ export default function StudentResumeBuilder() {
                   action={
                     <button
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
                         setDraft((current) => ({
                           ...current,
                           education: [...current.education, defaultEducation()],
-                        }))
-                      }
+                        }));
+                        setEditingEducationIndex(draft.education.length);
+                      }}
                       className="rounded-2xl border border-border px-3 py-2 text-sm font-medium"
                     >
-                      Add education
+                      Add new education
                     </button>
                   }
                 >
-                  {draft.education.map((education, index) => (
-                    <div key={index} className="rounded-3xl border border-border p-4">
-                      <div className="grid gap-4 md:grid-cols-3">
-                        <TextInput
-                          label="Degree"
-                          value={education.degree}
-                          onChange={(value) =>
-                            setDraft((current) => ({
-                              ...current,
-                              education: updateListField<ResumeEducation>(
-                                current.education,
-                                index,
-                                (item) => ({ ...item, degree: value })
-                              ),
-                            }))
-                          }
-                        />
-                        <TextInput
-                          label="College"
-                          value={education.college}
-                          onChange={(value) =>
-                            setDraft((current) => ({
-                              ...current,
-                              education: updateListField<ResumeEducation>(
-                                current.education,
-                                index,
-                                (item) => ({ ...item, college: value })
-                              ),
-                            }))
-                          }
-                        />
-                        <TextInput
-                          label="Year"
-                          value={education.year}
-                          onChange={(value) =>
-                            setDraft((current) => ({
-                              ...current,
-                              education: updateListField<ResumeEducation>(
-                                current.education,
-                                index,
-                                (item) => ({ ...item, year: value })
-                              ),
-                            }))
-                          }
-                        />
+                  <div className="space-y-2">
+                    {draft.education.map((education, index) => (
+                      <div key={`education-${index}`}>
+                        <div
+                          draggable
+                          onDragStart={(event) => {
+                            setDraggedEducationIndex(index);
+                            setDragOverEducationIndex(index);
+                            event.dataTransfer.effectAllowed = "move";
+                            event.dataTransfer.setData("text/plain", String(index));
+                          }}
+                          onDragOver={(event) => {
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = "move";
+                            if (dragOverEducationIndex !== index) setDragOverEducationIndex(index);
+                          }}
+                          onDrop={(event) => {
+                            event.preventDefault();
+                            const sourceIndex = draggedEducationIndex ?? Number(event.dataTransfer.getData("text/plain"));
+                            if (Number.isInteger(sourceIndex)) moveEducation(sourceIndex, index);
+                            setDraggedEducationIndex(null);
+                            setDragOverEducationIndex(null);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedEducationIndex(null);
+                            setDragOverEducationIndex(null);
+                          }}
+                          className={`flex items-center justify-between rounded-2xl border bg-background px-4 py-3 transition ${
+                            draggedEducationIndex === index
+                              ? "border-primary bg-primary/5 opacity-70"
+                              : dragOverEducationIndex === index
+                                ? "border-primary/70 bg-primary/5"
+                                : "border-border"
+                          }`}
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="cursor-grab text-muted-foreground active:cursor-grabbing"><GripVertical className="h-4 w-4" /></span>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold">{education.degree || "Untitled education"}</p>
+                              <p className="truncate text-xs text-muted-foreground">{[education.college, education.year].filter(Boolean).join(" • ") || "Add education details"}</p>
+                            </div>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button type="button" className="rounded-xl border border-border p-2 text-muted-foreground transition hover:border-primary/50 hover:text-foreground">
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40 rounded-xl">
+                              <DropdownMenuItem onClick={() => setEditingEducationIndex(index)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Update
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                setDraft((current) => ({ ...current, education: current.education.filter((_, itemIndex) => itemIndex !== index) }));
+                                setEditingEducationIndex((current) => current === null ? null : current === index ? null : current > index ? current - 1 : current);
+                              }} className="text-red-600 focus:text-red-600">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        {editingEducationIndex === index ? (
+                          <div className="mt-2 rounded-3xl border border-border bg-background/60 p-4">
+                            <div className="grid gap-4 md:grid-cols-3">
+                              <TextInput label="Degree" value={education.degree} onChange={(value) => setDraft((current) => ({ ...current, education: updateListField<ResumeEducation>(current.education, index, (item) => ({ ...item, degree: value })) }))} />
+                              <TextInput label="College" value={education.college} onChange={(value) => setDraft((current) => ({ ...current, education: updateListField<ResumeEducation>(current.education, index, (item) => ({ ...item, college: value })) }))} />
+                              <TextInput label="Year" value={education.year} onChange={(value) => setDraft((current) => ({ ...current, education: updateListField<ResumeEducation>(current.education, index, (item) => ({ ...item, year: value })) }))} />
+                            </div>
+                            <div className="mt-3 flex justify-end">
+                              <button type="button" onClick={() => setEditingEducationIndex(null)} className="rounded-2xl border border-border px-4 py-2 text-sm font-medium">Done</button>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </EditorCard>
 
                 <EditorCard
@@ -1313,52 +2013,100 @@ export default function StudentResumeBuilder() {
                   action={
                     <button
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
                         setDraft((current) => ({
                           ...current,
                           certifications: [...current.certifications, defaultCertification()],
-                        }))
-                      }
+                        }));
+                        setEditingCertificationIndex(draft.certifications.length);
+                      }}
                       className="rounded-2xl border border-border px-3 py-2 text-sm font-medium"
                     >
-                      Add certification
+                      Add new certification
                     </button>
                   }
                 >
-                  {draft.certifications.map((certification, index) => (
-                    <div key={index} className="rounded-3xl border border-border p-4">
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <TextInput
-                          label="Title"
-                          value={certification.title}
-                          onChange={(value) =>
-                            setDraft((current) => ({
-                              ...current,
-                              certifications: updateListField<ResumeCertification>(
-                                current.certifications,
-                                index,
-                                (item) => ({ ...item, title: value })
-                              ),
-                            }))
-                          }
-                        />
-                        <TextInput
-                          label="Issuer"
-                          value={certification.issuer}
-                          onChange={(value) =>
-                            setDraft((current) => ({
-                              ...current,
-                              certifications: updateListField<ResumeCertification>(
-                                current.certifications,
-                                index,
-                                (item) => ({ ...item, issuer: value })
-                              ),
-                            }))
-                          }
-                        />
+                  <div className="space-y-2">
+                    {draft.certifications.map((certification, index) => (
+                      <div key={`certification-${index}`}>
+                        <div
+                          draggable
+                          onDragStart={(event) => {
+                            setDraggedCertificationIndex(index);
+                            setDragOverCertificationIndex(index);
+                            event.dataTransfer.effectAllowed = "move";
+                            event.dataTransfer.setData("text/plain", String(index));
+                          }}
+                          onDragOver={(event) => {
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = "move";
+                            if (dragOverCertificationIndex !== index) setDragOverCertificationIndex(index);
+                          }}
+                          onDrop={(event) => {
+                            event.preventDefault();
+                            const sourceIndex = draggedCertificationIndex ?? Number(event.dataTransfer.getData("text/plain"));
+                            if (Number.isInteger(sourceIndex)) moveCertification(sourceIndex, index);
+                            setDraggedCertificationIndex(null);
+                            setDragOverCertificationIndex(null);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedCertificationIndex(null);
+                            setDragOverCertificationIndex(null);
+                          }}
+                          className={`flex items-center justify-between rounded-2xl border bg-background px-4 py-3 transition ${
+                            draggedCertificationIndex === index
+                              ? "border-primary bg-primary/5 opacity-70"
+                              : dragOverCertificationIndex === index
+                                ? "border-primary/70 bg-primary/5"
+                                : "border-border"
+                          }`}
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="cursor-grab text-muted-foreground active:cursor-grabbing"><GripVertical className="h-4 w-4" /></span>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold">{certification.title || "Untitled certification"}</p>
+                              <p className="truncate text-xs text-muted-foreground">{[certification.issuer, certification.year].filter(Boolean).join(" • ") || "Add certification details"}</p>
+                            </div>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button type="button" className="rounded-xl border border-border p-2 text-muted-foreground transition hover:border-primary/50 hover:text-foreground">
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40 rounded-xl">
+                              <DropdownMenuItem onClick={() => setEditingCertificationIndex(index)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Update
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                setDraft((current) => ({ ...current, certifications: current.certifications.filter((_, itemIndex) => itemIndex !== index) }));
+                                setEditingCertificationIndex((current) => current === null ? null : current === index ? null : current > index ? current - 1 : current);
+                              }} className="text-red-600 focus:text-red-600">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        {editingCertificationIndex === index ? (
+                          <div className="mt-2 rounded-3xl border border-border bg-background/60 p-4">
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <TextInput label="Title" value={certification.title} onChange={(value) => setDraft((current) => ({ ...current, certifications: updateListField<ResumeCertification>(current.certifications, index, (item) => ({ ...item, title: value })) }))} />
+                              <TextInput label="Issuer" value={certification.issuer} onChange={(value) => setDraft((current) => ({ ...current, certifications: updateListField<ResumeCertification>(current.certifications, index, (item) => ({ ...item, issuer: value })) }))} />
+                            </div>
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <TextInput label="Year" value={certification.year} onChange={(value) => setDraft((current) => ({ ...current, certifications: updateListField<ResumeCertification>(current.certifications, index, (item) => ({ ...item, year: value })) }))} />
+                              <TextInput label="Credential URL" value={certification.credentialUrl} onChange={(value) => setDraft((current) => ({ ...current, certifications: updateListField<ResumeCertification>(current.certifications, index, (item) => ({ ...item, credentialUrl: value })) }))} />
+                            </div>
+                            <div className="mt-3 flex justify-end">
+                              <button type="button" onClick={() => setEditingCertificationIndex(null)} className="rounded-2xl border border-border px-4 py-2 text-sm font-medium">Done</button>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </EditorCard>
 
                 <EditorCard
@@ -1366,50 +2114,94 @@ export default function StudentResumeBuilder() {
                   action={
                     <button
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
                         setDraft((current) => ({
                           ...current,
                           achievements: [...current.achievements, defaultAchievement()],
-                        }))
-                      }
+                        }));
+                        setEditingAchievementIndex(draft.achievements.length);
+                      }}
                       className="rounded-2xl border border-border px-3 py-2 text-sm font-medium"
                     >
-                      Add achievement
+                      Add new achievement
                     </button>
                   }
                 >
-                  {draft.achievements.map((achievement, index) => (
-                    <div key={index} className="rounded-3xl border border-border p-4">
-                      <TextInput
-                        label="Title"
-                        value={achievement.title}
-                        onChange={(value) =>
-                          setDraft((current) => ({
-                            ...current,
-                            achievements: updateListField<ResumeAchievement>(
-                              current.achievements,
-                              index,
-                              (item) => ({ ...item, title: value })
-                            ),
-                          }))
-                        }
-                      />
-                      <TextArea
-                        label="Description"
-                        value={achievement.description}
-                        onChange={(value) =>
-                          setDraft((current) => ({
-                            ...current,
-                            achievements: updateListField<ResumeAchievement>(
-                              current.achievements,
-                              index,
-                              (item) => ({ ...item, description: value })
-                            ),
-                          }))
-                        }
-                      />
-                    </div>
-                  ))}
+                  <div className="space-y-2">
+                    {draft.achievements.map((achievement, index) => (
+                      <div key={`achievement-${index}`}>
+                        <div
+                          draggable
+                          onDragStart={(event) => {
+                            setDraggedAchievementIndex(index);
+                            setDragOverAchievementIndex(index);
+                            event.dataTransfer.effectAllowed = "move";
+                            event.dataTransfer.setData("text/plain", String(index));
+                          }}
+                          onDragOver={(event) => {
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = "move";
+                            if (dragOverAchievementIndex !== index) setDragOverAchievementIndex(index);
+                          }}
+                          onDrop={(event) => {
+                            event.preventDefault();
+                            const sourceIndex = draggedAchievementIndex ?? Number(event.dataTransfer.getData("text/plain"));
+                            if (Number.isInteger(sourceIndex)) moveAchievement(sourceIndex, index);
+                            setDraggedAchievementIndex(null);
+                            setDragOverAchievementIndex(null);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedAchievementIndex(null);
+                            setDragOverAchievementIndex(null);
+                          }}
+                          className={`flex items-center justify-between rounded-2xl border bg-background px-4 py-3 transition ${
+                            draggedAchievementIndex === index
+                              ? "border-primary bg-primary/5 opacity-70"
+                              : dragOverAchievementIndex === index
+                                ? "border-primary/70 bg-primary/5"
+                                : "border-border"
+                          }`}
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="cursor-grab text-muted-foreground active:cursor-grabbing"><GripVertical className="h-4 w-4" /></span>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold">{achievement.title || "Untitled achievement"}</p>
+                              <p className="truncate text-xs text-muted-foreground">{achievement.description || "Add achievement details"}</p>
+                            </div>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button type="button" className="rounded-xl border border-border p-2 text-muted-foreground transition hover:border-primary/50 hover:text-foreground">
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40 rounded-xl">
+                              <DropdownMenuItem onClick={() => setEditingAchievementIndex(index)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Update
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                setDraft((current) => ({ ...current, achievements: current.achievements.filter((_, itemIndex) => itemIndex !== index) }));
+                                setEditingAchievementIndex((current) => current === null ? null : current === index ? null : current > index ? current - 1 : current);
+                              }} className="text-red-600 focus:text-red-600">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        {editingAchievementIndex === index ? (
+                          <div className="mt-2 rounded-3xl border border-border bg-background/60 p-4">
+                            <TextInput label="Title" value={achievement.title} onChange={(value) => setDraft((current) => ({ ...current, achievements: updateListField<ResumeAchievement>(current.achievements, index, (item) => ({ ...item, title: value })) }))} />
+                            <TextArea label="Description" value={achievement.description} onChange={(value) => setDraft((current) => ({ ...current, achievements: updateListField<ResumeAchievement>(current.achievements, index, (item) => ({ ...item, description: value })) }))} />
+                            <div className="mt-3 flex justify-end">
+                              <button type="button" onClick={() => setEditingAchievementIndex(null)} className="rounded-2xl border border-border px-4 py-2 text-sm font-medium">Done</button>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
                 </EditorCard>
 
                 <EditorCard
@@ -1417,62 +2209,99 @@ export default function StudentResumeBuilder() {
                   action={
                     <button
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
                         setDraft((current) => ({
                           ...current,
                           customSections: [...current.customSections, defaultCustomSection()],
-                        }))
-                      }
+                        }));
+                        setEditingCustomSectionIndex(draft.customSections.length);
+                      }}
                       className="rounded-2xl border border-border px-3 py-2 text-sm font-medium"
                     >
-                      Add custom section
+                      Add new custom section
                     </button>
                   }
                 >
-                  {draft.customSections.map((section, index) => (
-                    <div key={index} className="rounded-3xl border border-border p-4">
-                      <TextInput
-                        label="Section title"
-                        value={section.title}
-                        onChange={(value) =>
-                          setDraft((current) => ({
-                            ...current,
-                            customSections: updateListField<ResumeCustomSection>(
-                              current.customSections,
-                              index,
-                              (item) => ({ ...item, title: value })
-                            ),
-                          }))
-                        }
-                      />
-                      <TextArea
-                        label="Items"
-                        value={section.items.join("\n")}
-                        onChange={(value) =>
-                          setDraft((current) => ({
-                            ...current,
-                            customSections: updateListField<ResumeCustomSection>(
-                              current.customSections,
-                              index,
-                              (item) => ({
-                                ...item,
-                                items: value
-                                  .split("\n")
-                                  .map((line) => line.trim())
-                                  .filter(Boolean),
-                              })
-                            ),
-                          }))
-                        }
-                        rows={4}
-                      />
-                    </div>
-                  ))}
+                  <div className="space-y-2">
+                    {draft.customSections.map((section, index) => (
+                      <div key={`custom-section-${index}`}>
+                        <div
+                          draggable
+                          onDragStart={(event) => {
+                            setDraggedCustomSectionIndex(index);
+                            setDragOverCustomSectionIndex(index);
+                            event.dataTransfer.effectAllowed = "move";
+                            event.dataTransfer.setData("text/plain", String(index));
+                          }}
+                          onDragOver={(event) => {
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = "move";
+                            if (dragOverCustomSectionIndex !== index) setDragOverCustomSectionIndex(index);
+                          }}
+                          onDrop={(event) => {
+                            event.preventDefault();
+                            const sourceIndex = draggedCustomSectionIndex ?? Number(event.dataTransfer.getData("text/plain"));
+                            if (Number.isInteger(sourceIndex)) moveCustomSection(sourceIndex, index);
+                            setDraggedCustomSectionIndex(null);
+                            setDragOverCustomSectionIndex(null);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedCustomSectionIndex(null);
+                            setDragOverCustomSectionIndex(null);
+                          }}
+                          className={`flex items-center justify-between rounded-2xl border bg-background px-4 py-3 transition ${
+                            draggedCustomSectionIndex === index
+                              ? "border-primary bg-primary/5 opacity-70"
+                              : dragOverCustomSectionIndex === index
+                                ? "border-primary/70 bg-primary/5"
+                                : "border-border"
+                          }`}
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="cursor-grab text-muted-foreground active:cursor-grabbing"><GripVertical className="h-4 w-4" /></span>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold">{section.title || "Untitled section"}</p>
+                              <p className="truncate text-xs text-muted-foreground">{section.items.join(", ") || "Add section items"}</p>
+                            </div>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button type="button" className="rounded-xl border border-border p-2 text-muted-foreground transition hover:border-primary/50 hover:text-foreground">
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40 rounded-xl">
+                              <DropdownMenuItem onClick={() => setEditingCustomSectionIndex(index)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Update
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                setDraft((current) => ({ ...current, customSections: current.customSections.filter((_, itemIndex) => itemIndex !== index) }));
+                                setEditingCustomSectionIndex((current) => current === null ? null : current === index ? null : current > index ? current - 1 : current);
+                              }} className="text-red-600 focus:text-red-600">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        {editingCustomSectionIndex === index ? (
+                          <div className="mt-2 rounded-3xl border border-border bg-background/60 p-4">
+                            <TextInput label="Section title" value={section.title} onChange={(value) => setDraft((current) => ({ ...current, customSections: updateListField<ResumeCustomSection>(current.customSections, index, (item) => ({ ...item, title: value })) }))} />
+                            <TextArea label="Items" value={section.items.join("\n")} onChange={(value) => setDraft((current) => ({ ...current, customSections: updateListField<ResumeCustomSection>(current.customSections, index, (item) => ({ ...item, items: value.split("\n").map((line) => line.trim()).filter(Boolean) })) }))} rows={4} />
+                            <div className="mt-3 flex justify-end">
+                              <button type="button" onClick={() => setEditingCustomSectionIndex(null)} className="rounded-2xl border border-border px-4 py-2 text-sm font-medium">Done</button>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
                 </EditorCard>
             </div>
 
             <div className="sticky top-8">
-              <section className="rounded-[28px] border border-border bg-card p-5 shadow-sm">
+              <section>
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <h2 className="text-base font-semibold">Live Preview</h2>
@@ -1480,121 +2309,78 @@ export default function StudentResumeBuilder() {
                       Printable multi-section preview
                     </p>
                   </div>
-                  {draft.linkedInImport.profileUrl ? (
-                    <a
-                      href={draft.linkedInImport.profileUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-xs font-semibold"
-                    >
-                      <Link2 className="h-3.5 w-3.5" />
-                      LinkedIn source
-                    </a>
-                  ) : null}
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <div className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-1">
+                      <button
+                        type="button"
+                        onClick={() => updatePreviewScale(previewScale - 0.1)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                        aria-label="Zoom out"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updatePreviewScale(0.8);
+                          setPreviewPan({ x: 0, y: 0 });
+                        }}
+                        className="rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                      >
+                        {Math.round(previewScale * 100)}%
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updatePreviewScale(previewScale + 0.1)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                        aria-label="Zoom in"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {draft.linkedInImport.profileUrl ? (
+                      <a
+                        href={draft.linkedInImport.profileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-xs font-semibold"
+                      >
+                        <Link2 className="h-3.5 w-3.5" />
+                        LinkedIn source
+                      </a>
+                    ) : null}
+                  </div>
                 </div>
-                <ResumePreview resume={draft} />
+                <div
+                  onWheel={(event) => {
+                    if (!event.ctrlKey) return;
+                    event.preventDefault();
+                    updatePreviewScale(previewScale - event.deltaY * 0.001);
+                  }}
+                  onPointerDown={handlePreviewPointerDown}
+                  onPointerMove={handlePreviewPointerMove}
+                  onPointerUp={handlePreviewPointerEnd}
+                  onPointerCancel={handlePreviewPointerEnd}
+                  onPointerLeave={handlePreviewPointerEnd}
+                  className="overflow-visible"
+                  style={{ touchAction: "none" }}
+                >
+                  <div
+                    className={`mx-auto w-fit origin-top ${
+                      isPreviewDragging ? "cursor-grabbing" : "cursor-grab transition-transform"
+                    }`}
+                    style={{
+                      transform: `translate3d(${previewPan.x}px, ${previewPan.y}px, 0) scale(${previewScale})`,
+                    }}
+                  >
+                    <div ref={previewRef}>
+                      <ResumePreview resume={draft} />
+                    </div>
+                  </div>
+                </div>
               </section>
             </div>
 
-            {isStudentAuthenticated ? (
-            <aside className="sticky top-8 rounded-[28px] border border-border bg-card p-5 shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold">Your Resumes</h2>
-                  <p className="text-sm text-muted-foreground">Multiple versions are supported.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void createNewResume()}
-                  disabled={creatingResume}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground"
-                >
-                  {creatingResume ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Plus className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-              <div className="space-y-3">
-                {resumes.length ? (
-                  resumes.map((resume) => (
-                    <button
-                      type="button"
-                      key={resume._id}
-                      onClick={() => void loadResume(resume._id)}
-                      className={`w-full rounded-3xl border p-4 text-left transition ${
-                        resume._id === activeResumeId
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-semibold">{resume.title}</p>
-                          <p className="mt-1 text-xs capitalize text-muted-foreground">
-                            {resume.template} template
-                          </p>
-                        </div>
-                        <span
-                          className="h-3 w-3 rounded-full"
-                          style={{ backgroundColor: resume.accentColor }}
-                        />
-                      </div>
-                    </button>
-                  ))
-                ) : (
-                  <div className="rounded-3xl border border-dashed border-border p-5 text-sm text-muted-foreground">
-                    No saved resumes yet. Create one to enable autosave and admin review.
-                  </div>
-                )}
-              </div>
-            </aside>
-            ) : (
-            <aside className="sticky top-8 rounded-[28px] border border-border bg-card p-5 shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold">My Resumes</h2>
-                  <p className="text-sm text-muted-foreground">Saved locally in your browser.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void createNewResume()}
-                  disabled={creatingResume}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="space-y-3">
-                {guestResumes.map((resume) => (
-                  <button
-                    type="button"
-                    key={resume._id}
-                    onClick={() => loadGuestResume(resume._id)}
-                    className={`w-full rounded-3xl border p-4 text-left transition ${
-                      resume._id === guestActiveId
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold">{resume.title || "Untitled Resume"}</p>
-                        <p className="mt-1 text-xs capitalize text-muted-foreground">
-                          {resume.template} template
-                        </p>
-                      </div>
-                      <span
-                        className="h-3 w-3 rounded-full"
-                        style={{ backgroundColor: resume.accentColor }}
-                      />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </aside>
-            )}
           </section>
         </main>
       </div>

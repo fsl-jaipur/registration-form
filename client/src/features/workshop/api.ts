@@ -10,7 +10,7 @@ import type {
 const base =
   (import.meta.env.VITE_API_URL ||
     import.meta.env.VITE_API_BASE_URL ||
-    "") + "/api";
+    "") ;
 
 async function apiJson<T>(
   path: string,
