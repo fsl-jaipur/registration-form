@@ -58,5 +58,6 @@ export async function sendForgotPasswordEmail({ to, name, otp, expiryMinutes = 6
   }
 }
 
+
 export default sendForgotPasswordEmail;
 

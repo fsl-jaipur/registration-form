@@ -13,14 +13,12 @@ function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     const API_BASE_URL = import.meta.env.VITE_API_URL;
-
+    // console.log("API_BASE_URL", API_BASE_URL);
 
     try {
       const response = await fetch(`${API_BASE_URL}/auth/admin`, {
@@ -33,6 +31,8 @@ function AdminLogin() {
       });
 
       const data = await response.json();
+      // console.log("response", response)
+      // console.log(response.ok)
 
       if (response.ok) {
         setMessage(data.message);
@@ -40,12 +40,13 @@ function AdminLogin() {
         setRole("admin");
         navigate("/admin/home");
       } else {
-        setMessage(data.message || "Login failed. Please try again.");
+        const errorMsg = data?.message || "Login failed. Please try again.";
+        setMessage(errorMsg);
       }
     } catch (error) {
       setMessage(
         (error instanceof Error && error.message) ||
-          "Something went wrong. Please try again."
+          "Something went wrong. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -65,7 +66,10 @@ function AdminLogin() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-slate-700 mb-1"
+            >
               Email
             </label>
             <input
@@ -81,7 +85,10 @@ function AdminLogin() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-slate-700 mb-1"
+            >
               Password
             </label>
             <div className="relative">
@@ -100,7 +107,11 @@ function AdminLogin() {
                 className="absolute inset-y-0 right-2 flex items-center text-slate-500 hover:text-slate-700"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
               </button>
             </div>
           </div>
@@ -115,7 +126,13 @@ function AdminLogin() {
         </form>
 
         <p className="text-center text-sm text-slate-600 mt-4">
-          Not an admin? <a href="/login" className="font-medium text-indigo-600 hover:text-indigo-700">Go to User Login</a>
+          Not an admin?{" "}
+          <a
+            href="/login"
+            className="font-medium text-indigo-600 hover:text-indigo-700"
+          >
+            Go to User Login
+          </a>
         </p>
       </div>
     </div>

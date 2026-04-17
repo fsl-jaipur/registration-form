@@ -66,6 +66,11 @@ import AdminStudentDetail from "@/pages/AdminPages/AdminStudentDetail";
 import ViewTest from "./pages/AdminPages/AdminHome/ViewTest";
 import UpdateTest from "./pages/AdminPages/AdminHome/updateTest";
 import { getDocumentTitle } from "@/lib/documentTitle";
+import StudentResumeBuilder from "@/pages/StudentResumeBuilder";
+import AdminResumes from "@/pages/AdminResumes";
+import WorkshopPage from "@/pages/WorkshopPage";
+import AdminWorkshops from "@/pages/AdminPages/AdminWorkshops";
+import PublicResumePage from "@/pages/PublicResumePage";
 
 const queryClient = new QueryClient();
 
@@ -229,6 +234,13 @@ const AppRoutes = () => {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/student/resumes"
+              element={<StudentResumeBuilder />}
+            />
+            <Route path="/resume-builder" element={<StudentResumeBuilder />} />
+            <Route path="/resume/shared/:slug" element={<PublicResumePage />} />
+            <Route path="/workshop/:slug" element={<WorkshopPage />} />
           </Route>
 
           <Route
@@ -460,6 +472,28 @@ const AppRoutes = () => {
                   redirectTo="/admin/login"
                 >
                   <CreateTestForm />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="resumes"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["admin"]}
+                  redirectTo="/admin/login"
+                >
+                  <AdminResumes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="workshops"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["admin"]}
+                  redirectTo="/admin/login"
+                >
+                  <AdminWorkshops />
                 </ProtectedRoute>
               }
             />
