@@ -18,7 +18,7 @@ function AdminLogin() {
     setLoading(true);
 
     const API_BASE_URL = import.meta.env.VITE_API_URL;
-    console.log("API_BASE_URL", API_BASE_URL);
+    // console.log("API_BASE_URL", API_BASE_URL);
 
     try {
       const response = await fetch(`${API_BASE_URL}/auth/admin`, {
@@ -31,21 +31,16 @@ function AdminLogin() {
       });
 
       const data = await response.json();
+      // console.log("response", response)
+      // console.log(response.ok)
 
       if (response.ok) {
-        const data = await response.json();
         setMessage(data.message);
         setIsAuthenticated(true);
         setRole("admin");
         navigate("/admin/home");
       } else {
-        let errorMsg = "Login failed. Please try again.";
-        try {
-          const errData = await response.json();
-          errorMsg = errData.message || errorMsg;
-        } catch {
-          // response had no JSON body (e.g. gateway error)
-        }
+        const errorMsg = data?.message || "Login failed. Please try again.";
         setMessage(errorMsg);
       }
     } catch (error) {

@@ -10,8 +10,9 @@ export type WorkshopData = {
 export type WorkshopParticipant = {
   _id: string;
   enrollmentId: string;
-  email: string;
   name: string;
+  fname: string;
+  mname: string;
   createdAt: string;
 };
 

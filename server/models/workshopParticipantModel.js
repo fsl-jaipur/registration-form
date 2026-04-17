@@ -12,13 +12,20 @@ const workshopParticipantSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    email: {
+    name: {
       type: String,
       required: true,
-      lowercase: true,
       trim: true,
     },
-    name: {
+    fname: {
+      type: String,
+      trim: true,
+    },
+    mname: {
+      type: String,
+      trim: true,
+    },
+    class: {
       type: String,
       required: true,
       trim: true,
@@ -32,17 +39,18 @@ const workshopParticipantSchema = new mongoose.Schema(
       default: null,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Each enrollment ID is unique within a workshop
-workshopParticipantSchema.index({ workshopId: 1, enrollmentId: 1 }, { unique: true });
-// Each email is unique within a workshop
-workshopParticipantSchema.index({ workshopId: 1, email: 1 }, { unique: true });
+workshopParticipantSchema.index(
+  { workshopId: 1, enrollmentId: 1 },
+  { unique: true },
+);
 
 const workshopParticipantModel = mongoose.model(
   "WorkshopParticipant",
-  workshopParticipantSchema
+  workshopParticipantSchema,
 );
 
 export default workshopParticipantModel;

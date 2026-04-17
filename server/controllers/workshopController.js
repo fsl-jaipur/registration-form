@@ -44,13 +44,12 @@ export const verifyParticipant = async (req, res) => {
     const participant = await workshopParticipantModel.findOne({
       workshopId: workshop._id,
       enrollmentId: enrollmentId.trim(),
-      email: email.trim().toLowerCase(),
     });
 
     if (!participant) {
       return res.status(404).json({
         message:
-          "No participant found with this enrollment ID and email. Please check your details.",
+          "No participant found with this enrollment ID. Please check your details.",
       });
     }
 
@@ -59,6 +58,17 @@ export const verifyParticipant = async (req, res) => {
     console.error("verifyParticipant error:", error);
     return res.status(500).json({ message: "Internal server error." });
   }
+};
+
+const capitalize = (value) => {
+  return value.length > 1
+    ? value.indexOf(" ") !== -1
+      ? value
+          .split(" ")
+          .map((n) => n.slice(0, 1).toUpperCase() + n.slice(1))
+          .join(" ")
+      : value.slice(0, 1).toUpperCase() + value.slice(1)
+    : value;
 };
 
 // ─── Public: Send OTP ─────────────────────────────────────────────────────────
@@ -81,13 +91,10 @@ export const sendOtp = async (req, res) => {
     const participant = await workshopParticipantModel.findOne({
       workshopId: workshop._id,
       enrollmentId: enrollmentId.trim(),
-      email: email.trim().toLowerCase(),
     });
 
     if (!participant) {
-      return res
-        .status(404)
-        .json({ message: "Participant not found." });
+      return res.status(404).json({ message: "Participant not found." });
     }
 
     const otp = String(Math.floor(100000 + Math.random() * 900000));
@@ -99,7 +106,7 @@ export const sendOtp = async (req, res) => {
     await participant.save();
 
     await sendForgotPasswordEmail({
-      to: participant.email,
+      to: email,
       name: participant.name,
       otp,
       expiryMinutes: 15,
@@ -108,7 +115,9 @@ export const sendOtp = async (req, res) => {
     return res.json({ sent: true });
   } catch (error) {
     console.error("sendOtp error:", error);
-    return res.status(500).json({ message: "Failed to send OTP. Please try again." });
+    return res
+      .status(500)
+      .json({ message: "Failed to send OTP. Please try again." });
   }
 };
 
@@ -140,13 +149,19 @@ export const verifyOtp = async (req, res) => {
         .json({ message: "OTP not found. Please request a new one." });
     }
 
-    if (!participant.otpExpires || participant.otpExpires.getTime() < Date.now()) {
+    if (
+      !participant.otpExpires ||
+      participant.otpExpires.getTime() < Date.now()
+    ) {
       return res
         .status(400)
         .json({ message: "OTP has expired. Please request a new one." });
     }
 
-    const isMatch = await bcrypt.compare(String(otp).trim(), participant.otpHash);
+    const isMatch = await bcrypt.compare(
+      String(otp).trim(),
+      participant.otpHash,
+    );
     if (!isMatch) {
       return res
         .status(400)
@@ -165,7 +180,7 @@ export const verifyOtp = async (req, res) => {
         workshopSlug: slug,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "24h" }
+      { expiresIn: "24h" },
     );
 
     res.cookie("workshopSession", token, {
@@ -235,7 +250,9 @@ export const downloadCertificate = async (req, res) => {
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch {
-      return res.status(401).json({ message: "Session expired. Please log in again." });
+      return res
+        .status(401)
+        .json({ message: "Session expired. Please log in again." });
     }
 
     if (decoded.workshopSlug !== slug) {
@@ -252,9 +269,9 @@ export const downloadCertificate = async (req, res) => {
     }
 
     if (!workshop.certificateEnabled) {
-      return res
-        .status(403)
-        .json({ message: "Certificate download is not yet enabled for this workshop." });
+      return res.status(403).json({
+        message: "Certificate download is not yet enabled for this workshop.",
+      });
     }
 
     // Generate PDF
@@ -264,13 +281,10 @@ export const downloadCertificate = async (req, res) => {
       margins: { top: 60, bottom: 60, left: 60, right: 60 },
     });
 
-    const filename = `certificate-${participant.name.replace(/\s+/g, "-").toLowerCase()}.pdf`;
+    const filename = `certificaxte-${participant.name.replace(/\s+/g, "-").toLowerCase()}.pdf`;
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${filename}"`
-    );
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
     doc.pipe(res);
 
@@ -360,7 +374,9 @@ export const downloadCertificate = async (req, res) => {
   } catch (error) {
     console.error("downloadCertificate error:", error);
     if (!res.headersSent) {
-      return res.status(500).json({ message: "Failed to generate certificate." });
+      return res
+        .status(500)
+        .json({ message: "Failed to generate certificate." });
     }
   }
 };
@@ -368,9 +384,7 @@ export const downloadCertificate = async (req, res) => {
 // ─── Admin: List workshops ────────────────────────────────────────────────────
 export const listWorkshops = async (_req, res) => {
   try {
-    const workshops = await workshopModel
-      .find()
-      .sort({ createdAt: -1 });
+    const workshops = await workshopModel.find().sort({ createdAt: -1 });
     return res.json(workshops);
   } catch (error) {
     console.error("listWorkshops error:", error);
@@ -387,7 +401,9 @@ export const createWorkshop = async (req, res) => {
       return res.status(400).json({ message: "Slug and title are required." });
     }
 
-    const existing = await workshopModel.findOne({ slug: slug.trim().toLowerCase() });
+    const existing = await workshopModel.findOne({
+      slug: slug.trim().toLowerCase(),
+    });
     if (existing) {
       return res
         .status(409)
@@ -471,10 +487,12 @@ export const uploadParticipants = async (req, res) => {
     const text = req.file.buffer.toString("utf-8");
     const lines = text.split(/\r?\n/).filter((l) => l.trim());
 
+    console.log(lines[0]);
+
     if (lines.length < 2) {
-      return res
-        .status(400)
-        .json({ message: "CSV must have a header row and at least one data row." });
+      return res.status(400).json({
+        message: "CSV must have a header row and at least one data row.",
+      });
     }
 
     // Normalize header line
@@ -482,14 +500,30 @@ export const uploadParticipants = async (req, res) => {
       .split(",")
       .map((h) => h.trim().toLowerCase().replace(/"/g, ""));
 
-    const enrollmentIdx = headers.indexOf("enrollmentid");
-    const emailIdx = headers.indexOf("email");
-    const nameIdx = headers.indexOf("name");
+    console.log(headers);
 
-    if (enrollmentIdx === -1 || emailIdx === -1 || nameIdx === -1) {
+    // const enrollmentIdx = headers.indexOf("enrollmentid");
+    // const emailIdx = headers.indexOf("email");
+    // const nameIdx = headers.indexOf("name");
+
+    const enrollmentIdx = headers.indexOf("scholar no.");
+    const nameIdx = headers.indexOf("name");
+    const fnameIdx = headers.indexOf("father's name");
+    const mnameIdx = headers.indexOf("mother's name");
+    const classIdx = headers.indexOf("class");
+
+    // console.log(enrollmentIdx, nameIdx, fnameIdx, mnameIdx, classIdx);
+
+    if (
+      enrollmentIdx === -1 ||
+      nameIdx === -1 ||
+      fnameIdx === -1 ||
+      mnameIdx === -1 ||
+      classIdx === -1
+    ) {
       return res.status(400).json({
         message:
-          "CSV must have columns: enrollmentId, email, name (case-insensitive).",
+          "CSV must have columns: Scholar No., name, father's name, mother's name, class (case-insensitive).",
       });
     }
 
@@ -498,22 +532,58 @@ export const uploadParticipants = async (req, res) => {
 
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(",").map((c) => c.trim().replace(/"/g, ""));
-      const enrollmentId = cols[enrollmentIdx];
-      const email = cols[emailIdx]?.toLowerCase();
-      const name = cols[nameIdx];
+      const enrollmentId = cols[enrollmentIdx] ?? "";
+      const name = (cols[nameIdx] ?? "").toLowerCase();
+      const fname = (cols[fnameIdx] ?? "").toLowerCase();
+      const mname = (cols[mnameIdx] ?? "").toLowerCase();
+      const classVal = (cols[classIdx] ?? "").toLowerCase();
 
-      if (!enrollmentId || !email || !name) {
-        errors.push(`Row ${i + 1}: missing data — skipped`);
+      console.log(
+        `enrol: ${enrollmentId}, name: ${name}, fname: ${fname}, mname: ${mname}, class: ${classVal}`,
+      );
+
+      if (!enrollmentId) {
+        errors.push(`Row ${i + 1}: missing enrollment id — skipped`);
         continue;
       }
+
+      // console.log(mnameId);
+
+      // if (!enrollmentId || !nameId || !fnameId || !mnameId || !classId) {
+      //   errors.push(`Row ${i + 1}: missing data — skipped`);
+      //   continue;
+      // }
+      // if (!enrollmentId) {
+      //   errors.push(`Row ${i + 1}: missing enrollment id — skipped`);
+      //   continue;
+      // }
+      // if (!nameId) {
+      //   errors.push(`Row ${i + 1}: missing name id — skipped`);
+      //   continue;
+      // }
+      // if (!fnameId) {
+      //   errors.push(`Row ${i + 1}: missing fname id — skipped`);
+      //   continue;
+      // }
+      // if (!mnameId) {
+      //   errors.push(`Row ${i + 1}: missing mname id — skipped`);
+      //   continue;
+      // }
+      // if (!classId) {
+      //   errors.push(`Row ${i + 1}: missing class id — skipped`);
+      //   continue;
+      // }
 
       docs.push({
         workshopId: workshop._id,
         enrollmentId,
-        email,
         name,
+        fname,
+        mname,
+        class: classVal,
       });
     }
+    // console.log("errors", errors);
 
     let inserted = 0;
     let skipped = 0;
@@ -523,10 +593,14 @@ export const uploadParticipants = async (req, res) => {
         await workshopParticipantModel.updateOne(
           { workshopId: doc.workshopId, enrollmentId: doc.enrollmentId },
           { $set: doc },
-          { upsert: true }
+          { upsert: true },
         );
         inserted++;
-      } catch {
+      } catch (err) {
+        console.error(
+          `Row skip [enrollmentId=${doc.enrollmentId}]:`,
+          err.message,
+        );
         skipped++;
       }
     }
@@ -554,8 +628,8 @@ export const listParticipants = async (req, res) => {
 
     const participants = await workshopParticipantModel
       .find({ workshopId: id })
-      .select("enrollmentId email name createdAt")
-      .sort({ createdAt: -1 });
+      .select("enrollmentId name fname mname createdAt")
+      .sort({ enrollmentId: 1 });
 
     return res.json(participants);
   } catch (error) {

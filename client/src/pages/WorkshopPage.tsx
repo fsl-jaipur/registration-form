@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Award, ChevronRight, Download, Loader2, Mail, RefreshCw } from "lucide-react";
+import {
+  Award,
+  ChevronRight,
+  Download,
+  Loader2,
+  Mail,
+  RefreshCw,
+} from "lucide-react";
 import {
   checkWorkshopSession,
   downloadCertificate,
@@ -100,7 +107,11 @@ export default function WorkshopPage() {
 
     setIdentityLoading(true);
     try {
-      const result = await verifyParticipant(slug!, enrollmentId.trim(), email.trim());
+      const result = await verifyParticipant(
+        slug!,
+        enrollmentId.trim(),
+        email.trim(),
+      );
       setParticipantName(result.name);
 
       // Send OTP immediately after verification
@@ -114,7 +125,9 @@ export default function WorkshopPage() {
       setStep("otp");
     } catch (err) {
       setIdentityError(
-        err instanceof Error ? err.message : "Verification failed. Please try again."
+        err instanceof Error
+          ? err.message
+          : "Verification failed. Please try again.",
       );
     } finally {
       setIdentityLoading(false);
@@ -138,7 +151,9 @@ export default function WorkshopPage() {
       setStep("content");
     } catch (err) {
       setOtpError(
-        err instanceof Error ? err.message : "OTP verification failed. Please try again."
+        err instanceof Error
+          ? err.message
+          : "OTP verification failed. Please try again.",
       );
     } finally {
       setOtpLoading(false);
@@ -183,6 +198,17 @@ export default function WorkshopPage() {
     }
   };
 
+  const capitalize = (value: string) => {
+    return value.length > 1
+      ? value.indexOf(" ") !== -1
+        ? value
+            .split(" ")
+            .map((n) => n.slice(0, 1).toUpperCase() + n.slice(1))
+            .join(" ")
+        : value.slice(0, 1).toUpperCase() + value.slice(1)
+      : value;
+  };
+
   // ─── Loading / error states ───────────────────────────────────────────────
   if (loadingWorkshop) {
     return (
@@ -211,7 +237,9 @@ export default function WorkshopPage() {
       <div className="border-b border-border bg-card px-4 py-4">
         <div className="mx-auto flex max-w-3xl items-center gap-3">
           <Award className="h-6 w-6 text-primary flex-shrink-0" />
-          <span className="text-base font-semibold truncate">{workshop.title}</span>
+          <span className="text-base font-semibold truncate">
+            {workshop.title}
+          </span>
         </div>
       </div>
 
@@ -228,7 +256,11 @@ export default function WorkshopPage() {
             >
               1
             </span>
-            <span className={step === "identity" ? "text-foreground font-medium" : ""}>
+            <span
+              className={
+                step === "identity" ? "text-foreground font-medium" : ""
+              }
+            >
               Verify Identity
             </span>
             <ChevronRight className="h-4 w-4" />
@@ -241,7 +273,9 @@ export default function WorkshopPage() {
             >
               2
             </span>
-            <span className={step === "otp" ? "text-foreground font-medium" : ""}>
+            <span
+              className={step === "otp" ? "text-foreground font-medium" : ""}
+            >
               Enter OTP
             </span>
           </div>
@@ -252,13 +286,19 @@ export default function WorkshopPage() {
           <div className="rounded-[28px] border border-border bg-card p-8 shadow-sm">
             <h1 className="mb-1 text-2xl font-bold">Welcome</h1>
             <p className="mb-8 text-muted-foreground text-sm">
-              Enter your enrollment ID and the email address you registered with to receive
-              your OTP.
+              Enter your enrollment ID and the email address you registered with
+              to receive your OTP.
             </p>
 
-            <form onSubmit={(e) => void handleIdentitySubmit(e)} className="space-y-5">
+            <form
+              onSubmit={(e) => void handleIdentitySubmit(e)}
+              className="space-y-5"
+            >
               <label className="block space-y-2">
-                <span className="text-sm font-medium">Enrollment / Registration ID</span>
+                <span className="text-sm font-medium">
+                  Enrollment / Registration ID / Scholar No.{" "}
+                  <span className="required-field">*</span>
+                </span>
                 <input
                   type="text"
                   value={enrollmentId}
@@ -271,7 +311,9 @@ export default function WorkshopPage() {
               </label>
 
               <label className="block space-y-2">
-                <span className="text-sm font-medium">Email Address</span>
+                <span className="text-sm font-medium">
+                  Email Address <span className="required-field">*</span>
+                </span>
                 <input
                   type="email"
                   value={email}
@@ -317,10 +359,14 @@ export default function WorkshopPage() {
             </div>
             <h1 className="mb-1 text-2xl font-bold">Check your inbox</h1>
             <p className="mb-8 text-sm text-muted-foreground">
-              We sent a 6-digit code to <strong>{email}</strong>. It expires in 15 minutes.
+              We sent a 6-digit code to <strong>{email}</strong>. It expires in
+              15 minutes.
             </p>
 
-            <form onSubmit={(e) => void handleOtpSubmit(e)} className="space-y-5">
+            <form
+              onSubmit={(e) => void handleOtpSubmit(e)}
+              className="space-y-5"
+            >
               <label className="block space-y-2">
                 <span className="text-sm font-medium">One-Time Password</span>
                 <input
@@ -379,7 +425,9 @@ export default function WorkshopPage() {
                 className="inline-flex items-center gap-1.5 text-primary disabled:text-muted-foreground"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
-                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
+                {resendCooldown > 0
+                  ? `Resend in ${resendCooldown}s`
+                  : "Resend OTP"}
               </button>
             </div>
           </div>
@@ -390,8 +438,12 @@ export default function WorkshopPage() {
           <div className="space-y-8">
             {/* Welcome card */}
             <div className="rounded-[28px] border border-border bg-card p-8 shadow-sm">
-              <p className="text-sm text-muted-foreground mb-1">Welcome back,</p>
-              <h1 className="text-3xl font-bold text-foreground">{participantName}</h1>
+              <p className="text-sm text-muted-foreground mb-1">
+                Welcome back,
+              </p>
+              <h1 className="text-3xl font-bold text-foreground">
+                {capitalize(participantName)}
+              </h1>
             </div>
 
             {/* Workshop info card */}
@@ -400,7 +452,9 @@ export default function WorkshopPage() {
                 <div>
                   <h2 className="text-xl font-bold">{workshop.title}</h2>
                   {workshop.date && (
-                    <p className="mt-1 text-sm text-muted-foreground">{workshop.date}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {workshop.date}
+                    </p>
                   )}
                 </div>
                 <span
@@ -474,7 +528,8 @@ export default function WorkshopPage() {
 
               {!workshop.certificateEnabled && (
                 <p className="mt-3 text-center text-xs text-muted-foreground">
-                  The download button will activate once enabled by the administrator.
+                  The download button will activate once enabled by the
+                  administrator.
                 </p>
               )}
             </div>

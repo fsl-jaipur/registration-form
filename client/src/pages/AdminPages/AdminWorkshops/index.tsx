@@ -22,7 +22,10 @@ import {
   adminUpdateWorkshop,
   adminUploadParticipants,
 } from "@/features/workshop/api";
-import type { WorkshopData, WorkshopParticipant } from "@/features/workshop/types";
+import type {
+  WorkshopData,
+  WorkshopParticipant,
+} from "@/features/workshop/types";
 import { useToast } from "@/hooks/use-toast";
 
 const emptyForm = {
@@ -56,7 +59,9 @@ export default function AdminWorkshops() {
   const [participantsLoading, setParticipantsLoading] = useState<
     Record<string, boolean>
   >({});
-  const [uploadLoading, setUploadLoading] = useState<Record<string, boolean>>({});
+  const [uploadLoading, setUploadLoading] = useState<Record<string, boolean>>(
+    {},
+  );
   const csvInputRef = useRef<HTMLInputElement>(null);
 
   // ─── Load workshops ─────────────────────────────────────────────────────
@@ -121,7 +126,7 @@ export default function AdminWorkshops() {
           certificateEnabled: form.certificateEnabled,
         });
         setWorkshops((prev) =>
-          prev.map((w) => (w._id === updated._id ? updated : w))
+          prev.map((w) => (w._id === updated._id ? updated : w)),
         );
       } else {
         const created = await adminCreateWorkshop(form);
@@ -130,7 +135,7 @@ export default function AdminWorkshops() {
       setDialogOpen(false);
     } catch (err) {
       setFormError(
-        err instanceof Error ? err.message : "Failed to save workshop."
+        err instanceof Error ? err.message : "Failed to save workshop.",
       );
     } finally {
       setFormLoading(false);
@@ -141,7 +146,7 @@ export default function AdminWorkshops() {
   const handleDeleteWorkshop = async (w: WorkshopData) => {
     if (
       !window.confirm(
-        `Delete "${w.title}"? This will also remove all participant records.`
+        `Delete "${w.title}"? This will also remove all participant records.`,
       )
     )
       return;
@@ -167,7 +172,7 @@ export default function AdminWorkshops() {
         certificateEnabled: !w.certificateEnabled,
       });
       setWorkshops((prev) =>
-        prev.map((x) => (x._id === updated._id ? updated : x))
+        prev.map((x) => (x._id === updated._id ? updated : x)),
       );
       toast({
         title: updated.certificateEnabled
@@ -237,7 +242,7 @@ export default function AdminWorkshops() {
   // ─── Delete participant ──────────────────────────────────────────────────
   const handleDeleteParticipant = async (
     workshopId: string,
-    participantId: string
+    participantId: string,
   ) => {
     if (!window.confirm("Remove this participant?")) return;
 
@@ -246,7 +251,7 @@ export default function AdminWorkshops() {
       setParticipantsMap((prev) => ({
         ...prev,
         [workshopId]: (prev[workshopId] || []).filter(
-          (p) => p._id !== participantId
+          (p) => p._id !== participantId,
         ),
       }));
       toast({ title: "Participant removed" });
@@ -257,6 +262,23 @@ export default function AdminWorkshops() {
         variant: "destructive",
       });
     }
+  };
+
+  // function capitalize(value: string) {
+  //   return value.length > 1
+  //     ? value.slice(0, 1).toUpperCase() + value.slice(1)
+  //     : value;
+  // }
+
+  const capitalize = (value: string) => {
+    return value.length > 1
+      ? value.indexOf(" ") !== -1
+        ? value
+            .split(" ")
+            .map((n) => n.slice(0, 1).toUpperCase() + n.slice(1))
+            .join(" ")
+        : value.slice(0, 1).toUpperCase() + value.slice(1)
+      : value;
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -425,8 +447,11 @@ export default function AdminWorkshops() {
                     </div>
 
                     <p className="mb-3 text-xs text-slate-400">
-                      CSV format: <code>enrollmentId,email,name</code> (header row
-                      required)
+                      CSV format:{" "}
+                      <code>
+                        enrollmentId, name, father's name, mother's name
+                      </code>{" "}
+                      (header row required)
                     </p>
 
                     {participantsLoading[w._id] ? (
@@ -442,9 +467,10 @@ export default function AdminWorkshops() {
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-                              <th className="px-4 py-3">Name</th>
-                              <th className="px-4 py-3">Email</th>
                               <th className="px-4 py-3">Enrollment ID</th>
+                              <th className="px-4 py-3">Name</th>
+                              <th className="px-4 py-3">Father's Name</th>
+                              <th className="px-4 py-3">Mother's Name</th>
                               <th className="px-4 py-3 text-right">Actions</th>
                             </tr>
                           </thead>
@@ -457,13 +483,16 @@ export default function AdminWorkshops() {
                                 }`}
                               >
                                 <td className="px-4 py-3 font-medium text-slate-700">
-                                  {p.name}
+                                  {p.enrollmentId}
                                 </td>
                                 <td className="px-4 py-3 text-slate-500">
-                                  {p.email}
+                                  {capitalize(p.name)}
+                                </td>
+                                <td className="px-4 py-3 text-slate-500">
+                                  {capitalize(p.fname)}
                                 </td>
                                 <td className="px-4 py-3 font-mono text-slate-500">
-                                  {p.enrollmentId}
+                                  {capitalize(p.mname)}
                                 </td>
                                 <td className="px-4 py-3 text-right">
                                   <button
@@ -503,7 +532,9 @@ export default function AdminWorkshops() {
               <label className="block space-y-1.5">
                 <span className="text-sm font-medium">
                   Slug{" "}
-                  <span className="text-xs text-slate-400">(URL identifier — immutable after creation)</span>
+                  <span className="text-xs text-slate-400">
+                    (URL identifier — immutable after creation)
+                  </span>
                 </span>
                 <input
                   type="text"
@@ -577,7 +608,9 @@ export default function AdminWorkshops() {
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${
-                      form.certificateEnabled ? "translate-x-6" : "translate-x-1"
+                      form.certificateEnabled
+                        ? "translate-x-6"
+                        : "translate-x-1"
                     }`}
                   />
                 </div>

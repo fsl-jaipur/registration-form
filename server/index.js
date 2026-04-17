@@ -46,7 +46,7 @@ app.use(
     credentials: true,
   }),
 );
-console.log(process.env.FRONTEND_PATH);
+// console.log(process.env.FRONTEND_PATH);
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use("/static", express.static(join(__dirname, "uploads")));
