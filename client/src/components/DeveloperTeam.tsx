@@ -32,7 +32,7 @@ export default function DeveloperTeam() {
         </div>
 
         {/* Responsive Grid for Team Cards */}
-        <div className="mt-8 grid w-full grid-cols-1 gap-6 overflow-visible place-items-center sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 lg:gap-5">
+        <div className="mt-8 grid w-full grid-cols-1 gap-6 overflow-visible place-items-center sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-5">
           {cards.map((card) =>
             card.type === "member" ? (
               <div
