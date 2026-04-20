@@ -14,7 +14,9 @@ import {
   uploadParticipants,
   listParticipants,
   deleteParticipant,
+  downloadCertificate
 } from "../controllers/workshopController.js";
+
 
 const router = express.Router();
 
@@ -41,7 +43,7 @@ router.post("/workshops/:slug/register", registerWorkshopParticipant);
 router.post("/workshops/:slug/login", loginWorkshopParticipant);
 router.post("/workshops/:slug/logout", logoutWorkshopParticipant);
 router.get("/workshops/:slug/session", checkWorkshopSession);
-
+router.get("/workshops/:slug/certificate", downloadCertificate);
 // ─── Admin routes ─────────────────────────────────────────────────────────────
 router.get(
   "/admin/workshops",
