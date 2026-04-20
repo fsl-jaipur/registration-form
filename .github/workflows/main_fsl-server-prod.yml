@@ -4,6 +4,10 @@
 name: fsl-server-prod
 
 on:
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0a5064268498c3ec166488e1cd7f833534e543a2
   push:
     branches:
       - main
@@ -11,8 +15,11 @@ on:
       - 'server/**'  
       - '.github/workflows/main_fsl-server-prod.yml'
   workflow_dispatch:
+<<<<<<< HEAD
           
 
+=======
+>>>>>>> 0a5064268498c3ec166488e1cd7f833534e543a2
 jobs:
   build:
     runs-on: ubuntu-latest
