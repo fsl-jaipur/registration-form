@@ -42,18 +42,16 @@ export default function DeveloperTeam() {
 
         {/* Responsive Grid for Team Cards */}
         <div className="mt-8 grid w-full grid-cols-1 gap-6 overflow-visible place-items-center sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-5">
-          {cards.map((card) =>
-            card.type === "member" ? (
-              <div
-                className={`absolute inset-0 rounded-lg transition-all duration-300 pointer-events-none ${"group-hover:opacity-100 opacity-0"}`}
-                style={{
-                  background:
-                    "linear-gradient(to top, rgba(0, 0, 0, 0.96) 20%, rgba(0,0,0,0.0) 100%)",
-                }}
+          {teamMembers.map((member, idx) => (
+            <div key={idx} className="relative group w-full max-w-xs sm:max-w-[320px] md:max-w-[270px] lg:max-w-[280px] h-[340px] border border-border rounded-lg overflow-hidden shadow-lg flex flex-col bg-white dark:bg-slate-900">
+              <img
+                src={member.img}
+                alt={member.name}
+                className="w-full h-48 object-cover"
               />
               {/* Name/Title hidden, appears on hover with blur effect */}
               <div
-                className={`flex flex-col absolute left-4 bottom-4 z-10 transition-all duration-300 translate-y-6 opacity-0 group-hover:opacity-100 group-hover:translate-y-0`}
+                className="flex flex-col absolute left-4 bottom-4 z-10 transition-all duration-300 translate-y-6 opacity-0 group-hover:opacity-100 group-hover:translate-y-0"
                 style={{ backdropFilter: "blur(2.5px)" }}
               >
                 <h1 className="font-[regular] text-[1.1rem] sm:text-[1.2rem] md:text-[1.1rem] lg:text-[1.25rem] text-white">
