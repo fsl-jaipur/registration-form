@@ -3,7 +3,6 @@ import jwt from "jsonwebtoken";
 import PDFDocument from "pdfkit";
 import workshopModel from "../models/workshopModel.js";
 import workshopParticipantModel from "../models/workshopParticipantModel.js";
-import sendForgotPasswordEmail from "../services/forgotPasswordEmail.js";
 
 // ─── Public: Get workshop info ────────────────────────────────────────────────
 export const getWorkshop = async (req, res) => {
@@ -24,16 +23,18 @@ export const getWorkshop = async (req, res) => {
   }
 };
 
-// ─── Public: Verify participant (enrollmentId + email must match) ─────────────
-export const verifyParticipant = async (req, res) => {
+// ─── Public: Register workshop participant credentials ────────────────────────
+export const registerWorkshopParticipant = async (req, res) => {
   try {
     const { slug } = req.params;
-    const { enrollmentId, email } = req.body;
+    const { enrollmentId, email, phone, password } = req.body;
 
-    if (!enrollmentId || !email) {
+    if (!enrollmentId || !email || !phone || !password) {
       return res
         .status(400)
-        .json({ message: "Enrollment ID and email are required." });
+        .json({
+          message: "Enrollment number, email, phone number, and password are required.",
+        });
     }
 
     const workshop = await workshopModel.findOne({ slug });
@@ -41,139 +42,79 @@ export const verifyParticipant = async (req, res) => {
       return res.status(404).json({ message: "Workshop not found." });
     }
 
+    const normalizedEnrollmentId = String(enrollmentId).trim();
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const normalizedPhone = String(phone).trim();
+
     const participant = await workshopParticipantModel.findOne({
       workshopId: workshop._id,
-      enrollmentId: enrollmentId.trim(),
+      enrollmentId: normalizedEnrollmentId,
     });
 
     if (!participant) {
       return res.status(404).json({
         message:
-          "No participant found with this enrollment ID. Please check your details.",
+          "Enrollment number not found in workshop participants. Please check your enrollment number.",
       });
     }
 
-    return res.json({ valid: true, name: participant.name });
-  } catch (error) {
-    console.error("verifyParticipant error:", error);
-    return res.status(500).json({ message: "Internal server error." });
-  }
-};
-
-const capitalize = (value) => {
-  return value.length > 1
-    ? value.indexOf(" ") !== -1
-      ? value
-          .split(" ")
-          .map((n) => n.slice(0, 1).toUpperCase() + n.slice(1))
-          .join(" ")
-      : value.slice(0, 1).toUpperCase() + value.slice(1)
-    : value;
-};
-
-// ─── Public: Send OTP ─────────────────────────────────────────────────────────
-export const sendOtp = async (req, res) => {
-  try {
-    const { slug } = req.params;
-    const { enrollmentId, email } = req.body;
-
-    if (!enrollmentId || !email) {
-      return res
-        .status(400)
-        .json({ message: "Enrollment ID and email are required." });
-    }
-
-    const workshop = await workshopModel.findOne({ slug });
-    if (!workshop) {
-      return res.status(404).json({ message: "Workshop not found." });
-    }
-
-    const participant = await workshopParticipantModel.findOne({
-      workshopId: workshop._id,
-      enrollmentId: enrollmentId.trim(),
-    });
-
-    if (!participant) {
-      return res.status(404).json({ message: "Participant not found." });
-    }
-
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const otpHash = await bcrypt.hash(otp, 10);
-    const otpExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-
-    participant.otpHash = otpHash;
-    participant.otpExpires = otpExpires;
-    await participant.save();
-
-    await sendForgotPasswordEmail({
-      to: email,
-      name: participant.name,
-      otp,
-      expiryMinutes: 15,
-    });
-
-    return res.json({ sent: true });
-  } catch (error) {
-    console.error("sendOtp error:", error);
-    return res
-      .status(500)
-      .json({ message: "Failed to send OTP. Please try again." });
-  }
-};
-
-// ─── Public: Verify OTP ───────────────────────────────────────────────────────
-export const verifyOtp = async (req, res) => {
-  try {
-    const { slug } = req.params;
-    const { enrollmentId, otp } = req.body;
-
-    if (!enrollmentId || !otp) {
-      return res
-        .status(400)
-        .json({ message: "Enrollment ID and OTP are required." });
-    }
-
-    const workshop = await workshopModel.findOne({ slug });
-    if (!workshop) {
-      return res.status(404).json({ message: "Workshop not found." });
-    }
-
-    const participant = await workshopParticipantModel.findOne({
-      workshopId: workshop._id,
-      enrollmentId: enrollmentId.trim(),
-    });
-
-    if (!participant || !participant.otpHash) {
-      return res
-        .status(400)
-        .json({ message: "OTP not found. Please request a new one." });
-    }
-
     if (
-      !participant.otpExpires ||
-      participant.otpExpires.getTime() < Date.now()
+      participant.email &&
+      participant.passwordHash &&
+      participant.email !== normalizedEmail
     ) {
       return res
-        .status(400)
-        .json({ message: "OTP has expired. Please request a new one." });
+        .status(409)
+        .json({ message: "This enrollment number is already registered with another email." });
     }
 
-    const isMatch = await bcrypt.compare(
-      String(otp).trim(),
-      participant.otpHash,
-    );
-    if (!isMatch) {
-      return res
-        .status(400)
-        .json({ message: "Incorrect OTP. Please try again." });
-    }
-
-    // Clear OTP after successful verification
+    participant.email = normalizedEmail;
+    participant.phone = normalizedPhone;
+    participant.passwordHash = await bcrypt.hash(String(password), 10);
     participant.otpHash = null;
     participant.otpExpires = null;
     await participant.save();
 
-    // Issue a workshopSession JWT as an HTTP-only cookie
+    return res.json({
+      registered: true,
+      message: "Registration successful. Please log in.",
+      name: participant.name,
+    });
+  } catch (error) {
+    console.error("registerWorkshopParticipant error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+// ─── Public: Login workshop participant ───────────────────────────────────────
+export const loginWorkshopParticipant = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required." });
+    }
+
+    const workshop = await workshopModel.findOne({ slug });
+    if (!workshop) {
+      return res.status(404).json({ message: "Workshop not found." });
+    }
+
+    const participant = await workshopParticipantModel.findOne({
+      workshopId: workshop._id,
+      email: String(email).trim().toLowerCase(),
+    });
+
+    if (!participant || !participant.passwordHash) {
+      return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    const isMatch = await bcrypt.compare(String(password), participant.passwordHash);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid email or password." });
+    }
+
     const token = jwt.sign(
       {
         participantId: String(participant._id),
@@ -191,11 +132,27 @@ export const verifyOtp = async (req, res) => {
     });
 
     return res.json({
-      verified: true,
+      authenticated: true,
       name: participant.name,
+      enrollmentId: participant.enrollmentId,
     });
   } catch (error) {
-    console.error("verifyOtp error:", error);
+    console.error("loginWorkshopParticipant error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+// ─── Public: Logout workshop participant ──────────────────────────────────────
+export const logoutWorkshopParticipant = async (_req, res) => {
+  try {
+    res.clearCookie("workshopSession", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.SAMESITE || "lax",
+    });
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("logoutWorkshopParticipant error:", error);
     return res.status(500).json({ message: "Internal server error." });
   }
 };
@@ -229,7 +186,11 @@ export const checkWorkshopSession = async (req, res) => {
       return res.status(401).json({ authenticated: false });
     }
 
-    return res.json({ authenticated: true, name: participant.name });
+    return res.json({
+      authenticated: true,
+      name: participant.name,
+      enrollmentId: participant.enrollmentId,
+    });
   } catch (error) {
     console.error("checkWorkshopSession error:", error);
     return res.status(500).json({ message: "Internal server error." });

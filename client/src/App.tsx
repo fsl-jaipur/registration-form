@@ -236,7 +236,7 @@ const AppRoutes = () => {
             />
             <Route path="/resume-builder" element={<StudentResumeBuilder />} />
             <Route path="/resume/shared/:slug" element={<PublicResumePage />} />
-            <Route path="/workshop/:slug" element={<WorkshopPage />} />
+            <Route path="/workshop" element={<WorkshopPage />} />
           </Route>
 
           <Route

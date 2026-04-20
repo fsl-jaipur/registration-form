@@ -1,7 +1,7 @@
 import type {
+  RegisterResult,
+  WorkshopLoginResult,
   UploadResult,
-  VerifyOtpResult,
-  VerifyParticipantResult,
   WorkshopData,
   WorkshopParticipant,
   SessionResult,
@@ -38,46 +38,32 @@ export const fetchWorkshop = (slug: string) =>
 export const checkWorkshopSession = (slug: string) =>
   apiJson<SessionResult>(`/workshops/${slug}/session`);
 
-export const verifyParticipant = (
+export const registerWorkshopParticipant = (
   slug: string,
   enrollmentId: string,
-  email: string
+  email: string,
+  phone: string,
+  password: string
 ) =>
-  apiJson<VerifyParticipantResult>(`/workshops/${slug}/verify-participant`, {
+  apiJson<RegisterResult>(`/workshops/${slug}/register`, {
     method: "POST",
-    body: JSON.stringify({ enrollmentId, email }),
+    body: JSON.stringify({ enrollmentId, email, phone, password }),
   });
 
-export const sendOtp = (slug: string, enrollmentId: string, email: string) =>
-  apiJson<{ sent: boolean }>(`/workshops/${slug}/send-otp`, {
+export const loginWorkshopParticipant = (
+  slug: string,
+  email: string,
+  password: string
+) =>
+  apiJson<WorkshopLoginResult>(`/workshops/${slug}/login`, {
     method: "POST",
-    body: JSON.stringify({ enrollmentId, email }),
+    body: JSON.stringify({ email, password }),
   });
 
-export const verifyOtp = (slug: string, enrollmentId: string, otp: string) =>
-  apiJson<VerifyOtpResult>(`/workshops/${slug}/verify-otp`, {
+export const logoutWorkshopParticipant = (slug: string) =>
+  apiJson<{ success: true }>(`/workshops/${slug}/logout`, {
     method: "POST",
-    body: JSON.stringify({ enrollmentId, otp }),
   });
-
-export const downloadCertificate = async (slug: string): Promise<void> => {
-  const res = await fetch(`${base}/workshops/${slug}/certificate`, {
-    credentials: "include",
-  });
-  if (!res.ok) {
-    const data = (await res.json()) as { message?: string };
-    throw new Error(data.message || "Failed to download certificate");
-  }
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "certificate.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-};
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
 
