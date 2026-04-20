@@ -1,13 +1,13 @@
 name: fsl-server-dev
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - Azure-deployment
     paths:
       - 'server/**'
       - '.github/workflows/azure-deployment_fsl-server-dev.yml'
-  workflow_dispatch:
 
 jobs:
   build:

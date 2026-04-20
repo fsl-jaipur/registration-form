@@ -1,6 +1,7 @@
 name: fsl-frontend-dev
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - Azure-deployment
