@@ -1,67 +1,59 @@
-import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
-import {
-  Award,
-  ChevronRight,
-  Download,
-  Loader2,
-  Mail,
-  RefreshCw,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Award, Download, Eye, EyeOff, Loader2 } from "lucide-react";
 import {
   checkWorkshopSession,
   downloadCertificate,
   fetchWorkshop,
-  sendOtp,
-  verifyOtp,
-  verifyParticipant,
+  loginWorkshopParticipant,
+  logoutWorkshopParticipant,
+  registerWorkshopParticipant,
 } from "@/features/workshop/api";
 import type { Step, WorkshopData } from "@/features/workshop/types";
 import { useToast } from "@/hooks/use-toast";
 
-const OTP_RESEND_COOLDOWN = 60; // seconds
+const WORKSHOP_SLUG = "agentic-ai";
 
 export default function WorkshopPage() {
-  const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
 
   const [workshop, setWorkshop] = useState<WorkshopData | null>(null);
   const [loadingWorkshop, setLoadingWorkshop] = useState(true);
   const [workshopError, setWorkshopError] = useState("");
 
-  const [step, setStep] = useState<Step>("identity");
+  const [step, setStep] = useState<Step>("register");
   const [participantName, setParticipantName] = useState("");
+  const [participantEnrollmentId, setParticipantEnrollmentId] = useState("");
+  const [participantCertificateDownloaded, setParticipantCertificateDownloaded] =
+    useState(false);
 
-  // Step 1 fields
   const [enrollmentId, setEnrollmentId] = useState("");
-  const [email, setEmail] = useState("");
-  const [identityError, setIdentityError] = useState("");
-  const [identityLoading, setIdentityLoading] = useState(false);
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [registerError, setRegisterError] = useState("");
+  const [registerLoading, setRegisterLoading] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
 
-  // Step 2 fields
-  const [otp, setOtp] = useState("");
-  const [otpError, setOtpError] = useState("");
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Step 3
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [certLoading, setCertLoading] = useState(false);
 
-  // ─── Load workshop + check for existing session ──────────────────────────
   useEffect(() => {
-    if (!slug) return;
-
     const load = async () => {
       try {
         const [workshopData, session] = await Promise.all([
-          fetchWorkshop(slug),
-          checkWorkshopSession(slug).catch(() => ({ authenticated: false })),
+          fetchWorkshop(WORKSHOP_SLUG),
+          checkWorkshopSession(WORKSHOP_SLUG).catch(() => ({ authenticated: false })),
         ]);
         setWorkshop(workshopData);
 
         if (session.authenticated && session.name) {
           setParticipantName(session.name);
+          setParticipantEnrollmentId(session.enrollmentId || "");
+          setParticipantCertificateDownloaded(Boolean(session.certificateDownloaded));
           setStep("content");
         }
       } catch {
@@ -72,121 +64,110 @@ export default function WorkshopPage() {
     };
 
     void load();
-  }, [slug]);
-
-  // ─── Cooldown timer for OTP resend ───────────────────────────────────────
-  const startCooldown = () => {
-    setResendCooldown(OTP_RESEND_COOLDOWN);
-    if (cooldownRef.current) clearInterval(cooldownRef.current);
-    cooldownRef.current = setInterval(() => {
-      setResendCooldown((prev) => {
-        if (prev <= 1) {
-          if (cooldownRef.current) clearInterval(cooldownRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (cooldownRef.current) clearInterval(cooldownRef.current);
-    };
   }, []);
 
-  // ─── Step 1: Verify participant ───────────────────────────────────────────
-  const handleIdentitySubmit = async (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIdentityError("");
+    setRegisterError("");
 
-    if (!enrollmentId.trim() || !email.trim()) {
-      setIdentityError("Both fields are required.");
+    if (
+      !enrollmentId.trim() ||
+      !registerEmail.trim() ||
+      !phone.trim() ||
+      !registerPassword.trim()
+    ) {
+      setRegisterError("All fields are required.");
       return;
     }
 
-    setIdentityLoading(true);
+    if (!/^\d{10}$/.test(phone.trim())) {
+      setRegisterError("Phone number must be exactly 10 digits.");
+      return;
+    }
+
+    setRegisterLoading(true);
     try {
-      const result = await verifyParticipant(
-        slug!,
+      const result = await registerWorkshopParticipant(
+        WORKSHOP_SLUG,
         enrollmentId.trim(),
-        email.trim(),
+        registerEmail.trim(),
+        phone.trim(),
+        registerPassword,
       );
+
       setParticipantName(result.name);
-
-      // Send OTP immediately after verification
-      await sendOtp(slug!, enrollmentId.trim(), email.trim());
-      startCooldown();
-
+      setLoginEmail(registerEmail.trim());
+      setLoginPassword("");
+      setStep("login");
       toast({
-        title: "OTP sent!",
-        description: `A 6-digit code was sent to ${email.trim()}.`,
+        title: "Registration successful",
+        description: "Please log in with your email and password.",
       });
-      setStep("otp");
     } catch (err) {
-      setIdentityError(
-        err instanceof Error
-          ? err.message
-          : "Verification failed. Please try again.",
+      setRegisterError(
+        err instanceof Error ? err.message : "Registration failed. Please try again.",
       );
     } finally {
-      setIdentityLoading(false);
+      setRegisterLoading(false);
     }
   };
 
-  // ─── Step 2: Verify OTP ───────────────────────────────────────────────────
-  const handleOtpSubmit = async (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setOtpError("");
+    setLoginError("");
 
-    if (!otp.trim() || otp.trim().length !== 6) {
-      setOtpError("Please enter the 6-digit OTP.");
+    if (!loginEmail.trim() || !loginPassword.trim()) {
+      setLoginError("Email and password are required.");
       return;
     }
 
-    setOtpLoading(true);
+    setLoginLoading(true);
     try {
-      const result = await verifyOtp(slug!, enrollmentId.trim(), otp.trim());
+      const result = await loginWorkshopParticipant(
+        WORKSHOP_SLUG,
+        loginEmail.trim(),
+        loginPassword,
+      );
       setParticipantName(result.name);
+      setParticipantEnrollmentId(result.enrollmentId);
+      setParticipantCertificateDownloaded(Boolean(result.certificateDownloaded));
       setStep("content");
     } catch (err) {
-      setOtpError(
-        err instanceof Error
-          ? err.message
-          : "OTP verification failed. Please try again.",
+      setLoginError(
+        err instanceof Error ? err.message : "Login failed. Please try again.",
       );
     } finally {
-      setOtpLoading(false);
+      setLoginLoading(false);
     }
   };
 
-  // ─── Resend OTP ───────────────────────────────────────────────────────────
-  const handleResendOtp = async () => {
-    if (resendCooldown > 0) return;
-
+  const handleLogout = async () => {
     try {
-      await sendOtp(slug!, enrollmentId.trim(), email.trim());
-      startCooldown();
-      setOtp("");
-      setOtpError("");
-      toast({
-        title: "OTP resent",
-        description: `A new code was sent to ${email.trim()}.`,
-      });
-    } catch (err) {
-      toast({
-        title: "Could not resend OTP",
-        description: err instanceof Error ? err.message : "Please try again.",
-        variant: "destructive",
-      });
+      await logoutWorkshopParticipant(WORKSHOP_SLUG);
+    } catch {
+      // Ignore network/logout errors and still reset local state.
     }
+
+    setParticipantName("");
+    setParticipantEnrollmentId("");
+    setParticipantCertificateDownloaded(false);
+    setLoginPassword("");
+    setStep("login");
+    toast({
+      title: "Logged out",
+      description: "You have been logged out successfully.",
+    });
   };
 
-  // ─── Download certificate ─────────────────────────────────────────────────
   const handleDownloadCertificate = async () => {
     setCertLoading(true);
     try {
-      await downloadCertificate(slug!);
+      await downloadCertificate(WORKSHOP_SLUG);
+      setParticipantCertificateDownloaded(true);
+      toast({
+        title: "Certificate downloaded",
+        description: "Certificate can be downloaded only once.",
+      });
     } catch (err) {
       toast({
         title: "Download failed",
@@ -209,7 +190,6 @@ export default function WorkshopPage() {
       : value;
   };
 
-  // ─── Loading / error states ───────────────────────────────────────────────
   if (loadingWorkshop) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -230,231 +210,247 @@ export default function WorkshopPage() {
     );
   }
 
-  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
-      {/* Header bar */}
       <div className="border-b border-border bg-card px-4 py-4">
         <div className="mx-auto flex max-w-3xl items-center gap-3">
           <Award className="h-6 w-6 text-primary flex-shrink-0" />
-          <span className="text-base font-semibold truncate">
-            {workshop.title}
-          </span>
+          <span className="text-base font-semibold truncate">{workshop.title}</span>
         </div>
       </div>
 
       <main className="mx-auto max-w-3xl px-4 py-12">
-        {/* ── Step indicator ── */}
         {step !== "content" && (
-          <div className="mb-10 flex items-center gap-2 text-sm text-muted-foreground">
-            <span
-              className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
-                step === "identity"
+          <div className="mb-8 inline-flex rounded-xl border border-border bg-muted/40 p-1">
+            <button
+              type="button"
+              onClick={() => {
+                setRegisterError("");
+                setStep("register");
+              }}
+              className={`rounded-lg px-5 py-2 text-sm font-medium transition ${
+                step === "register"
                   ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              1
-            </span>
-            <span
-              className={
-                step === "identity" ? "text-foreground font-medium" : ""
-              }
-            >
-              Verify Identity
-            </span>
-            <ChevronRight className="h-4 w-4" />
-            <span
-              className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
-                step === "otp"
+              Register
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setLoginError("");
+                setStep("login");
+              }}
+              className={`rounded-lg px-5 py-2 text-sm font-medium transition ${
+                step === "login"
                   ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              2
-            </span>
-            <span
-              className={step === "otp" ? "text-foreground font-medium" : ""}
-            >
-              Enter OTP
-            </span>
+              Login
+            </button>
           </div>
         )}
 
-        {/* ── Step 1: Identity form ── */}
-        {step === "identity" && (
+        {step === "register" && (
           <div className="rounded-[28px] border border-border bg-card p-8 shadow-sm">
-            <h1 className="mb-1 text-2xl font-bold">Welcome</h1>
+            <h1 className="mb-1 text-2xl font-bold">Register</h1>
             <p className="mb-8 text-muted-foreground text-sm">
-              Enter your enrollment ID and the email address you registered with
-              to receive your OTP.
+              Enter your details. Enrollment number must already exist in the workshop
+              participant list.
             </p>
 
-            <form
-              onSubmit={(e) => void handleIdentitySubmit(e)}
-              className="space-y-5"
-            >
+            <form onSubmit={(e) => void handleRegisterSubmit(e)} className="space-y-5">
               <label className="block space-y-2">
-                <span className="text-sm font-medium">
-                  Enrollment / Registration ID / Scholar No.{" "}
-                  <span className="required-field">*</span>
-                </span>
+                <span className="text-sm font-medium">Enrollment No. *</span>
                 <input
                   type="text"
                   value={enrollmentId}
                   onChange={(e) => setEnrollmentId(e.target.value)}
-                  placeholder="e.g. FSL2024001"
+                  placeholder="e.g. 38889"
                   className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                   autoFocus
-                  autoComplete="off"
                 />
               </label>
 
               <label className="block space-y-2">
-                <span className="text-sm font-medium">
-                  Email Address <span className="required-field">*</span>
-                </span>
+                <span className="text-sm font-medium">Email *</span>
                 <input
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={registerEmail}
+                  onChange={(e) => setRegisterEmail(e.target.value)}
                   placeholder="you@example.com"
                   className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                   autoComplete="email"
                 />
               </label>
 
-              {identityError && (
-                <p className="rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-                  {identityError}
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={identityLoading}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
-              >
-                {identityLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Verifying…
-                  </>
-                ) : (
-                  <>
-                    Send OTP
-                    <ChevronRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {/* ── Step 2: OTP form ── */}
-        {step === "otp" && (
-          <div className="rounded-[28px] border border-border bg-card p-8 shadow-sm">
-            <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-              <Mail className="h-6 w-6 text-primary" />
-            </div>
-            <h1 className="mb-1 text-2xl font-bold">Check your inbox</h1>
-            <p className="mb-8 text-sm text-muted-foreground">
-              We sent a 6-digit code to <strong>{email}</strong>. It expires in
-              15 minutes.
-            </p>
-
-            <form
-              onSubmit={(e) => void handleOtpSubmit(e)}
-              className="space-y-5"
-            >
               <label className="block space-y-2">
-                <span className="text-sm font-medium">One-Time Password</span>
+                <span className="text-sm font-medium">Phone No. *</span>
                 <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={6}
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                  placeholder="123456"
-                  className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  autoFocus
-                  autoComplete="one-time-code"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) =>
+                    setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
+                  }
+                  placeholder="9876543210"
+                  maxLength={10}
+                  className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  autoComplete="tel"
                 />
               </label>
 
-              {otpError && (
+              <label className="block space-y-2">
+                <span className="text-sm font-medium">Password *</span>
+                <div className="relative">
+                  <input
+                    type={showRegisterPassword ? "text" : "password"}
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                    placeholder="Create password"
+                    className="w-full rounded-2xl border border-border bg-background px-4 py-3 pr-12 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegisterPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 inline-flex items-center px-3 text-muted-foreground hover:text-foreground"
+                    aria-label={showRegisterPassword ? "Hide password" : "Show password"}
+                  >
+                    {showRegisterPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </label>
+
+              {registerError && (
                 <p className="rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-                  {otpError}
+                  {registerError}
                 </p>
               )}
 
               <button
                 type="submit"
-                disabled={otpLoading}
+                disabled={registerLoading}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
               >
-                {otpLoading ? (
+                {registerLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Verifying…
+                    Registering...
                   </>
                 ) : (
-                  "Verify OTP"
+                  "Register"
                 )}
               </button>
             </form>
-
-            <div className="mt-5 flex items-center justify-between text-sm">
-              <button
-                type="button"
-                onClick={() => {
-                  setStep("identity");
-                  setOtp("");
-                  setOtpError("");
-                }}
-                className="text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-              >
-                ← Back
-              </button>
-
-              <button
-                type="button"
-                onClick={() => void handleResendOtp()}
-                disabled={resendCooldown > 0}
-                className="inline-flex items-center gap-1.5 text-primary disabled:text-muted-foreground"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                {resendCooldown > 0
-                  ? `Resend in ${resendCooldown}s`
-                  : "Resend OTP"}
-              </button>
-            </div>
           </div>
         )}
 
-        {/* ── Step 3: Workshop content + certificate ── */}
+        {step === "login" && (
+          <div className="rounded-[28px] border border-border bg-card p-8 shadow-sm">
+            <h1 className="mb-1 text-2xl font-bold">Login</h1>
+            <p className="mb-8 text-sm text-muted-foreground">
+              Login with your registered email and password.
+            </p>
+
+            <form onSubmit={(e) => void handleLoginSubmit(e)} className="space-y-5">
+              <label className="block space-y-2">
+                <span className="text-sm font-medium">Email *</span>
+                <input
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  autoFocus
+                  autoComplete="email"
+                />
+              </label>
+
+              <label className="block space-y-2">
+                <span className="text-sm font-medium">Password *</span>
+                <div className="relative">
+                  <input
+                    type={showLoginPassword ? "text" : "password"}
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="Enter password"
+                    className="w-full rounded-2xl border border-border bg-background px-4 py-3 pr-12 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 inline-flex items-center px-3 text-muted-foreground hover:text-foreground"
+                    aria-label={showLoginPassword ? "Hide password" : "Show password"}
+                  >
+                    {showLoginPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </label>
+
+              {loginError && (
+                <p className="rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+                  {loginError}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loginLoading}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
+              >
+                {loginLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Logging in...
+                  </>
+                ) : (
+                  "Login"
+                )}
+              </button>
+            </form>
+          </div>
+        )}
+
         {step === "content" && (
           <div className="space-y-8">
-            {/* Welcome card */}
             <div className="rounded-[28px] border border-border bg-card p-8 shadow-sm">
-              <p className="text-sm text-muted-foreground mb-1">
-                Welcome back,
-              </p>
-              <h1 className="text-3xl font-bold text-foreground">
-                {capitalize(participantName)}
-              </h1>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Welcome back,</p>
+                  <h1 className="text-3xl font-bold text-foreground">
+                    {capitalize(participantName)}
+                  </h1>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Enrollment No: <span className="font-medium text-foreground">{participantEnrollmentId}</span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleLogout()}
+                  className="rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                >
+                  Logout
+                </button>
+              </div>
             </div>
 
-            {/* Workshop info card */}
             <div className="rounded-[28px] border border-border bg-card p-8 shadow-sm space-y-4">
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
                   <h2 className="text-xl font-bold">{workshop.title}</h2>
                   {workshop.date && (
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {workshop.date}
-                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">{workshop.date}</p>
                   )}
                 </div>
                 <span
@@ -486,7 +482,6 @@ export default function WorkshopPage() {
               )}
             </div>
 
-            {/* Certificate card */}
             <div className="rounded-[28px] border border-border bg-card p-8 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
@@ -496,8 +491,8 @@ export default function WorkshopPage() {
                   <h3 className="font-semibold">Certificate of Completion</h3>
                   <p className="text-sm text-muted-foreground">
                     {workshop.certificateEnabled
-                      ? "Your certificate is ready to download."
-                      : "Your certificate will be available once the admin enables downloads."}
+                      ? "Your certificate is ready."
+                      : "Your certificate will be available once the workshop is completed."}
                   </p>
                 </div>
               </div>
@@ -505,18 +500,30 @@ export default function WorkshopPage() {
               <button
                 type="button"
                 onClick={() => void handleDownloadCertificate()}
-                disabled={!workshop.certificateEnabled || certLoading}
                 title={
                   !workshop.certificateEnabled
                     ? "Certificate not yet available"
-                    : "Download your certificate"
+                    : participantCertificateDownloaded
+                      ? "Certificate already downloaded"
+                      : "Download your certificate"
                 }
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-3 text-sm font-semibold transition ${
+                  workshop.certificateEnabled &&
+                  !participantCertificateDownloaded &&
+                  !certLoading
+                    ? "bg-primary text-primary-foreground hover:opacity-90"
+                    : "cursor-not-allowed bg-primary text-primary-foreground opacity-40"
+                }`}
+                disabled={
+                  !workshop.certificateEnabled ||
+                  participantCertificateDownloaded ||
+                  certLoading
+                }
               >
                 {certLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Generating PDF…
+                    Downloading...
                   </>
                 ) : (
                   <>
@@ -526,10 +533,19 @@ export default function WorkshopPage() {
                 )}
               </button>
 
+              <p className="mt-3 text-center text-xs text-muted-foreground">
+                Certificate can be downloaded only once.
+              </p>
+
               {!workshop.certificateEnabled && (
                 <p className="mt-3 text-center text-xs text-muted-foreground">
-                  The download button will activate once enabled by the
-                  administrator.
+                  The download button will activate once enabled by the administrator.
+                </p>
+              )}
+
+              {participantCertificateDownloaded && (
+                <p className="mt-2 text-center text-xs font-medium text-green-700">
+                  Certificate already downloaded.
                 </p>
               )}
             </div>

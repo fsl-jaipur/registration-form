@@ -16,19 +16,24 @@ export type WorkshopParticipant = {
   createdAt: string;
 };
 
-export type VerifyParticipantResult = {
-  valid: true;
+export type RegisterResult = {
+  registered: true;
+  message: string;
   name: string;
 };
 
-export type VerifyOtpResult = {
-  verified: true;
+export type WorkshopLoginResult = {
+  authenticated: true;
   name: string;
+  enrollmentId: string;
+  certificateDownloaded: boolean;
 };
 
 export type SessionResult = {
   authenticated: boolean;
   name?: string;
+  enrollmentId?: string;
+  certificateDownloaded?: boolean;
 };
 
 export type UploadResult = {
@@ -37,4 +42,4 @@ export type UploadResult = {
   parseErrors: string[];
 };
 
-export type Step = "identity" | "otp" | "content";
+export type Step = "register" | "login" | "content";

@@ -1,28 +1,26 @@
 import fs from "fs/promises";
-import sgMail from "@sendgrid/mail";
+import { Resend } from "resend";
+
 const getEmailConfig = () => {
-  const apiKey = process.env.SENDGRID_API_KEY;
+  const apiKey = process.env.RESEND_API_KEY;
   const fromEmail =
-    process.env.SENDGRID_FROM_EMAIL ||
-    process.env.SENDGRID_FROM ||
+    process.env.RESEND_FROM_EMAIL ||
     process.env.ADMIN_EMAIL;
   const adminEmail = process.env.ADMIN_EMAIL || fromEmail;
 
   if (!apiKey) {
-    throw new Error("SENDGRID_API_KEY is not configured.");
+    throw new Error("RESEND_API_KEY is not configured.");
   }
 
   if (!adminEmail) {
-    throw new Error("ADMIN_EMAIL is not configured.");
+    throw new Error("ADMIN_EMAIL must be configured.");
   }
 
   if (!fromEmail) {
-    throw new Error("SENDGRID_FROM_EMAIL or ADMIN_EMAIL must be configured.");
+    throw new Error("RESEND_FROM_EMAIL or ADMIN_EMAIL must be configured.");
   }
 
-  sgMail.setApiKey(apiKey);
-
-  return { adminEmail, fromEmail };
+  return { apiKey, adminEmail, fromEmail };
 };
 
 
@@ -42,22 +40,15 @@ export const sendJobApplicationEmails = async ({
   resumeFile,
   submittedAt,
 }) => {
-  const { adminEmail, fromEmail } = getEmailConfig();
-  const attachmentContent = await fs.readFile(resumeFile.path, { encoding: "base64" });
+  const { apiKey, adminEmail, fromEmail } = getEmailConfig();
+  const resend = new Resend(apiKey);
+  const attachmentContent = await fs.readFile(resumeFile.path);
   const submittedAtLabel = formatSubmittedAt(submittedAt);
 
   const userEmail = {
-    to: candidateEmail,
     from: fromEmail,
+    to: candidateEmail,
     subject: "Application Received Successfully",
-    text: `Hi ${candidateName},
-
-Thank you for applying for the ${jobTitle} role.
-
-We have received your application successfully, and our team will review it soon. If your profile matches what we are looking for, we will get in touch with you.
-
-Best regards,
-Full Stack Learning`,
     html: `
       <p>Hi ${candidateName},</p>
       <p>Thank you for applying for the <strong>${jobTitle}</strong> role.</p>
@@ -67,16 +58,9 @@ Full Stack Learning`,
   };
 
   const adminEmailMessage = {
-    to: adminEmail,
     from: fromEmail,
+    to: adminEmail,
     subject: "New Job Application Received",
-    text: `A new job application has been received.
-
-Candidate Name: ${candidateName}
-Candidate Email: ${candidateEmail}
-Phone: ${phone}
-Job Title: ${jobTitle}
-Date/Time: ${submittedAtLabel}`,
     html: `
       <p>A new job application has been received.</p>
       <p><strong>Candidate Name:</strong> ${candidateName}</p>
@@ -87,18 +71,20 @@ Date/Time: ${submittedAtLabel}`,
     `,
     attachments: [
       {
-        content: attachmentContent,
         filename: resumeFile.originalname,
-        type: resumeFile.mimetype,
-        disposition: "attachment",
+        content: attachmentContent,
       },
     ],
   };
 
-  try {
-    await Promise.all([sgMail.send(userEmail), sgMail.send(adminEmailMessage)]);
-  } catch (err) {
-    console.error("SendGrid error:", err?.response?.body?.errors);
-    throw err;
+  const [userResult, adminResult] = await Promise.all([
+    resend.emails.send(userEmail),
+    resend.emails.send(adminEmailMessage),
+  ]);
+
+  if (userResult.error || adminResult.error) {
+    const err = userResult.error || adminResult.error;
+    console.error("Resend error:", err);
+    throw new Error(JSON.stringify(err));
   }
 };

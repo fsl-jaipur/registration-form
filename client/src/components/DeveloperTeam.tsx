@@ -1,22 +1,31 @@
-import { useEngineeringTeam } from "@/hooks/useEngineeringTeam";
-import { fallbackEngineeringTeam } from "@/lib/api/engineeringTeam";
-import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import blankImage from "@/assets/blank.png";
+import { User } from "lucide-react";
+
+const teamMembers = [
+  {
+    name: "Rohit Jain",
+    title: "Founder & CEO",
+    img: "/images/employees/rohit.jpg ",
+  },
+  {
+    name: "Akshat Sharma",
+    title: "Our Frontend Lead",
+    img: "/images/employees/akshat.jpeg ",
+  },
+  {
+    name: "Dheeraj Jangid",
+    title: "Our DevOps Guy",
+    img: "/images/employees/dheeraj.jpg ",
+  },
+];
 
 export default function DeveloperTeam() {
-  const { data: team = fallbackEngineeringTeam } = useEngineeringTeam();
-  const cards = [
-    ...team.map((member) => ({ type: "member" as const, member })),
-    { type: "cta" as const, name: "Name", title: "Designation" },
-  ];
-
   return (
     <section className="relative min-h-screen py-24 overflow-hidden">
       <div className="absolute inset-0 dot-grid opacity-40" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] rounded-full bg-primary/5 blur-[120px]" />
       <div className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full bg-accent/5 blur-[100px]" />
-      <div className="container relative mx-auto max-w-7xl px-4">
+      <div className="container relative mx-auto px-4 max-w-6xl">
         <div className="text-center mb-20">
           <span className="inline-block px-4 py-1.5 rounded-full bg-brand-orange-light text-brand-orange text-sm font-semibold mb-4">
             Engineering Team
@@ -36,64 +45,48 @@ export default function DeveloperTeam() {
           {cards.map((card) =>
             card.type === "member" ? (
               <div
-                key={card.member._id || card.member.name}
-                className="group relative flex h-[340px] w-full max-w-xs items-end justify-start overflow-hidden rounded-lg border border-white/50 bg-black/80 shadow-lg transition-all duration-300 sm:max-w-[320px] md:max-w-[270px] lg:max-w-none"
-              >
-                <img
-                  className="size-full object-cover rounded-lg transition-transform duration-300 group-hover:scale-105"
-                  src={card.member.photo}
-                  alt={card.member.name}
-                />
-                <div
-                  className={`absolute inset-0 rounded-lg transition-all duration-300 pointer-events-none ${"group-hover:opacity-100 opacity-0"}`}
-                  style={{
-                    background:
-                      "linear-gradient(to top, rgba(0, 0, 0, 0.96) 20%, rgba(0,0,0,0.0) 100%)",
-                  }}
-                />
-                <div
-                  className={`flex flex-col absolute left-4 bottom-4 z-10 transition-all duration-300 translate-y-6 opacity-0 group-hover:opacity-100 group-hover:translate-y-0`}
-                  style={{ backdropFilter: "blur(2.5px)" }}
-                >
-                  <h1 className="font-[regular] text-[1.1rem] sm:text-[1.2rem] md:text-[1.1rem] lg:text-[1.25rem] text-white">
-                    {card.member.name}
-                  </h1>
-                  <h2 className="text-[0.95rem] sm:text-[1.05rem] md:text-[1rem] text-white">
-                    {card.member.title}
-                  </h2>
-                </div>
-              </div>
-            ) : (
+                className={`absolute inset-0 rounded-lg transition-all duration-300 pointer-events-none ${"group-hover:opacity-100 opacity-0"}`}
+                style={{
+                  background:
+                    "linear-gradient(to top, rgba(0, 0, 0, 0.96) 20%, rgba(0,0,0,0.0) 100%)",
+                }}
+              />
+              {/* Name/Title hidden, appears on hover with blur effect */}
               <div
-                key="career-launch-card"
-                className="flex h-[340px] w-full max-w-xs flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_20px_45px_rgba(15,23,42,0.12)] sm:max-w-[320px] md:max-w-[270px] lg:max-w-[280px]"
+                className={`flex flex-col absolute left-4 bottom-4 z-10 transition-all duration-300 translate-y-6 opacity-0 group-hover:opacity-100 group-hover:translate-y-0`}
+                style={{ backdropFilter: "blur(2.5px)" }}
               >
-                <div className="h-[190px] overflow-hidden bg-[#edf3ff]">
-                  <img
-                    src={blankImage}
-                    alt="Career opportunity placeholder"
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div className="flex flex-1 flex-col items-center justify-between px-5 py-6 text-center">
-                  <div className="space-y-2">
-                    <h3 className="text-[1.15rem] font-bold leading-tight text-slate-900 sm:text-[1.35rem]">
-                      {card.name}
-                    </h3>
-                    <p className="text-sm font-medium text-[#446fa8]">
-                      {card.title}
-                    </p>
-                  </div>
-                  <Button
-                    asChild
-                    className="h-11 w-full rounded-xl bg-gradient-to-r from-[#3d73ac] to-[#f36b34] px-4 text-sm font-semibold text-white hover:opacity-95"
-                  >
-                    <Link to="/career">Launch your career with us</Link>
-                  </Button>
-                </div>
+                <h1 className="font-[regular] text-[1.1rem] sm:text-[1.2rem] md:text-[1.1rem] lg:text-[1.25rem] text-white">
+                  {member.name}
+                </h1>
+                <h2 className="text-[0.95rem] sm:text-[1.05rem] md:text-[1rem] text-white">
+                  {member.title}
+                </h2>
               </div>
-            ),
-          )}
+            </div>
+          ))}
+
+          {/* "This could be you" placeholder card */}
+          <div className="w-full max-w-xs sm:max-w-[320px] md:max-w-[270px] lg:max-w-[280px] h-[340px] border border-border rounded-lg overflow-hidden shadow-lg flex flex-col bg-white dark:bg-slate-900">
+            <div className="flex-1 flex items-center justify-center bg-slate-100 dark:bg-slate-800">
+              <div className="w-24 h-24 rounded-full bg-slate-300 dark:bg-slate-600 flex items-center justify-center">
+                <User className="w-14 h-14 text-blue-400" strokeWidth={1.5} />
+              </div>
+            </div>
+            <div className="flex flex-col items-center gap-1 px-4 py-5">
+              <h1 className="font-bold text-[1.15rem] text-foreground">This could be you</h1>
+              <p className="text-muted-foreground text-sm">Your Designation</p>
+              <Link
+                to="/career"
+                className="mt-3 w-full text-center text-sm font-semibold text-white py-2 px-4 rounded-md"
+                style={{
+                  background: "linear-gradient(to right, #1e3a5f, #c0522a)",
+                }}
+              >
+                Launch your career with us
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </section>
