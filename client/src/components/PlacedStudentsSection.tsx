@@ -134,7 +134,7 @@ export default function PlacedStudentsSection() {
         if (!res.ok) throw new Error("Failed to fetch placed students");
         const data = await res.json();
         const mapped: Student[] = (data.students ?? []).map(
-          (s: any): Student => ({
+          (s: { name: string; title: string; company: string; city: string; photo?: string }): Student => ({
             name: s.name,
             role: s.title,
             company: s.company,
