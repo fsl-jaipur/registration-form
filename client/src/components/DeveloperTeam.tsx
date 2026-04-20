@@ -49,7 +49,6 @@ export default function DeveloperTeam() {
                 alt={member.name}
                 className="w-full h-48 object-cover"
               />
-              {/* Name/Title hidden, appears on hover with blur effect */}
               <div
                 className="flex flex-col absolute left-4 bottom-4 z-10 transition-all duration-300 translate-y-6 opacity-0 group-hover:opacity-100 group-hover:translate-y-0"
                 style={{ backdropFilter: "blur(2.5px)" }}
@@ -64,7 +63,6 @@ export default function DeveloperTeam() {
             </div>
           ))}
 
-          {/* "This could be you" placeholder card */}
           <div className="w-full max-w-xs sm:max-w-[320px] md:max-w-[270px] lg:max-w-[280px] h-[340px] border border-border rounded-lg overflow-hidden shadow-lg flex flex-col bg-white dark:bg-slate-900">
             <div className="flex-1 flex items-center justify-center bg-slate-100 dark:bg-slate-800">
               <div className="w-24 h-24 rounded-full bg-slate-300 dark:bg-slate-600 flex items-center justify-center">
