@@ -1,8 +1,22 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import PDFDocument from "pdfkit";
 import workshopModel from "../models/workshopModel.js";
 import workshopParticipantModel from "../models/workshopParticipantModel.js";
+
+const CERTIFICATE_BASE_URL =
+  "https://res.cloudinary.com/ddadanczt/image/upload/v1776430211/certificates";
+
+const buildCertificateSlug = (name, enrollmentId) => {
+  const normalizedName = String(name)
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, "_");
+  const normalizedEnrollmentId = String(enrollmentId)
+    .trim()
+    .replace(/[^a-z0-9]/gi, "");
+  return `${normalizedName}_${normalizedEnrollmentId}.png`;
+};
 
 // ─── Public: Get workshop info ────────────────────────────────────────────────
 export const getWorkshop = async (req, res) => {
@@ -46,6 +60,12 @@ export const registerWorkshopParticipant = async (req, res) => {
     const normalizedEmail = String(email).trim().toLowerCase();
     const normalizedPhone = String(phone).trim();
 
+    if (!/^\d{10}$/.test(normalizedPhone)) {
+      return res.status(400).json({
+        message: "Phone number must be exactly 10 digits.",
+      });
+    }
+
     const participant = await workshopParticipantModel.findOne({
       workshopId: workshop._id,
       enrollmentId: normalizedEnrollmentId,
@@ -56,6 +76,13 @@ export const registerWorkshopParticipant = async (req, res) => {
         message:
           "Enrollment number not found in workshop participants. Please check your enrollment number.",
       });
+    }
+
+    if (
+      participant.email === normalizedEmail &&
+      participant.passwordHash
+    ) {
+      return res.status(409).json({ message: "Already registered." });
     }
 
     if (
@@ -135,6 +162,7 @@ export const loginWorkshopParticipant = async (req, res) => {
       authenticated: true,
       name: participant.name,
       enrollmentId: participant.enrollmentId,
+      certificateDownloaded: Boolean(participant.certificateDownloaded),
     });
   } catch (error) {
     console.error("loginWorkshopParticipant error:", error);
@@ -180,7 +208,7 @@ export const checkWorkshopSession = async (req, res) => {
 
     const participant = await workshopParticipantModel
       .findById(decoded.participantId)
-      .select("name email enrollmentId");
+      .select("name email enrollmentId certificateDownloaded");
 
     if (!participant) {
       return res.status(401).json({ authenticated: false });
@@ -190,6 +218,7 @@ export const checkWorkshopSession = async (req, res) => {
       authenticated: true,
       name: participant.name,
       enrollmentId: participant.enrollmentId,
+      certificateDownloaded: Boolean(participant.certificateDownloaded),
     });
   } catch (error) {
     console.error("checkWorkshopSession error:", error);
@@ -221,8 +250,10 @@ export const downloadCertificate = async (req, res) => {
     }
 
     const [participant, workshop] = await Promise.all([
-      workshopParticipantModel.findById(decoded.participantId).select("name"),
-      workshopModel.findOne({ slug }).select("title certificateEnabled date"),
+      workshopParticipantModel
+        .findById(decoded.participantId)
+        .select("name enrollmentId certificateDownloaded"),
+      workshopModel.findOne({ slug }).select("title certificateEnabled"),
     ]);
 
     if (!participant || !workshop) {
@@ -235,103 +266,38 @@ export const downloadCertificate = async (req, res) => {
       });
     }
 
-    // Generate PDF
-    const doc = new PDFDocument({
-      layout: "landscape",
-      size: "A4",
-      margins: { top: 60, bottom: 60, left: 60, right: 60 },
-    });
-
-    const filename = `certificaxte-${participant.name.replace(/\s+/g, "-").toLowerCase()}.pdf`;
-
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-
-    doc.pipe(res);
-
-    const pageWidth = doc.page.width;
-    const pageHeight = doc.page.height;
-
-    // Background colour
-    doc.rect(0, 0, pageWidth, pageHeight).fill("#f8f9ff");
-
-    // Decorative border
-    doc
-      .rect(20, 20, pageWidth - 40, pageHeight - 40)
-      .lineWidth(3)
-      .stroke("#1d4ed8");
-
-    doc
-      .rect(28, 28, pageWidth - 56, pageHeight - 56)
-      .lineWidth(1)
-      .stroke("#93c5fd");
-
-    // Heading
-    doc
-      .fillColor("#1d4ed8")
-      .fontSize(38)
-      .font("Helvetica-Bold")
-      .text("Certificate of Completion", 0, 95, { align: "center" });
-
-    // Divider
-    doc
-      .moveTo(120, 155)
-      .lineTo(pageWidth - 120, 155)
-      .lineWidth(1.5)
-      .stroke("#1d4ed8");
-
-    // Presented to
-    doc
-      .fillColor("#475569")
-      .fontSize(14)
-      .font("Helvetica")
-      .text("This is to certify that", 0, 176, { align: "center" });
-
-    // Name
-    doc
-      .fillColor("#0f172a")
-      .fontSize(32)
-      .font("Helvetica-Bold")
-      .text(participant.name, 0, 205, { align: "center" });
-
-    // Completion line
-    doc
-      .fillColor("#475569")
-      .fontSize(14)
-      .font("Helvetica")
-      .text("has successfully completed", 0, 252, { align: "center" });
-
-    // Workshop title
-    doc
-      .fillColor("#1d4ed8")
-      .fontSize(20)
-      .font("Helvetica-Bold")
-      .text(workshop.title, 0, 276, { align: "center" });
-
-    // Date line
-    if (workshop.date) {
-      doc
-        .fillColor("#475569")
-        .fontSize(13)
-        .font("Helvetica")
-        .text(`on ${workshop.date}`, 0, 316, { align: "center" });
+    if (participant.certificateDownloaded) {
+      return res.status(403).json({
+        message: "Certificate can be downloaded only once.",
+      });
     }
 
-    // Bottom divider
-    doc
-      .moveTo(120, pageHeight - 80)
-      .lineTo(pageWidth - 120, pageHeight - 80)
-      .lineWidth(1)
-      .stroke("#93c5fd");
+    const fileName = buildCertificateSlug(
+      participant.name,
+      participant.enrollmentId,
+    );
+    const certificateUrl = `${CERTIFICATE_BASE_URL}/${fileName}`;
 
-    // Footer
-    doc
-      .fillColor("#94a3b8")
-      .fontSize(10)
-      .font("Helvetica")
-      .text("FullStack Learning", 0, pageHeight - 60, { align: "center" });
+    const certificateResponse = await fetch(certificateUrl);
+    if (!certificateResponse.ok) {
+      return res.status(404).json({
+        message: "Certificate file not found.",
+      });
+    }
 
-    doc.end();
+    const certificateBuffer = Buffer.from(
+      await certificateResponse.arrayBuffer(),
+    );
+    const contentType =
+      certificateResponse.headers.get("content-type") || "image/png";
+
+    participant.certificateDownloaded = true;
+    participant.certificateDownloadedAt = new Date();
+    await participant.save();
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    return res.send(certificateBuffer);
   } catch (error) {
     console.error("downloadCertificate error:", error);
     if (!res.headersSent) {

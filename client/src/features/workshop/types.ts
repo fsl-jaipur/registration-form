@@ -26,12 +26,14 @@ export type WorkshopLoginResult = {
   authenticated: true;
   name: string;
   enrollmentId: string;
+  certificateDownloaded: boolean;
 };
 
 export type SessionResult = {
   authenticated: boolean;
   name?: string;
   enrollmentId?: string;
+  certificateDownloaded?: boolean;
 };
 
 export type UploadResult = {

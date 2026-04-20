@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Award, Download, Loader2 } from "lucide-react";
+import { Award, Download, Eye, EyeOff, Loader2 } from "lucide-react";
 import {
   checkWorkshopSession,
+  downloadCertificate,
   fetchWorkshop,
   loginWorkshopParticipant,
   logoutWorkshopParticipant,
@@ -11,8 +12,6 @@ import type { Step, WorkshopData } from "@/features/workshop/types";
 import { useToast } from "@/hooks/use-toast";
 
 const WORKSHOP_SLUG = "agentic-ai";
-const CERTIFICATE_BASE_URL =
-  "https://res.cloudinary.com/ddadanczt/image/upload/v1776430211/certificates";
 
 export default function WorkshopPage() {
   const { toast } = useToast();
@@ -24,6 +23,8 @@ export default function WorkshopPage() {
   const [step, setStep] = useState<Step>("register");
   const [participantName, setParticipantName] = useState("");
   const [participantEnrollmentId, setParticipantEnrollmentId] = useState("");
+  const [participantCertificateDownloaded, setParticipantCertificateDownloaded] =
+    useState(false);
 
   const [enrollmentId, setEnrollmentId] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
@@ -31,11 +32,14 @@ export default function WorkshopPage() {
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerError, setRegisterError] = useState("");
   const [registerLoading, setRegisterLoading] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
 
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [certLoading, setCertLoading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -49,6 +53,7 @@ export default function WorkshopPage() {
         if (session.authenticated && session.name) {
           setParticipantName(session.name);
           setParticipantEnrollmentId(session.enrollmentId || "");
+          setParticipantCertificateDownloaded(Boolean(session.certificateDownloaded));
           setStep("content");
         }
       } catch {
@@ -72,6 +77,11 @@ export default function WorkshopPage() {
       !registerPassword.trim()
     ) {
       setRegisterError("All fields are required.");
+      return;
+    }
+
+    if (!/^\d{10}$/.test(phone.trim())) {
+      setRegisterError("Phone number must be exactly 10 digits.");
       return;
     }
 
@@ -120,6 +130,7 @@ export default function WorkshopPage() {
       );
       setParticipantName(result.name);
       setParticipantEnrollmentId(result.enrollmentId);
+      setParticipantCertificateDownloaded(Boolean(result.certificateDownloaded));
       setStep("content");
     } catch (err) {
       setLoginError(
@@ -139,6 +150,7 @@ export default function WorkshopPage() {
 
     setParticipantName("");
     setParticipantEnrollmentId("");
+    setParticipantCertificateDownloaded(false);
     setLoginPassword("");
     setStep("login");
     toast({
@@ -147,20 +159,25 @@ export default function WorkshopPage() {
     });
   };
 
-  const buildCertificateSlug = (name: string, enrollmentNo: string) => {
-    const normalizedName = name
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9\s]/g, "")
-      .replace(/\s+/g, "_");
-    const normalizedEnrollment = String(enrollmentNo).trim().replace(/[^a-z0-9]/gi, "");
-    return `${normalizedName}_${normalizedEnrollment}.png`;
+  const handleDownloadCertificate = async () => {
+    setCertLoading(true);
+    try {
+      await downloadCertificate(WORKSHOP_SLUG);
+      setParticipantCertificateDownloaded(true);
+      toast({
+        title: "Certificate downloaded",
+        description: "Certificate can be downloaded only once.",
+      });
+    } catch (err) {
+      toast({
+        title: "Download failed",
+        description: err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCertLoading(false);
+    }
   };
-
-  const certificateUrl =
-    participantName && participantEnrollmentId
-      ? `${CERTIFICATE_BASE_URL}/${buildCertificateSlug(participantName, participantEnrollmentId)}`
-      : "";
 
   const capitalize = (value: string) => {
     return value.length > 1
@@ -274,8 +291,11 @@ export default function WorkshopPage() {
                 <input
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) =>
+                    setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
+                  }
                   placeholder="9876543210"
+                  maxLength={10}
                   className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                   autoComplete="tel"
                 />
@@ -283,14 +303,28 @@ export default function WorkshopPage() {
 
               <label className="block space-y-2">
                 <span className="text-sm font-medium">Password *</span>
-                <input
-                  type="password"
-                  value={registerPassword}
-                  onChange={(e) => setRegisterPassword(e.target.value)}
-                  placeholder="Create password"
-                  className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  autoComplete="new-password"
-                />
+                <div className="relative">
+                  <input
+                    type={showRegisterPassword ? "text" : "password"}
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                    placeholder="Create password"
+                    className="w-full rounded-2xl border border-border bg-background px-4 py-3 pr-12 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegisterPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 inline-flex items-center px-3 text-muted-foreground hover:text-foreground"
+                    aria-label={showRegisterPassword ? "Hide password" : "Show password"}
+                  >
+                    {showRegisterPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </label>
 
               {registerError && (
@@ -340,14 +374,28 @@ export default function WorkshopPage() {
 
               <label className="block space-y-2">
                 <span className="text-sm font-medium">Password *</span>
-                <input
-                  type="password"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="Enter password"
-                  className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  autoComplete="current-password"
-                />
+                <div className="relative">
+                  <input
+                    type={showLoginPassword ? "text" : "password"}
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="Enter password"
+                    className="w-full rounded-2xl border border-border bg-background px-4 py-3 pr-12 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 inline-flex items-center px-3 text-muted-foreground hover:text-foreground"
+                    aria-label={showLoginPassword ? "Hide password" : "Show password"}
+                  >
+                    {showLoginPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </label>
 
               {loginError && (
@@ -449,33 +497,55 @@ export default function WorkshopPage() {
                 </div>
               </div>
 
-              <a
-                href={workshop.certificateEnabled ? certificateUrl : undefined}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                type="button"
+                onClick={() => void handleDownloadCertificate()}
                 title={
                   !workshop.certificateEnabled
                     ? "Certificate not yet available"
-                    : "Open your certificate"
+                    : participantCertificateDownloaded
+                      ? "Certificate already downloaded"
+                      : "Download your certificate"
                 }
                 className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-3 text-sm font-semibold transition ${
-                  workshop.certificateEnabled && certificateUrl
+                  workshop.certificateEnabled &&
+                  !participantCertificateDownloaded &&
+                  !certLoading
                     ? "bg-primary text-primary-foreground hover:opacity-90"
                     : "cursor-not-allowed bg-primary text-primary-foreground opacity-40"
                 }`}
-                onClick={(e) => {
-                  if (!workshop.certificateEnabled || !certificateUrl) {
-                    e.preventDefault();
-                  }
-                }}
+                disabled={
+                  !workshop.certificateEnabled ||
+                  participantCertificateDownloaded ||
+                  certLoading
+                }
               >
-                <Download className="h-4 w-4" />
-                View Certificate
-              </a>
+                {certLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Download Certificate
+                  </>
+                )}
+              </button>
+
+              <p className="mt-3 text-center text-xs text-muted-foreground">
+                Certificate can be downloaded only once.
+              </p>
 
               {!workshop.certificateEnabled && (
                 <p className="mt-3 text-center text-xs text-muted-foreground">
                   The download button will activate once enabled by the administrator.
+                </p>
+              )}
+
+              {participantCertificateDownloaded && (
+                <p className="mt-2 text-center text-xs font-medium text-green-700">
+                  Certificate already downloaded.
                 </p>
               )}
             </div>

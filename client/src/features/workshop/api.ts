@@ -65,6 +65,31 @@ export const logoutWorkshopParticipant = (slug: string) =>
     method: "POST",
   });
 
+export const downloadCertificate = async (slug: string): Promise<void> => {
+  const res = await fetch(`${base}/workshops/${slug}/certificate`, {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const data = (await res.json()) as { message?: string };
+      throw new Error(data.message || "Failed to download certificate");
+    }
+    throw new Error("Failed to download certificate");
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "certificate.png";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+
 // ─── Admin ────────────────────────────────────────────────────────────────────
 
 export const adminListWorkshops = () =>
