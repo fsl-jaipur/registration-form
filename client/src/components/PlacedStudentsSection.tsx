@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useMemo } from "react";
 import { Briefcase, MapPin } from "lucide-react";
 import Blank from "@/assets/blank.png";
+import { images } from "@/assets/images";
 
 type Student = {
   name: string;
@@ -92,7 +93,7 @@ function PlaceholderCard({ index }: { index: number }) {
     >
       <div className="relative h-48 overflow-hidden bg-muted">
         <img
-          src={Blank}
+          src={images.blank}
           alt="Future student"
           className="w-full h-full object-cover opacity-70"
         />
