@@ -10,6 +10,7 @@ import {
   type UniversalHeaderButton,
   type UniversalHeaderNavItem,
 } from "@/lib/api/universalHeader";
+import { images } from "@/assets/images";
 
 const enrollButtonClasses =
   "px-5 py-2.5 rounded-lg text-sm font-semibold text-primary-foreground gradient-brand hover:opacity-90 transition-all duration-200 hover:shadow-lg hover:scale-105";
@@ -214,7 +215,7 @@ const Header = () => {
             className="flex items-center gap-2 group"
           >
             <img
-              src={header.logo}
+              src={images.logo}
               alt={header.logoAlt || "FullStack Learning Logo"}
               loading="eager"
               decoding="async"

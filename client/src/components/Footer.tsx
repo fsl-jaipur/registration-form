@@ -5,6 +5,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import bundledLogo from "@/assets/logo.png";
 import { useFooter } from "@/hooks/useFooter";
 import { fallbackFooter } from "@/lib/api/footer";
+import { image } from "html2canvas/dist/types/css/types/image";
+import { images } from "@/assets/images";
 
 const logoSrcSet = "/images/logo@2x.png 2x, /images/logo.png 1x";
 
@@ -152,7 +154,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
             <img
-              src={footer.logo}
+              src={images.logo}
               srcSet={logoSrcSet}
               alt="FullStack Learning"
               loading="eager"

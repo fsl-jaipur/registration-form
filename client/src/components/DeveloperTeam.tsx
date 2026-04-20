@@ -5,17 +5,17 @@ const teamMembers = [
   {
     name: "Rohit Jain",
     title: "Founder & CEO",
-    img: "/images/employees/rohit.jpg ",
+    img: "https://stfsl.blob.core.windows.net/fslfiles/Rohit.png",
   },
   {
     name: "Akshat Sharma",
     title: "Our Frontend Lead",
-    img: "/images/employees/akshat.jpeg ",
+    img: "https://stfsl.blob.core.windows.net/fslfiles/Akshat.png",
   },
   {
     name: "Dheeraj Jangid",
     title: "Our DevOps Guy",
-    img: "/images/employees/dheeraj.jpg ",
+    img: "https://stfsl.blob.core.windows.net/fslfiles/Dheeraj.png",
   },
 ];
 
@@ -47,7 +47,7 @@ export default function DeveloperTeam() {
               <img
                 src={member.img}
                 alt={member.name}
-                className="w-full h-full object-cover"
+                className="w-full object-cover"
               />
               {/* Gradient overlay — fades in on hover */}
               <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
