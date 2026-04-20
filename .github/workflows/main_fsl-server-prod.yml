@@ -4,14 +4,14 @@
 name: fsl-server-prod
 
 on:
-  workflow_dispatch:
+workflow_dispatch:
   push:
     branches:
       - main
     paths:
       - 'server/**'  
       - '.github/workflows/main_fsl-server-prod.yml'
-
+  
 
 jobs:
   build:
