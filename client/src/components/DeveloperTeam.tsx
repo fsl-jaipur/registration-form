@@ -41,41 +41,28 @@ export default function DeveloperTeam() {
         </div>
 
         {/* Responsive Grid for Team Cards */}
-        <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8 mt-8 overflow-visible place-items-center">
-          {teamMembers.map((member) => (
-            <div
-              key={member.name}
-              className="w-full max-w-xs sm:max-w-[320px] md:max-w-[270px] lg:max-w-[280px] h-[340px] border border-white/50 rounded-lg relative flex items-end justify-start overflow-hidden shadow-lg group transition-all duration-300 bg-black/80"
-            >
+        <div className="mt-8 grid w-full grid-cols-1 gap-6 overflow-visible place-items-center sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-5">
+          {teamMembers.map((member, idx) => (
+            <div key={idx} className="relative group w-full max-w-xs sm:max-w-[320px] md:max-w-[270px] lg:max-w-[280px] h-[340px] border border-border rounded-lg overflow-hidden shadow-lg bg-white dark:bg-slate-900">
               <img
-                className="size-full object-cover rounded-lg transition-transform duration-300 group-hover:scale-105"
                 src={member.img}
                 alt={member.name}
+                className="w-full h-full object-cover"
               />
-              {/* Gradient overlay appears on hover instead of always visible */}
-              <div
-                className={`absolute inset-0 rounded-lg transition-all duration-300 pointer-events-none ${"group-hover:opacity-100 opacity-0"}`}
-                style={{
-                  background:
-                    "linear-gradient(to top, rgba(0, 0, 0, 0.96) 20%, rgba(0,0,0,0.0) 100%)",
-                }}
-              />
-              {/* Name/Title hidden, appears on hover with blur effect */}
-              <div
-                className={`flex flex-col absolute left-4 bottom-4 z-10 transition-all duration-300 translate-y-6 opacity-0 group-hover:opacity-100 group-hover:translate-y-0`}
-                style={{ backdropFilter: "blur(2.5px)" }}
-              >
-                <h1 className="font-[regular] text-[1.1rem] sm:text-[1.2rem] md:text-[1.1rem] lg:text-[1.25rem] text-white">
+              {/* Gradient overlay — fades in on hover */}
+              <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              {/* Name/title — slides up on hover */}
+              <div className="absolute left-4 bottom-4 z-10 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+                <p className="font-semibold text-base text-white leading-tight">
                   {member.name}
-                </h1>
-                <h2 className="text-[0.95rem] sm:text-[1.05rem] md:text-[1rem] text-white">
+                </p>
+                <p className="text-sm text-white/80 mt-0.5">
                   {member.title}
-                </h2>
+                </p>
               </div>
             </div>
           ))}
 
-          {/* "This could be you" placeholder card */}
           <div className="w-full max-w-xs sm:max-w-[320px] md:max-w-[270px] lg:max-w-[280px] h-[340px] border border-border rounded-lg overflow-hidden shadow-lg flex flex-col bg-white dark:bg-slate-900">
             <div className="flex-1 flex items-center justify-center bg-slate-100 dark:bg-slate-800">
               <div className="w-24 h-24 rounded-full bg-slate-300 dark:bg-slate-600 flex items-center justify-center">
