@@ -41,18 +41,9 @@ export default function DeveloperTeam() {
         </div>
 
         {/* Responsive Grid for Team Cards */}
-        <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8 mt-8 overflow-visible place-items-center">
-          {teamMembers.map((member) => (
-            <div
-              key={member.name}
-              className="w-full max-w-xs sm:max-w-[320px] md:max-w-[270px] lg:max-w-[280px] h-[340px] border border-white/50 rounded-lg relative flex items-end justify-start overflow-hidden shadow-lg group transition-all duration-300 bg-black/80"
-            >
-              <img
-                className="size-full object-cover rounded-lg transition-transform duration-300 group-hover:scale-105"
-                src={member.img}
-                alt={member.name}
-              />
-              {/* Gradient overlay appears on hover instead of always visible */}
+        <div className="mt-8 grid w-full grid-cols-1 gap-6 overflow-visible place-items-center sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-5">
+          {cards.map((card) =>
+            card.type === "member" ? (
               <div
                 className={`absolute inset-0 rounded-lg transition-all duration-300 pointer-events-none ${"group-hover:opacity-100 opacity-0"}`}
                 style={{

@@ -336,7 +336,7 @@ export default function AdminWorkshops() {
                         {w.title}
                       </h2>
                       <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-mono text-slate-500">
-                        /workshop/{w.slug}
+                        /workshop
                       </span>
                     </div>
                     {w.date && (

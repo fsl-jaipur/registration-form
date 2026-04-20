@@ -3,9 +3,9 @@ import multer from "multer";
 import authMiddleware from "../middlewares/authJWT.js";
 import {
   getWorkshop,
-  verifyParticipant,
-  sendOtp,
-  verifyOtp,
+  registerWorkshopParticipant,
+  loginWorkshopParticipant,
+  logoutWorkshopParticipant,
   checkWorkshopSession,
   downloadCertificate,
   listWorkshops,
@@ -38,9 +38,9 @@ const csvUpload = multer({
 
 // ─── Public routes ────────────────────────────────────────────────────────────
 router.get("/workshops/:slug", getWorkshop);
-router.post("/workshops/:slug/verify-participant", verifyParticipant);
-router.post("/workshops/:slug/send-otp", sendOtp);
-router.post("/workshops/:slug/verify-otp", verifyOtp);
+router.post("/workshops/:slug/register", registerWorkshopParticipant);
+router.post("/workshops/:slug/login", loginWorkshopParticipant);
+router.post("/workshops/:slug/logout", logoutWorkshopParticipant);
 router.get("/workshops/:slug/session", checkWorkshopSession);
 router.get("/workshops/:slug/certificate", downloadCertificate);
 

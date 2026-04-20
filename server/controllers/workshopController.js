@@ -1,9 +1,22 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import PDFDocument from "pdfkit";
 import workshopModel from "../models/workshopModel.js";
 import workshopParticipantModel from "../models/workshopParticipantModel.js";
-import sendForgotPasswordEmail from "../services/forgotPasswordEmail.js";
+
+const CERTIFICATE_BASE_URL =
+  "https://res.cloudinary.com/ddadanczt/image/upload/v1776430211/certificates";
+
+const buildCertificateSlug = (name, enrollmentId) => {
+  const normalizedName = String(name)
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, "_");
+  const normalizedEnrollmentId = String(enrollmentId)
+    .trim()
+    .replace(/[^a-z0-9]/gi, "");
+  return `${normalizedName}_${normalizedEnrollmentId}.png`;
+};
 
 // ─── Public: Get workshop info ────────────────────────────────────────────────
 export const getWorkshop = async (req, res) => {
@@ -24,16 +37,18 @@ export const getWorkshop = async (req, res) => {
   }
 };
 
-// ─── Public: Verify participant (enrollmentId + email must match) ─────────────
-export const verifyParticipant = async (req, res) => {
+// ─── Public: Register workshop participant credentials ────────────────────────
+export const registerWorkshopParticipant = async (req, res) => {
   try {
     const { slug } = req.params;
-    const { enrollmentId, email } = req.body;
+    const { enrollmentId, email, phone, password } = req.body;
 
-    if (!enrollmentId || !email) {
+    if (!enrollmentId || !email || !phone || !password) {
       return res
         .status(400)
-        .json({ message: "Enrollment ID and email are required." });
+        .json({
+          message: "Enrollment number, email, phone number, and password are required.",
+        });
     }
 
     const workshop = await workshopModel.findOne({ slug });
@@ -41,139 +56,92 @@ export const verifyParticipant = async (req, res) => {
       return res.status(404).json({ message: "Workshop not found." });
     }
 
+    const normalizedEnrollmentId = String(enrollmentId).trim();
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const normalizedPhone = String(phone).trim();
+
+    if (!/^\d{10}$/.test(normalizedPhone)) {
+      return res.status(400).json({
+        message: "Phone number must be exactly 10 digits.",
+      });
+    }
+
     const participant = await workshopParticipantModel.findOne({
       workshopId: workshop._id,
-      enrollmentId: enrollmentId.trim(),
+      enrollmentId: normalizedEnrollmentId,
     });
 
     if (!participant) {
       return res.status(404).json({
         message:
-          "No participant found with this enrollment ID. Please check your details.",
+          "Enrollment number not found in workshop participants. Please check your enrollment number.",
       });
     }
 
-    return res.json({ valid: true, name: participant.name });
-  } catch (error) {
-    console.error("verifyParticipant error:", error);
-    return res.status(500).json({ message: "Internal server error." });
-  }
-};
-
-const capitalize = (value) => {
-  return value.length > 1
-    ? value.indexOf(" ") !== -1
-      ? value
-          .split(" ")
-          .map((n) => n.slice(0, 1).toUpperCase() + n.slice(1))
-          .join(" ")
-      : value.slice(0, 1).toUpperCase() + value.slice(1)
-    : value;
-};
-
-// ─── Public: Send OTP ─────────────────────────────────────────────────────────
-export const sendOtp = async (req, res) => {
-  try {
-    const { slug } = req.params;
-    const { enrollmentId, email } = req.body;
-
-    if (!enrollmentId || !email) {
-      return res
-        .status(400)
-        .json({ message: "Enrollment ID and email are required." });
-    }
-
-    const workshop = await workshopModel.findOne({ slug });
-    if (!workshop) {
-      return res.status(404).json({ message: "Workshop not found." });
-    }
-
-    const participant = await workshopParticipantModel.findOne({
-      workshopId: workshop._id,
-      enrollmentId: enrollmentId.trim(),
-    });
-
-    if (!participant) {
-      return res.status(404).json({ message: "Participant not found." });
-    }
-
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const otpHash = await bcrypt.hash(otp, 10);
-    const otpExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-
-    participant.otpHash = otpHash;
-    participant.otpExpires = otpExpires;
-    await participant.save();
-
-    await sendForgotPasswordEmail({
-      to: email,
-      name: participant.name,
-      otp,
-      expiryMinutes: 15,
-    });
-
-    return res.json({ sent: true });
-  } catch (error) {
-    console.error("sendOtp error:", error);
-    return res
-      .status(500)
-      .json({ message: "Failed to send OTP. Please try again." });
-  }
-};
-
-// ─── Public: Verify OTP ───────────────────────────────────────────────────────
-export const verifyOtp = async (req, res) => {
-  try {
-    const { slug } = req.params;
-    const { enrollmentId, otp } = req.body;
-
-    if (!enrollmentId || !otp) {
-      return res
-        .status(400)
-        .json({ message: "Enrollment ID and OTP are required." });
-    }
-
-    const workshop = await workshopModel.findOne({ slug });
-    if (!workshop) {
-      return res.status(404).json({ message: "Workshop not found." });
-    }
-
-    const participant = await workshopParticipantModel.findOne({
-      workshopId: workshop._id,
-      enrollmentId: enrollmentId.trim(),
-    });
-
-    if (!participant || !participant.otpHash) {
-      return res
-        .status(400)
-        .json({ message: "OTP not found. Please request a new one." });
+    if (
+      participant.email === normalizedEmail &&
+      participant.passwordHash
+    ) {
+      return res.status(409).json({ message: "Already registered." });
     }
 
     if (
-      !participant.otpExpires ||
-      participant.otpExpires.getTime() < Date.now()
+      participant.email &&
+      participant.passwordHash &&
+      participant.email !== normalizedEmail
     ) {
       return res
-        .status(400)
-        .json({ message: "OTP has expired. Please request a new one." });
+        .status(409)
+        .json({ message: "This enrollment number is already registered with another email." });
     }
 
-    const isMatch = await bcrypt.compare(
-      String(otp).trim(),
-      participant.otpHash,
-    );
-    if (!isMatch) {
-      return res
-        .status(400)
-        .json({ message: "Incorrect OTP. Please try again." });
-    }
-
-    // Clear OTP after successful verification
+    participant.email = normalizedEmail;
+    participant.phone = normalizedPhone;
+    participant.passwordHash = await bcrypt.hash(String(password), 10);
     participant.otpHash = null;
     participant.otpExpires = null;
     await participant.save();
 
-    // Issue a workshopSession JWT as an HTTP-only cookie
+    return res.json({
+      registered: true,
+      message: "Registration successful. Please log in.",
+      name: participant.name,
+    });
+  } catch (error) {
+    console.error("registerWorkshopParticipant error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+// ─── Public: Login workshop participant ───────────────────────────────────────
+export const loginWorkshopParticipant = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required." });
+    }
+
+    const workshop = await workshopModel.findOne({ slug });
+    if (!workshop) {
+      return res.status(404).json({ message: "Workshop not found." });
+    }
+
+    const participant = await workshopParticipantModel.findOne({
+      workshopId: workshop._id,
+      email: String(email).trim().toLowerCase(),
+    });
+
+    if (!participant || !participant.passwordHash) {
+      return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    const isMatch = await bcrypt.compare(String(password), participant.passwordHash);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid email or password." });
+    }
+
     const token = jwt.sign(
       {
         participantId: String(participant._id),
@@ -191,11 +159,28 @@ export const verifyOtp = async (req, res) => {
     });
 
     return res.json({
-      verified: true,
+      authenticated: true,
       name: participant.name,
+      enrollmentId: participant.enrollmentId,
+      certificateDownloaded: Boolean(participant.certificateDownloaded),
     });
   } catch (error) {
-    console.error("verifyOtp error:", error);
+    console.error("loginWorkshopParticipant error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+// ─── Public: Logout workshop participant ──────────────────────────────────────
+export const logoutWorkshopParticipant = async (_req, res) => {
+  try {
+    res.clearCookie("workshopSession", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.SAMESITE || "lax",
+    });
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("logoutWorkshopParticipant error:", error);
     return res.status(500).json({ message: "Internal server error." });
   }
 };
@@ -223,13 +208,18 @@ export const checkWorkshopSession = async (req, res) => {
 
     const participant = await workshopParticipantModel
       .findById(decoded.participantId)
-      .select("name email enrollmentId");
+      .select("name email enrollmentId certificateDownloaded");
 
     if (!participant) {
       return res.status(401).json({ authenticated: false });
     }
 
-    return res.json({ authenticated: true, name: participant.name });
+    return res.json({
+      authenticated: true,
+      name: participant.name,
+      enrollmentId: participant.enrollmentId,
+      certificateDownloaded: Boolean(participant.certificateDownloaded),
+    });
   } catch (error) {
     console.error("checkWorkshopSession error:", error);
     return res.status(500).json({ message: "Internal server error." });
@@ -260,8 +250,10 @@ export const downloadCertificate = async (req, res) => {
     }
 
     const [participant, workshop] = await Promise.all([
-      workshopParticipantModel.findById(decoded.participantId).select("name"),
-      workshopModel.findOne({ slug }).select("title certificateEnabled date"),
+      workshopParticipantModel
+        .findById(decoded.participantId)
+        .select("name enrollmentId certificateDownloaded"),
+      workshopModel.findOne({ slug }).select("title certificateEnabled"),
     ]);
 
     if (!participant || !workshop) {
@@ -274,103 +266,38 @@ export const downloadCertificate = async (req, res) => {
       });
     }
 
-    // Generate PDF
-    const doc = new PDFDocument({
-      layout: "landscape",
-      size: "A4",
-      margins: { top: 60, bottom: 60, left: 60, right: 60 },
-    });
-
-    const filename = `certificaxte-${participant.name.replace(/\s+/g, "-").toLowerCase()}.pdf`;
-
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-
-    doc.pipe(res);
-
-    const pageWidth = doc.page.width;
-    const pageHeight = doc.page.height;
-
-    // Background colour
-    doc.rect(0, 0, pageWidth, pageHeight).fill("#f8f9ff");
-
-    // Decorative border
-    doc
-      .rect(20, 20, pageWidth - 40, pageHeight - 40)
-      .lineWidth(3)
-      .stroke("#1d4ed8");
-
-    doc
-      .rect(28, 28, pageWidth - 56, pageHeight - 56)
-      .lineWidth(1)
-      .stroke("#93c5fd");
-
-    // Heading
-    doc
-      .fillColor("#1d4ed8")
-      .fontSize(38)
-      .font("Helvetica-Bold")
-      .text("Certificate of Completion", 0, 95, { align: "center" });
-
-    // Divider
-    doc
-      .moveTo(120, 155)
-      .lineTo(pageWidth - 120, 155)
-      .lineWidth(1.5)
-      .stroke("#1d4ed8");
-
-    // Presented to
-    doc
-      .fillColor("#475569")
-      .fontSize(14)
-      .font("Helvetica")
-      .text("This is to certify that", 0, 176, { align: "center" });
-
-    // Name
-    doc
-      .fillColor("#0f172a")
-      .fontSize(32)
-      .font("Helvetica-Bold")
-      .text(participant.name, 0, 205, { align: "center" });
-
-    // Completion line
-    doc
-      .fillColor("#475569")
-      .fontSize(14)
-      .font("Helvetica")
-      .text("has successfully completed", 0, 252, { align: "center" });
-
-    // Workshop title
-    doc
-      .fillColor("#1d4ed8")
-      .fontSize(20)
-      .font("Helvetica-Bold")
-      .text(workshop.title, 0, 276, { align: "center" });
-
-    // Date line
-    if (workshop.date) {
-      doc
-        .fillColor("#475569")
-        .fontSize(13)
-        .font("Helvetica")
-        .text(`on ${workshop.date}`, 0, 316, { align: "center" });
+    if (participant.certificateDownloaded) {
+      return res.status(403).json({
+        message: "Certificate can be downloaded only once.",
+      });
     }
 
-    // Bottom divider
-    doc
-      .moveTo(120, pageHeight - 80)
-      .lineTo(pageWidth - 120, pageHeight - 80)
-      .lineWidth(1)
-      .stroke("#93c5fd");
+    const fileName = buildCertificateSlug(
+      participant.name,
+      participant.enrollmentId,
+    );
+    const certificateUrl = `${CERTIFICATE_BASE_URL}/${fileName}`;
 
-    // Footer
-    doc
-      .fillColor("#94a3b8")
-      .fontSize(10)
-      .font("Helvetica")
-      .text("FullStack Learning", 0, pageHeight - 60, { align: "center" });
+    const certificateResponse = await fetch(certificateUrl);
+    if (!certificateResponse.ok) {
+      return res.status(404).json({
+        message: "Certificate file not found.",
+      });
+    }
 
-    doc.end();
+    const certificateBuffer = Buffer.from(
+      await certificateResponse.arrayBuffer(),
+    );
+    const contentType =
+      certificateResponse.headers.get("content-type") || "image/png";
+
+    participant.certificateDownloaded = true;
+    participant.certificateDownloadedAt = new Date();
+    await participant.save();
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    return res.send(certificateBuffer);
   } catch (error) {
     console.error("downloadCertificate error:", error);
     if (!res.headersSent) {

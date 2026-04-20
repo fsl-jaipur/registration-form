@@ -30,6 +30,29 @@ const workshopParticipantSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      default: null,
+    },
+    phone: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    passwordHash: {
+      type: String,
+      default: null,
+    },
+    certificateDownloaded: {
+      type: Boolean,
+      default: false,
+    },
+    certificateDownloadedAt: {
+      type: Date,
+      default: null,
+    },
     otpHash: {
       type: String,
       default: null,
