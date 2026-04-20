@@ -7,7 +7,6 @@ import {
   sendOtp,
   verifyOtp,
   checkWorkshopSession,
-  downloadCertificate,
   listWorkshops,
   createWorkshop,
   updateWorkshop,
@@ -42,7 +41,6 @@ router.post("/workshops/:slug/verify-participant", verifyParticipant);
 router.post("/workshops/:slug/send-otp", sendOtp);
 router.post("/workshops/:slug/verify-otp", verifyOtp);
 router.get("/workshops/:slug/session", checkWorkshopSession);
-router.get("/workshops/:slug/certificate", downloadCertificate);
 
 // ─── Admin routes ─────────────────────────────────────────────────────────────
 router.get(
