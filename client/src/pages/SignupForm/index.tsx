@@ -338,8 +338,8 @@ const SignupForm = () => {
   const getError = (field: string) => (submitted ? errors[field] : undefined);
   const hasError = (field: string) => Boolean(getError(field));
   return (
-      <div className="min-h-screen bg-background py-8 sm:py-12 px-3 sm:px-4">
-        <div className="mx-auto p-[60px]">
+      <div className="min-h-screen bg-background py-8 sm:py-12 px-1 sm:px-4">
+        <div className="mx-auto p-4 sm:p-14">
           <h1 className="mb-2 text-center text-3xl sm:text-4xl font-bold text-foreground">
             Registration <span className="text-gradient-brand">Form</span>
           </h1>
