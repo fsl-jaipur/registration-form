@@ -63,6 +63,26 @@ export default function EnquiryForm() {
 
       const data = await response.json();
 
+      // Send enquiry to n8n webhook endpoint
+      try {
+        await fetch("https://dheerajfsl.app.n8n.cloud/webhook/enquiry", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: form.name,
+            phone: form.phone,
+            email: form.email,
+            course: form.course,
+            message: form.message,
+          }),
+        });
+      } catch (n8nError) {
+        // Optionally log or handle webhook error, but don't block user
+        console.log("n8n webhook error", n8nError);
+      }
+
       if (data.success) {
         setSubmitted(true);
         setResult("Form Submitted Successfully");
