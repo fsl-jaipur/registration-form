@@ -8,8 +8,6 @@ on:
     paths:
       - 'server/**'
       - '.github/workflows/azure-static-web-apps-white-sea-0d3446200.yml'
-      
-
 jobs:
   build_and_deploy_job:
     if: github.event_name == 'push' 
