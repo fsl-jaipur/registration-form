@@ -17,7 +17,7 @@ const sectionTitle = (title: string, accentColor: string) => (
 );
 
 const sectionGridClass =
-  "grid grid-cols-[28mm_minmax(0,1fr)] gap-3 border-t border-border pt-1.5";
+  "grid grid-cols-[24mm_minmax(0,1fr)] gap-2 border-t border-border pt-1.5 sm:grid-cols-[28mm_minmax(0,1fr)] sm:gap-3";
 
 const linkHref = (value?: string) => {
   const trimmed = value?.trim();
@@ -96,12 +96,12 @@ export default function ResumePreview({ resume: resumeInput, className = "" }: R
                         style={{ backgroundColor: resume.accentColor }}
                       />
                     ) : null}
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                       <div className="min-w-0">
                         <h3 className="text-xs font-bold">{item.role || "Role"}</h3>
                         <p className={`text-[11px] ${subtleClasses}`}>{item.company}</p>
                       </div>
-                      <span className={`shrink-0 text-right text-[10px] font-medium ${subtleClasses}`}>
+                      <span className={`shrink-0 text-left text-[10px] font-medium sm:text-right ${subtleClasses}`}>
                         {item.duration}
                       </span>
                     </div>
@@ -127,7 +127,7 @@ export default function ResumePreview({ resume: resumeInput, className = "" }: R
                     key={`${item.title}-${index}`}
                     className="break-inside-avoid"
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                       <h3 className="break-words text-xs font-bold [overflow-wrap:anywhere]">
                         {item.title || "Untitled project"}
                       </h3>
@@ -164,7 +164,7 @@ export default function ResumePreview({ resume: resumeInput, className = "" }: R
                 {resume.education.map((item, index) => (
                   <article
                     key={`${item.degree}-${index}`}
-                    className="flex items-start justify-between gap-3"
+                    className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
                   >
                     <div className="min-w-0">
                       <h3 className="text-xs font-bold">{item.degree || "Degree"}</h3>
@@ -173,7 +173,7 @@ export default function ResumePreview({ resume: resumeInput, className = "" }: R
                         <p className={`mt-1 text-xs leading-5 ${subtleClasses}`}>{item.description}</p>
                       ) : null}
                     </div>
-                    <span className={`shrink-0 text-right text-[10px] font-medium ${subtleClasses}`}>
+                    <span className={`shrink-0 text-left text-[10px] font-medium sm:text-right ${subtleClasses}`}>
                       {item.year}
                     </span>
                   </article>
@@ -191,7 +191,7 @@ export default function ResumePreview({ resume: resumeInput, className = "" }: R
               {resume.certifications.map((item, index) => (
                 <article
                   key={`${item.title}-${index}`}
-                  className="flex items-start justify-between gap-3"
+                  className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
                 >
                   <div className="min-w-0">
                     {item.credentialUrl ? (
@@ -209,7 +209,7 @@ export default function ResumePreview({ resume: resumeInput, className = "" }: R
                     )}
                     <p className={`text-[11px] ${subtleClasses}`}>{item.issuer}</p>
                   </div>
-                  <span className={`shrink-0 text-right text-[10px] font-medium ${subtleClasses}`}>
+                  <span className={`shrink-0 text-left text-[10px] font-medium sm:text-right ${subtleClasses}`}>
                     {item.year}
                   </span>
                 </article>
@@ -272,10 +272,10 @@ export default function ResumePreview({ resume: resumeInput, className = "" }: R
   };
 
   return (
-    <div className={`mx-auto w-full overflow-x-auto ${className}`}>
+    <div className={`mx-auto w-fit max-w-none ${className}`}>
       <div
         data-resume-page="true"
-        className={`mx-auto min-h-[297mm] w-[210mm] max-w-full border shadow-[0_12px_32px_rgba(15,23,42,0.12)] ${pageBackgroundClass} ${darkClasses}`}
+        className={`mx-auto min-h-[297mm] w-[210mm] max-w-none border shadow-[0_12px_32px_rgba(15,23,42,0.12)] ${pageBackgroundClass} ${darkClasses}`}
       >
       <div className={`min-h-[297mm] p-[10mm] sm:p-[12mm] ${isMinimal ? "space-y-4" : "space-y-5"}`}>
         <header className="flex flex-col items-center gap-5 pb-4 text-center">
@@ -310,10 +310,10 @@ export default function ResumePreview({ resume: resumeInput, className = "" }: R
                   </span>
                 ) : null}
               </div>
-              {resume.socialLinks.some((item) => item.label || item.url) ? (
+              {resume.socialLinks.some((item) => item.url?.trim()) ? (
                 <div className={`mt-4 flex flex-wrap justify-center gap-3 text-sm ${subtleClasses}`}>
                   {resume.socialLinks
-                    .filter((item) => item.label || item.url)
+                    .filter((item) => item.url?.trim())
                     .map((item, index) => (
                       <a
                         key={`${item.label}-${index}`}

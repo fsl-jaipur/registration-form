@@ -87,11 +87,7 @@ export const defaultResumeValues = (): ResumeFormValues => ({
   phone: "",
   profilePhoto: "",
   summary: "",
-  socialLinks: [
-    { label: "LinkedIn", url: "" },
-    { label: "GitHub", url: "" },
-    { label: "Portfolio", url: "" },
-  ],
+  socialLinks: [],
   skills: [],
   projects: [],
   experience: [],

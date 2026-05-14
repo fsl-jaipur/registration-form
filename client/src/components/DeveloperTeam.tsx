@@ -42,8 +42,13 @@ export default function DeveloperTeam() {
 
         {/* Responsive Grid for Team Cards */}
         <div className="mt-8 grid w-full grid-cols-1 gap-6 overflow-visible place-items-center sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-5">
-          {cards.map((card) =>
-            card.type === "member" ? (
+          {teamMembers.map((member, index) => (
+            <div key={index} className="relative group w-full max-w-xs sm:max-w-[320px] md:max-w-[270px] lg:max-w-[280px] h-[340px] border border-border rounded-lg overflow-hidden shadow-lg">
+              <img
+                src={member.img}
+                alt={member.name}
+                className="w-full h-full object-cover"
+              />
               <div
                 className={`absolute inset-0 rounded-lg transition-all duration-300 pointer-events-none ${"group-hover:opacity-100 opacity-0"}`}
                 style={{

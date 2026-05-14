@@ -91,6 +91,13 @@ const guestDraftStorageKey = "resume_builder_guest_draft";
 const guestResumesStorageKey = "resume_builder_guest_resumes";
 const guestActiveIdStorageKey = "resume_builder_guest_active_id";
 
+const getResponsivePreviewScale = () => {
+  if (typeof window === "undefined") return 0.8;
+  const availableWidth = Math.max(280, window.innerWidth - 40);
+  const a4WidthPx = 794;
+  return Math.min(0.8, Math.max(0.35, Number((availableWidth / a4WidthPx).toFixed(2))));
+};
+
 const arrayMove = <T,>(items: T[], from: number, to: number) => {
   const next = [...items];
   const [item] = next.splice(from, 1);
@@ -114,8 +121,8 @@ type EditorCardProps = {
 
 function EditorCard({ title, action, children }: EditorCardProps) {
   return (
-    <section className="rounded-[28px] border border-border bg-card p-5 shadow-sm">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <section className="min-w-0 rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-5">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-base font-semibold">{title}</h2>
         {action}
       </div>
@@ -227,7 +234,7 @@ export default function StudentResumeBuilder() {
   const [editingCustomSectionIndex, setEditingCustomSectionIndex] = useState<number | null>(null);
   const [draggedCustomSectionIndex, setDraggedCustomSectionIndex] = useState<number | null>(null);
   const [dragOverCustomSectionIndex, setDragOverCustomSectionIndex] = useState<number | null>(null);
-  const [previewScale, setPreviewScale] = useState(0.8);
+  const [previewScale, setPreviewScale] = useState(() => getResponsivePreviewScale());
   const [previewPan, setPreviewPan] = useState({ x: 0, y: 0 });
   const [isPreviewDragging, setIsPreviewDragging] = useState(false);
   const previewRef = useRef<HTMLDivElement | null>(null);
@@ -319,7 +326,7 @@ export default function StudentResumeBuilder() {
   };
 
   const updatePreviewScale = (nextScale: number) => {
-    setPreviewScale(Math.min(1.4, Math.max(0.5, Number(nextScale.toFixed(2)))));
+    setPreviewScale(Math.min(1.4, Math.max(0.35, Number(nextScale.toFixed(2)))));
   };
 
   const clearPreviewHoldTimer = () => {
@@ -395,6 +402,16 @@ export default function StudentResumeBuilder() {
 
   useEffect(() => {
     return () => clearPreviewHoldTimer();
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setPreviewScale(getResponsivePreviewScale());
+      setPreviewPan({ x: 0, y: 0 });
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const moveSectionOrder = (fromSection: string, toSection: string) => {
@@ -935,9 +952,9 @@ export default function StudentResumeBuilder() {
 
   return (
     <div className={draft.themeMode === "dark" ? "dark" : ""}>
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.18),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(15,118,110,0.18),_transparent_30%),linear-gradient(180deg,_hsl(var(--background))_0%,_hsl(var(--muted))_100%)] text-foreground">
-        <main className="mx-auto flex w-full max-w-[1500px] flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
-          <section className="rounded-[32px] border border-border bg-card/80 p-6 shadow-[0_18px_70px_rgba(15,23,42,0.08)] backdrop-blur">
+      <div className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.18),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(15,118,110,0.18),_transparent_30%),linear-gradient(180deg,_hsl(var(--background))_0%,_hsl(var(--muted))_100%)] text-foreground">
+        <main className="mx-auto flex w-full max-w-[1500px] flex-col gap-5 px-3 py-5 sm:gap-8 sm:px-6 sm:py-8 lg:px-8">
+          <section className="min-w-0 rounded-3xl border border-border bg-card/80 p-4 shadow-[0_18px_70px_rgba(15,23,42,0.08)] backdrop-blur sm:p-6">
             <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Student / Resume Builder</p>
@@ -949,7 +966,7 @@ export default function StudentResumeBuilder() {
                   multiple templates, LinkedIn-assisted import, and admin review support.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap">
                 <button
                   type="button"
                   onClick={() => setShowLinkedInImport(true)}
@@ -978,7 +995,7 @@ export default function StudentResumeBuilder() {
               </div>
             </div>
 
-            <div className="mt-6 flex flex-wrap items-center gap-3">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               {isStudentAuthenticated ? (
                 <div className="rounded-full border border-border bg-background px-4 py-2 text-sm">
                   {saveStatusLabel}
@@ -994,7 +1011,7 @@ export default function StudentResumeBuilder() {
                     <ChevronDown className="h-3.5 w-3.5" />
                   </button>
                   {showGuestInfo ? (
-                    <div className="absolute left-0 top-full z-10 mt-2 w-72 rounded-2xl border border-border bg-card p-4 shadow-lg">
+                    <div className="absolute left-0 top-full z-10 mt-2 w-[min(18rem,calc(100vw-2rem))] rounded-2xl border border-border bg-card p-4 shadow-lg">
                       <p className="text-sm font-semibold">Guest Draft</p>
                       <p className="mt-1 text-xs leading-5 text-muted-foreground">
                         Build directly without login. This draft stays in your browser. Sign in later if you want MongoDB autosave and multi-resume management.
@@ -1133,8 +1150,8 @@ export default function StudentResumeBuilder() {
             </div>
           </section>
 
-          <section className="grid gap-4 items-start lg:grid-cols-[320px_minmax(0,1fr)]">
-            <div className="resume-editor-scroll max-h-[calc(100vh-2rem)] space-y-5 overflow-y-auto pr-2 lg:sticky lg:top-8 lg:max-h-[calc(100vh-4rem)]">
+          <section className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(300px,360px)_minmax(0,1fr)]">
+            <div className="resume-editor-scroll min-w-0 space-y-5 lg:sticky lg:top-8 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto lg:pr-2">
                 <EditorCard title="Essentials">
                   <TextInput
                     label="Resume Title"
@@ -1200,7 +1217,7 @@ export default function StudentResumeBuilder() {
                 </EditorCard>
 
                 <EditorCard title="Templates and Theme">
-                  <div className="flex flex-wrap gap-3">
+                  <div className="grid gap-3 sm:grid-cols-3">
                     {resumeTemplates.map((template) => (
                       <button
                         type="button"
@@ -1215,7 +1232,7 @@ export default function StudentResumeBuilder() {
                           draft.template === template.id
                             ? "border-primary bg-primary/5"
                             : "border-border hover:border-primary/50"
-                        } min-w-[180px] flex-1`}
+                        } min-w-0 flex-1 sm:min-w-[180px]`}
                       >
                         <p className="font-semibold">{template.label}</p>
                         <p className="mt-2 text-xs leading-5 text-muted-foreground">
@@ -2300,9 +2317,9 @@ export default function StudentResumeBuilder() {
                 </EditorCard>
             </div>
 
-            <div className="sticky top-8">
+            <div className="min-w-0 lg:sticky lg:top-8">
               <section>
-                <div className="mb-4 flex items-center justify-between">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h2 className="text-base font-semibold">Live Preview</h2>
                     <p className="text-sm text-muted-foreground">
@@ -2362,8 +2379,7 @@ export default function StudentResumeBuilder() {
                   onPointerUp={handlePreviewPointerEnd}
                   onPointerCancel={handlePreviewPointerEnd}
                   onPointerLeave={handlePreviewPointerEnd}
-                  className="overflow-visible"
-                  style={{ touchAction: "none" }}
+                  className="max-w-full overflow-x-auto overflow-y-visible rounded-2xl pb-4 touch-pan-y lg:touch-none"
                 >
                   <div
                     className={`mx-auto w-fit origin-top ${
