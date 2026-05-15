@@ -6,6 +6,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+export { cloudinary };
+
 export async function cloudinaryUpload(files) {
   if (!files || !Array.isArray(files)) {
     throw new Error("Files must be an array");

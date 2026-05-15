@@ -12,7 +12,27 @@ import {
   Plus,
   Trash2,
   Upload,
+  GripVertical,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import {
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import Spinner from "@/components/ui/Spinner";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminContext } from "@/Context/Admincontext";
@@ -24,6 +44,7 @@ type PlacedStudent = {
   company: string;
   city: string;
   photo: string;
+  order?: number;
 };
 
 const AdminPlacedStudents = (): JSX.Element => {
@@ -37,6 +58,7 @@ const AdminPlacedStudents = (): JSX.Element => {
     title: string;
     company: string;
     city: string;
+    position: string;
     file: File | null;
     preview: string | null;
   }>({
@@ -44,6 +66,7 @@ const AdminPlacedStudents = (): JSX.Element => {
     title: "",
     company: "",
     city: "",
+    position: "",
     file: null,
     preview: null,
   });
@@ -56,6 +79,18 @@ const AdminPlacedStudents = (): JSX.Element => {
   const apiOrigin = useMemo(
     () => apiBase?.replace(/\/api$/, "") ?? "",
     [apiBase],
+  );
+
+  // Drag-and-drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
   );
 
   const resolveImage = (src: string) =>
@@ -125,6 +160,7 @@ const AdminPlacedStudents = (): JSX.Element => {
       title: "",
       company: "",
       city: "",
+      position: "",
       file: null,
       preview: null,
     });
@@ -139,9 +175,73 @@ const AdminPlacedStudents = (): JSX.Element => {
       title: student.title,
       company: student.company,
       city: student.city,
+      position: (student.order || 0).toString(),
       file: null,
       preview: resolveImage(student.photo),
     });
+  };
+
+  // Drag-and-drop handler
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      const oldIndex = students.findIndex((student) => student._id === active.id);
+      const newIndex = students.findIndex((student) => student._id === over?.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newStudents = arrayMove(students, oldIndex, newIndex);
+        
+        // Optimistic update
+        setStudents(newStudents);
+
+        // Send bulk reorder to backend
+        try {
+          const studentIds = newStudents.map((student) => student._id);
+          
+          const response = await fetch(`${apiBase}/placed-students/reorder`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({ studentIds }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || "Failed to reorder students");
+          }
+
+          const result = await response.json();
+          
+          toast({
+            title: "Students reordered",
+            description: "Order updated successfully.",
+          });
+
+          // Refresh the list to get updated order numbers from server
+          const res = await fetch(`${apiBase}/placed-students`);
+          if (res.ok) {
+            const data = await res.json();
+            setStudents(data.students ?? []);
+          }
+        } catch (error: any) {
+          console.error("Reorder error:", error);
+          toast({
+            title: "Reorder failed",
+            description: error?.message || "Failed to save new order. Please try again.",
+            variant: "destructive",
+          });
+          // Revert the optimistic update
+          const res = await fetch(`${apiBase}/placed-students`);
+          if (res.ok) {
+            const data = await res.json();
+            setStudents(data.students ?? []);
+          }
+        }
+      }
+    }
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -168,6 +268,9 @@ const AdminPlacedStudents = (): JSX.Element => {
       body.append("title", form.title.trim());
       body.append("company", form.company.trim());
       body.append("city", form.city.trim());
+      if (form.position.trim()) {
+        body.append("order", form.position.trim());
+      }
       if (form.file) body.append("photo", form.file);
 
       const isEdit = Boolean(editingId);
@@ -188,11 +291,20 @@ const AdminPlacedStudents = (): JSX.Element => {
       }
 
       const { student } = await res.json();
-      setStudents((prev) =>
-        isEdit
-          ? prev.map((s) => (s._id === student._id ? student : s))
-          : [student, ...prev],
-      );
+      
+      // Refresh the entire list to ensure correct ordering
+      const refreshRes = await fetch(`${apiBase}/placed-students`);
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        setStudents(refreshData.students ?? []);
+      } else {
+        // Fallback to manual update if refresh fails
+        setStudents((prev) =>
+          isEdit
+            ? prev.map((s) => (s._id === student._id ? student : s))
+            : [student, ...prev],
+        );
+      }
       resetForm();
       setShowForm(false);
       toast({
@@ -218,17 +330,120 @@ const AdminPlacedStudents = (): JSX.Element => {
         method: "DELETE",
         credentials: "include",
       });
-      if (!res.ok) throw new Error("Failed to delete");
-      setStudents((prev) => prev.filter((s) => s._id !== id));
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to delete");
+      }
+      
+      // Refresh the list to maintain correct order after deletion
+      const refreshRes = await fetch(`${apiBase}/placed-students`);
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        setStudents(refreshData.students ?? []);
+      } else {
+        setStudents((prev) => prev.filter((s) => s._id !== id));
+      }
       toast({ title: "Student removed" });
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      console.error("Delete error:", error);
       toast({
         title: "Delete failed",
-        description: "Please try again.",
+        description: error?.message || "Please try again.",
         variant: "destructive",
       });
     }
+  };
+
+  // Sortable Student Component
+  const SortableStudent = ({ student, index }: { student: PlacedStudent; index: number }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: student._id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={`group bg-card rounded-2xl overflow-hidden border border-border shadow-md card-hover transition-all duration-500 relative ${
+          isDragging ? "z-50" : ""
+        }`}
+        key={student._id}
+      >
+        <div className="relative h-48 overflow-hidden">
+          <img
+            src={resolveImage(student.photo)}
+            alt={student.name}
+            className="w-full h-full object-contain bg-white group-hover:scale-105 transition-transform duration-500"
+          />
+          
+          {/* Order Badge */}
+          <div className="absolute top-2 left-2">
+            <span className="inline-block px-2 py-1 rounded-full bg-brand-blue text-white text-xs font-bold">
+              #{student.order || index + 1}
+            </span>
+          </div>
+
+          {/* Drag Handle */}
+          <button 
+            {...attributes}
+            {...listeners}
+            className="absolute top-2 right-2 p-2 bg-white/90 rounded-full cursor-grab active:cursor-grabbing hover:bg-white shadow-sm z-10 touch-none"
+            title="Drag to reorder"
+            type="button"
+          >
+            <GripVertical className="h-4 w-4 text-brand-blue" />
+          </button>
+
+          <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 to-transparent" />
+          <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+            <span className="inline-block px-3 py-1 rounded-full bg-brand-orange text-primary-foreground text-xs font-bold">
+              {student.company}
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => startEdit(student)}
+                className="rounded-full bg-white/90 px-2 py-1 text-xs font-semibold text-brand-blue hover:bg-brand-blue/10 border border-border shadow-sm opacity-100 z-10"
+                aria-label="Edit student"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDelete(student._id)}
+                className="rounded-full bg-white/90 p-1 text-red-600 hover:bg-red-50 border border-red-200 shadow-sm opacity-100 z-10"
+                aria-label="Delete student"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="p-4">
+          <h3 className="font-bold text-foreground">{student.name}</h3>
+          <p className="text-sm text-brand-blue mb-3">{student.title}</p>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <MapPin size={12} className="text-brand-orange" /> {student.city}
+            </span>
+            <span className="flex items-center gap-1">
+              <Briefcase size={12} className="text-brand-blue" /> Placed
+            </span>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -241,8 +456,8 @@ const AdminPlacedStudents = (): JSX.Element => {
               Placed Students
             </h1>
             <p className="text-sm text-muted-foreground max-w-2xl">
-              Keep the success wall in sync across the site. Add new student highlights with a photo, title,
-              company, and city.
+              Manage student placements with drag-and-drop reordering and manual position control. 
+              Use the drag handle (⋮⋮) to reorder students or set specific positions in the edit form.
             </p>
           </div>
           <button
@@ -344,11 +559,25 @@ const AdminPlacedStudents = (): JSX.Element => {
                   placeholder="e.g., Jaipur"
                 />
               </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Display Position</label>
+                <input
+                  type="number"
+                  value={form.position}
+                  onChange={(e) => setForm((prev) => ({ ...prev, position: e.target.value }))}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm shadow-sm focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                  placeholder="Leave empty for automatic position"
+                  min="1"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Set a specific display position (1, 2, 3...) or leave empty to add at the end. You can also drag-and-drop to reorder.
+                </p>
+              </div>
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs text-muted-foreground">
-                Adding a student updates both the admin view and homepage immediately (data served from the same API).
+                Students can be reordered by dragging the grip handle (⋮⋮) or by setting specific positions. Changes sync instantly across admin and public views.
               </p>
               <button
                 type="submit"
@@ -396,59 +625,22 @@ const AdminPlacedStudents = (): JSX.Element => {
               No placed students yet. Add one to get started.
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {students.map((s, idx) => (
-                <div
-                  key={s._id}
-                  className={`group bg-card rounded-2xl overflow-hidden border border-border shadow-md card-hover transition-all duration-500 relative`}
-                  style={{ transitionDelay: `${idx * 80}ms` }}
-                >
-                  <div className="relative h-48 overflow-hidden">
-                    <img
-                      src={resolveImage(s.photo)}
-                      alt={s.name}
-                      className="w-full h-full object-contain bg-white group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 to-transparent" />
-                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                      <span className="inline-block px-3 py-1 rounded-full bg-brand-orange text-primary-foreground text-xs font-bold">
-                        {s.company}
-                      </span>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => startEdit(s)}
-                          className="rounded-full bg-white/90 px-2 py-1 text-xs font-semibold text-brand-blue hover:bg-brand-blue/10 border border-border shadow-sm opacity-100"
-                          aria-label="Edit student"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(s._id)}
-                          className="rounded-full bg-white/90 p-1 text-red-600 hover:bg-red-50 border border-red-200 shadow-sm opacity-100"
-                          aria-label="Delete student"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-bold text-foreground">{s.name}</h3>
-                    <p className="text-sm text-brand-blue mb-3">{s.title}</p>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <MapPin size={12} className="text-brand-orange" /> {s.city}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Briefcase size={12} className="text-brand-blue" /> Placed
-                      </span>
-                    </div>
-                  </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={students.map((s) => s._id)}
+                strategy={rectSortingStrategy}
+              >
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {students.map((student, idx) => (
+                    <SortableStudent key={student._id} student={student} index={idx} />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           )}
         </div>
       </main>

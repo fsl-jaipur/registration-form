@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { fetchCourseBySlug, fallbackCourses, type Course } from "../../lib/courseData";
+import { fetchCourseBySlug, fallbackCourses, type Course, type SyllabusModule } from "../../lib/courseData";
 
 export default function CourseDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug?: string | string[] }>();
@@ -59,7 +59,23 @@ export default function CourseDetailScreen() {
 
   const title = course?.title || "Course";
   const description = course?.description || course?.overview || "Course details will be updated soon.";
-  const syllabus = course?.syllabus ?? [];
+  
+  // Normalize syllabus to handle both old (string[]) and new (SyllabusModule[]) formats
+  const syllabusModules: SyllabusModule[] = useMemo(() => {
+    const syllabus = course?.syllabus;
+    if (!syllabus || !Array.isArray(syllabus)) return [];
+    
+    // If it's already in new format
+    if (syllabus.length > 0 && typeof syllabus[0] === 'object' && 'title' in syllabus[0]) {
+      return syllabus as SyllabusModule[];
+    }
+    
+    // Convert old format to new format
+    return (syllabus as string[]).map(title => ({
+      title,
+      points: ["Hands-on exercises", "Mini-projects", "Quizzes & assessments", "Revision and Q&A"]
+    }));
+  }, [course?.syllabus]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -87,12 +103,12 @@ export default function CourseDetailScreen() {
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>What You'll Learn</Text>
-          {syllabus.length ? (
+          {syllabusModules.length ? (
             <View style={styles.learnGrid}>
-              {syllabus.slice(0, 6).map((item) => (
-                <View key={item} style={styles.learnItem}>
+              {syllabusModules.slice(0, 6).map((module) => (
+                <View key={module.title} style={styles.learnItem}>
                   <View style={styles.learnDot} />
-                  <Text style={styles.learnText}>{item}</Text>
+                  <Text style={styles.learnText}>{module.title}</Text>
                 </View>
               ))}
             </View>
@@ -106,28 +122,37 @@ export default function CourseDetailScreen() {
           <Text style={styles.sectionText}>Expand the modules to see more details and topics.</Text>
 
           <View style={styles.accordion}>
-            {syllabus.length ? (
-              syllabus.map((item, index) => {
+            {syllabusModules.length ? (
+              syllabusModules.map((module, index) => {
                 const opened = openModule === index;
                 return (
-                  <View key={`${item}-${index}`} style={styles.accordionItem}>
+                  <View key={`${module.title}-${index}`} style={styles.accordionItem}>
                     <Pressable
                       style={styles.accordionHeader}
                       onPress={() => setOpenModule(opened ? null : index)}
                     >
                       <Text style={styles.accordionTitle}>
-                        Module {index + 1}: {item.length > 60 ? `${item.slice(0, 60)}...` : item}
+                        Module {index + 1}: {module.title.length > 60 ? `${module.title.slice(0, 60)}...` : module.title}
                       </Text>
                       <Text style={styles.accordionIcon}>{opened ? "-" : "+"}</Text>
                     </Pressable>
                     {opened ? (
                       <View style={styles.accordionBody}>
-                        <Text style={styles.sectionText}>{item}</Text>
+                        <Text style={styles.sectionText}>{module.title}</Text>
                         <View style={styles.bulletList}>
-                          {["Hands-on exercises", "Mini-projects", "Quizzes & assessments", "Revision and Q&A"].map(
-                            (line) => (
-                              <Text key={line} style={styles.bulletItem}>
-                                - {line}
+                          {module.points.map(
+                            (point) => (
+                              <Text key={point} style={styles.bulletItem}>
+                                - {point}
+                              </Text>
+                            ),
+                          )}
+                        </View>
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })
                               </Text>
                             ),
                           )}

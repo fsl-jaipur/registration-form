@@ -1,4 +1,4 @@
-import sgMail from "@sendgrid/mail";
+import { Resend } from "resend";
 import "dotenv/config";
 import { v2 as cloudinary } from "cloudinary";
 
@@ -23,9 +23,6 @@ const uploadBase64ToCloudinary = async (base64Data, filename) => {
   }
 };
 
-const LOGO_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
-
-const TAILWIND_CDN = `<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">`;
 
 
 export function sendResultEmail(student, testTitle) {
@@ -73,25 +70,61 @@ export function sendResultEmail(student, testTitle) {
 
 
 export function sendAckEmail(newData) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-  
-  const msg = {
-    to: newData.email,
-    from: "rohit@fullstacklearning.com",
-    subject: "Registration successful. Welcome to Full Stack Learning",
-    templateId: process.env.SENDGRID_ACK_TEMPLATE_ID,
-    dynamic_template_data: {
-      otp: newData.plainPassword || newData.password,
-      dashboard_link:
-        process.env.STUDENT_DASHBOARD_URL ||
-        "https://registration-form-1-mbw5.onrender.com/student"
-    },
-  };
-  
-  sgMail
-    .send(msg)
-    .then(() => {
-      console.log("Enhanced acknowledgment email sent successfully");
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const from = process.env.RESEND_FROM_EMAIL || "rohit@fullstacklearning.com";
+  const dashboardLink =
+    process.env.STUDENT_DASHBOARD_URL ||
+    "https://registration-form-1-mbw5.onrender.com/student";
+
+  const html = `
+    <html>
+      <body style="font-family: Arial, sans-serif; background-color: #f5f7fa; margin: 0; padding: 0;">
+        <table align="center" width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05); margin-top: 40px;">
+          <tr>
+            <td style="padding: 20px 30px; text-align: center; background-color: #004aad; color: #ffffff; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+              <h2 style="margin: 0;">Welcome to Full Stack Learning!</h2>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 30px;">
+              <p style="font-size: 16px; color: #333333;">Dear <strong>${newData.name || "Student"}</strong>,</p>
+              <p style="font-size: 16px; color: #333333;">
+                Your registration was successful. Here are your login credentials:
+              </p>
+              <table cellpadding="8" cellspacing="0" style="background:#f0f4ff; border-radius:6px; margin: 16px 0;">
+                <tr><td style="font-size:14px; color:#555;"><strong>Email:</strong></td><td style="font-size:14px; color:#333;">${newData.email}</td></tr>
+                <tr><td style="font-size:14px; color:#555;"><strong>Password:</strong></td><td style="font-size:14px; color:#333;">${newData.plainPassword || newData.password}</td></tr>
+              </table>
+              <div style="margin: 20px 0;">
+                <a href="${dashboardLink}" style="background-color: #004aad; color: #ffffff; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-weight: bold;">Go to Dashboard</a>
+              </div>
+              <p style="font-size: 14px; color: #777777;">Please keep your credentials safe and do not share them with anyone.</p>
+              <p style="font-size: 16px; color: #333333;">Best regards,<br/><strong>Full Stack Learning Team</strong></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 15px; text-align: center; font-size: 12px; color: #999999; background-color: #f0f0f0; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
+              © ${new Date().getFullYear()} Full Stack Learning. All rights reserved.
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+  `;
+
+  resend.emails
+    .send({
+      from,
+      to: newData.email,
+      subject: "Registration Successful – Welcome to Full Stack Learning",
+      html,
+    })
+    .then(({ error }) => {
+      if (error) {
+        console.error("Error sending acknowledgment email:", error);
+      } else {
+        console.log("Acknowledgment email sent successfully");
+      }
     })
     .catch((error) => {
       console.error("Error sending acknowledgment email:", error);
@@ -99,124 +132,128 @@ export function sendAckEmail(newData) {
 }
 
 export function sendDataByEmail(newData) {
-  const getDayName = [
-    "Monday", "Tuesday", "Wednesday", "Thursday", 
-    "Friday", "Saturday", "Sunday"
-  ];
   const getMonthName = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
   ];
 
   const dt = new Date();
-  const date = dt.getDate();
-  const month = getMonthName[dt.getMonth()];
-  const year = dt.getFullYear();
-  const hour = dt.getHours();
-  const min = dt.getMinutes();
-  const timestamp = `${date} ${month} ${year} at ${hour}:${min.toString().padStart(2, '0')}`;
+  const timestamp = `${dt.getDate()} ${getMonthName[dt.getMonth()]} ${dt.getFullYear()} at ${dt.getHours()}:${dt.getMinutes().toString().padStart(2, "0")}`;
 
   const sendEmailWithImages = async () => {
     try {
-      // Upload Aadhaar images to Cloudinary if they exist
-      let aadhaarFrontUrl = '';
-      let aadhaarBackUrl = '';
+      let aadhaarFrontUrl = "";
+      let aadhaarBackUrl = "";
 
       if (newData.aadharFront) {
-        aadhaarFrontUrl = await uploadBase64ToCloudinary(newData.aadharFront, 'aadhaar-front');
+        aadhaarFrontUrl = await uploadBase64ToCloudinary(newData.aadharFront, "aadhaar-front");
       }
-
       if (newData.aadharBack) {
-        aadhaarBackUrl = await uploadBase64ToCloudinary(newData.aadharBack, 'aadhaar-back');
+        aadhaarBackUrl = await uploadBase64ToCloudinary(newData.aadharBack, "aadhaar-back");
       }
 
-      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-      
-      const msg = {
-        to: "rohit@fullstacklearning.com",
-        from: "rohit@fullstacklearning.com",
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const from = process.env.RESEND_FROM_EMAIL || "rohit@fullstacklearning.com";
+      const to = process.env.ADMIN_EMAIL || "rohit@fullstacklearning.com";
+      const courseName = newData.otherCourse
+        ? `${newData.course} (${newData.otherCourse})`
+        : newData.course;
+
+      const html = `
+        <html>
+          <body style="font-family: Arial, sans-serif; background-color: #f5f7fa; margin: 0; padding: 0;">
+            <table align="center" width="640" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05); margin-top: 40px;">
+              <tr>
+                <td style="padding: 20px 30px; text-align: center; background-color: #004aad; color: #ffffff; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                  <h2 style="margin: 0;">🎓 New Registration – ${newData.name}</h2>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 30px;">
+                  <table width="100%" cellpadding="6" cellspacing="0" style="font-size:14px; color:#333;">
+                    <tr><td><strong>Name:</strong></td><td>${newData.name}</td></tr>
+                    <tr><td><strong>Email:</strong></td><td>${newData.email}</td></tr>
+                    <tr><td><strong>Phone:</strong></td><td>${newData.phone}</td></tr>
+                    <tr><td><strong>Course:</strong></td><td>${courseName}</td></tr>
+                    <tr><td><strong>Date of Birth:</strong></td><td>${newData.dob}</td></tr>
+                    <tr><td><strong>Father's Name:</strong></td><td>${newData.fname}</td></tr>
+                    <tr><td><strong>Father's Phone:</strong></td><td>${newData.fphone}</td></tr>
+                    <tr><td><strong>Local Address:</strong></td><td>${newData.laddress}</td></tr>
+                    <tr><td><strong>Permanent Address:</strong></td><td>${newData.paddress}</td></tr>
+                    <tr><td><strong>College:</strong></td><td>${newData.college}</td></tr>
+                    <tr><td><strong>Qualification:</strong></td><td>${newData.qualification}</td></tr>
+                    <tr><td><strong>Batch Year:</strong></td><td>${newData.qualificationYear}</td></tr>
+                    <tr><td><strong>Referral:</strong></td><td>${newData.referral}</td></tr>
+                    ${newData.friendName ? `<tr><td><strong>Referred by:</strong></td><td>${newData.friendName}</td></tr>` : ""}
+                    <tr><td><strong>Registered at:</strong></td><td>${timestamp}</td></tr>
+                  </table>
+                  ${aadhaarFrontUrl ? `<p><strong>Aadhaar Front:</strong> <a href="${aadhaarFrontUrl}">View</a></p>` : ""}
+                  ${aadhaarBackUrl ? `<p><strong>Aadhaar Back:</strong> <a href="${aadhaarBackUrl}">View</a></p>` : ""}
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 15px; text-align: center; font-size: 12px; color: #999999; background-color: #f0f0f0; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
+                  © ${new Date().getFullYear()} Full Stack Learning. All rights reserved.
+                </td>
+              </tr>
+            </table>
+          </body>
+        </html>
+      `;
+
+      const { error } = await resend.emails.send({
+        from,
+        to,
         subject: `🎓 New Registration - ${newData.name}`,
-        templateId: process.env.SENDGRID_ADMIN_TEMPLATE_ID,
-        dynamic_template_data: {
-          email_subject: `🎓 New Registration - ${newData.name}`,
-          student_name: newData.name,
-          student_email: newData.email,
-          student_phone: newData.phone,
-          registration_date: timestamp,
-          course_name: newData.otherCourse ? `${newData.course} (${newData.otherCourse})` : newData.course,
-          dob: newData.dob,
-          father_name: newData.fname,
-          father_phone: newData.fphone,
-          local_address: newData.laddress,
-          permanent_address: newData.paddress,
-          college: newData.college,
-          studying: newData.qualification,
-          batch: newData.qualificationYear,
-          referral_source: newData.referral,
-          friend_name: newData.friendName,
-          aadhaar_front: aadhaarFrontUrl,
-          aadhaar_back: aadhaarBackUrl
-        },
-        attachments: [
-          {
-            filename: "logo.png",
-            content: LOGO_BASE64.split(',')[1],
-            type: "image/png",
-            disposition: "inline",
-            content_id: "logo"
-          }
-        ]
-      };
-      
-      const response = await sgMail.send(msg);
-      console.log("Enhanced registration notification email sent successfully");
-      return response;
-      
+        html,
+      });
+
+      if (error) {
+        console.error("Error sending registration notification email:", error);
+      } else {
+        console.log("Registration notification email sent successfully");
+      }
     } catch (error) {
       console.error("Error sending registration notification email:", error);
       throw error;
     }
   };
 
-  // Execute the async function
   sendEmailWithImages().catch((error) => {
     console.log("Error in sendDataByEmail:", error);
   });
 }
 
-const sendSendgridResults = async ({ students, testTitle }) => {
+const sendResults = async ({ students, testTitle }) => {
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const from = process.env.RESEND_FROM_EMAIL || "rohit@fullstacklearning.com";
   const results = [];
 
   for (const student of students) {
-    const htmlContent = sendResultEmail(student, testTitle); // use testTitle here
-
-    const msg = {
-      to: student.email,
-      from: "rohit@fullstacklearning.com",
-      subject: `📢 Your Result for "${testTitle}" is Released!`,
-      html: htmlContent,
-    };
+    const htmlContent = sendResultEmail(student, testTitle);
 
     try {
-      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-
-      const response = await sgMail.send(msg);
-      results.push({ email: student.email, status: "sent", response });
-    } catch (error) {
-      console.error(
-        `Failed to send email to ${student.email}`,
-        error.response?.body || error.message
-      );
-      results.push({
-        email: student.email,
-        status: "failed",
-        error: error.response?.body || error.message,
+      const { error } = await resend.emails.send({
+        from,
+        to: student.email,
+        subject: `📢 Your Result for "${testTitle}" is Released!`,
+        html: htmlContent,
       });
+
+      if (error) {
+        console.error(`Failed to send email to ${student.email}`, error);
+        results.push({ email: student.email, status: "failed", error });
+      } else {
+        results.push({ email: student.email, status: "sent" });
+      }
+    } catch (error) {
+      console.error(`Failed to send email to ${student.email}`, error.message);
+      results.push({ email: student.email, status: "failed", error: error.message });
     }
   }
 
   return results;
 };
 
-export default sendSendgridResults;
+export default sendResults;
 

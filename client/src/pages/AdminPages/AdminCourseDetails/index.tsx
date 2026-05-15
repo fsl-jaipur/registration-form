@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import {
   ArrowRight,
   BadgeCheck,
+  ChevronDown,
+  ChevronUp,
   PenSquare,
   Plus,
   RefreshCw,
@@ -44,7 +46,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useCourses, useDeleteCourse, useSaveCourse } from "@/hooks/useCourses";
-import { Course, getCourseIcon, slugify } from "@/lib/courses";
+import { Course, getCourseIcon, slugify, normalizeSyllabusModules, SyllabusModule } from "@/lib/courses";
 import { cn } from "@/lib/utils";
 
 const iconOptions = ["Layers", "Code2", "Server", "Database", "Globe", "Bot", "Smartphone"];
@@ -64,6 +66,8 @@ type CourseDraft = Course & {
   durationUnit: DurationUnit;
   tagInput: string;
   syllabusInput: string;
+  expandedModule: number | null; // Track which module is being edited
+  editingModulePoints: string; // Input for adding new points to a module
 };
 
 type CourseFormErrors = Partial<
@@ -79,7 +83,7 @@ const emptyCourse = (): Course => ({
   rating: undefined,
   level: "",
   tags: [],
-  syllabus: [],
+  syllabus: [], // Will be normalized to SyllabusModule[]
   badge: null,
   badgeColor: badgeColors[0],
   color: gradientOptions[0],
@@ -151,7 +155,8 @@ const createCourseDraft = (course: Course | undefined, orderHint: number): Cours
         ...emptyCourse(),
         ...course,
         tags: uniqueItems(course.tags ?? []),
-        syllabus: uniqueItems(course.syllabus ?? []),
+        // Normalize syllabus to module format for editing
+        syllabus: normalizeSyllabusModules(course.syllabus),
         badgeColor: course.badgeColor || badgeColors[0],
         color: course.color || gradientOptions[0],
         iconName: course.iconName || iconOptions[0],
@@ -168,6 +173,8 @@ const createCourseDraft = (course: Course | undefined, orderHint: number): Cours
     durationUnit: parsedDuration.unit,
     tagInput: "",
     syllabusInput: "",
+    expandedModule: null,
+    editingModulePoints: "",
   };
 };
 
@@ -220,7 +227,7 @@ const buildCoursePayload = (draft: CourseDraft): Course => ({
   rating: draft.rating === undefined || draft.rating === null ? undefined : Number(draft.rating),
   level: draft.level?.trim() || "",
   tags: uniqueItems(draft.tags ?? []),
-  syllabus: uniqueItems(draft.syllabus ?? []),
+  syllabus: draft.syllabus || [], // Pass syllabus modules as-is
   badge: draft.badge?.trim() ? draft.badge.trim() : null,
   badgeColor: draft.badgeColor || badgeColors[0],
   color: draft.color || gradientOptions[0],
@@ -359,13 +366,18 @@ export default function AdminCourseDetails() {
     }));
   };
 
-  const addSyllabusItems = (value: string, commitAll = true) => {
+  const addSyllabusModules = (value: string, commitAll = true) => {
     const { committed, remainder } = splitTokenInput(value, commitAll);
     if (!committed.length && remainder === draft.syllabusInput) return;
 
+    const newModules: SyllabusModule[] = committed.map(title => ({
+      title,
+      points: ["Hands-on exercises", "Mini-projects", "Quizzes & assessments", "Revision and Q&A"]
+    }));
+
     setDraft((prev) => ({
       ...prev,
-      syllabus: uniqueItems([...(prev.syllabus ?? []), ...committed]),
+      syllabus: [...(normalizeSyllabusModules(prev.syllabus) || []), ...newModules],
       syllabusInput: remainder,
     }));
   };
@@ -373,7 +385,7 @@ export default function AdminCourseDetails() {
   const handleSyllabusInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     if (value.includes(",") || value.includes("\n")) {
-      addSyllabusItems(value, false);
+      addSyllabusModules(value, false);
       return;
     }
 
@@ -383,15 +395,16 @@ export default function AdminCourseDetails() {
   const handleSyllabusKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       event.preventDefault();
-      addSyllabusItems(draft.syllabusInput, true);
+      addSyllabusModules(draft.syllabusInput, true);
       return;
     }
 
-    if (event.key === "Backspace" && !draft.syllabusInput && (draft.syllabus?.length ?? 0) > 0) {
+    const modules = normalizeSyllabusModules(draft.syllabus);
+    if (event.key === "Backspace" && !draft.syllabusInput && modules.length > 0) {
       event.preventDefault();
       setDraft((prev) => ({
         ...prev,
-        syllabus: (prev.syllabus ?? []).slice(0, -1),
+        syllabus: modules.slice(0, -1),
       }));
     }
   };
@@ -400,14 +413,61 @@ export default function AdminCourseDetails() {
     const pastedValue = event.clipboardData.getData("text");
     if (/[,\n]/.test(pastedValue)) {
       event.preventDefault();
-      addSyllabusItems(pastedValue, true);
+      addSyllabusModules(pastedValue, true);
     }
   };
 
-  const removeSyllabusItem = (itemToRemove: string) => {
+  const removeSyllabusModule = (moduleIndex: number) => {
+    setDraft((prev) => {
+      const modules = normalizeSyllabusModules(prev.syllabus);
+      return {
+        ...prev,
+        syllabus: modules.filter((_, index) => index !== moduleIndex),
+        expandedModule: prev.expandedModule === moduleIndex ? null : prev.expandedModule,
+      };
+    });
+  };
+
+  const updateModuleTitle = (moduleIndex: number, newTitle: string) => {
+    setDraft((prev) => {
+      const modules = normalizeSyllabusModules(prev.syllabus);
+      modules[moduleIndex] = { ...modules[moduleIndex], title: newTitle };
+      return { ...prev, syllabus: modules };
+    });
+  };
+
+  const addModulePoint = (moduleIndex: number, point: string) => {
+    if (!point.trim()) return;
+    
+    setDraft((prev) => {
+      const modules = normalizeSyllabusModules(prev.syllabus);
+      const existingPoints = modules[moduleIndex].points;
+      if (existingPoints.includes(point.trim())) return prev;
+      
+      modules[moduleIndex] = {
+        ...modules[moduleIndex],
+        points: [...existingPoints, point.trim()]
+      };
+      return { ...prev, syllabus: modules, editingModulePoints: "" };
+    });
+  };
+
+  const removeModulePoint = (moduleIndex: number, pointIndex: number) => {
+    setDraft((prev) => {
+      const modules = normalizeSyllabusModules(prev.syllabus);
+      modules[moduleIndex] = {
+        ...modules[moduleIndex],
+        points: modules[moduleIndex].points.filter((_, index) => index !== pointIndex)
+      };
+      return { ...prev, syllabus: modules };
+    });
+  };
+
+  const toggleModuleExpansion = (moduleIndex: number) => {
     setDraft((prev) => ({
       ...prev,
-      syllabus: (prev.syllabus ?? []).filter((item) => item !== itemToRemove),
+      expandedModule: prev.expandedModule === moduleIndex ? null : moduleIndex,
+      editingModulePoints: "",
     }));
   };
 
@@ -475,7 +535,7 @@ export default function AdminCourseDetails() {
     const Icon = getCourseIcon(course.iconName);
     const gradient = course.color || gradientOptions[0];
     const tags = course.tags ?? [];
-    const syllabus = course.syllabus ?? [];
+    const syllabusModules = normalizeSyllabusModules(course.syllabus);
 
     return (
       <Card className="border-border shadow-sm">
@@ -516,7 +576,7 @@ export default function AdminCourseDetails() {
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             {course.students && <span>{course.students} learners</span>}
             {course.rating !== undefined && <span>Rating {course.rating}</span>}
-            <span>{syllabus.length} modules</span>
+            <span>{syllabusModules.length} modules</span>
           </div>
           <div className={`h-1 w-full rounded-full bg-gradient-to-r ${gradient}`} />
         </CardContent>
@@ -932,51 +992,140 @@ export default function AdminCourseDetails() {
 
                   <div>
                     <Label htmlFor="syllabusInput">Syllabus / Modules</Label>
-                    <div className="space-y-3 rounded-xl border border-border bg-background p-3">
-                      <div className="space-y-2">
-                        {(draft.syllabus ?? []).length > 0 ? (
-                          (draft.syllabus ?? []).map((item, index) => (
-                            <div
-                              key={`${item}-${index}`}
-                              className="flex items-start justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2 text-sm"
-                            >
-                              <span className="flex-1 text-foreground">{item}</span>
-                              <button
-                                type="button"
-                                onClick={() => removeSyllabusItem(item)}
-                                className="rounded-full text-muted-foreground transition hover:text-foreground"
-                                aria-label={`Remove ${item}`}
+                    <div className="space-y-4 rounded-xl border border-border bg-background p-4">
+                      <div className="space-y-3">
+                        {(() => {
+                          const modules = normalizeSyllabusModules(draft.syllabus);
+                          return modules.length > 0 ? (
+                            modules.map((module, moduleIndex) => (
+                              <div
+                                key={`module-${moduleIndex}`}
+                                className="rounded-lg border border-border bg-card p-4"
                               >
-                                <X className="h-4 w-4" />
-                              </button>
+                                {/* Module Header */}
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1">
+                                    <Input
+                                      value={module.title}
+                                      onChange={(e) => updateModuleTitle(moduleIndex, e.target.value)}
+                                      className="font-medium text-base"
+                                      placeholder="Module title"
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => toggleModuleExpansion(moduleIndex)}
+                                    >
+                                      {draft.expandedModule === moduleIndex ? (
+                                        <ChevronUp className="h-4 w-4" />
+                                      ) : (
+                                        <ChevronDown className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => removeSyllabusModule(moduleIndex)}
+                                      className="text-destructive hover:text-destructive"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                {/* Module Points (Expanded) */}
+                                {draft.expandedModule === moduleIndex && (
+                                  <div className="mt-4 space-y-3">
+                                    <div className="text-sm font-medium text-muted-foreground">
+                                      Learning Points:
+                                    </div>
+                                    
+                                    {/* Existing Points */}
+                                    <div className="space-y-2">
+                                      {module.points.map((point, pointIndex) => (
+                                        <div
+                                          key={`point-${pointIndex}`}
+                                          className="flex items-center justify-between gap-3 rounded-md bg-muted/30 px-3 py-2"
+                                        >
+                                          <span className="flex-1 text-sm">{point}</span>
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => removeModulePoint(moduleIndex, pointIndex)}
+                                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      ))}
+                                    </div>
+
+                                    {/* Add New Point */}
+                                    <div className="flex gap-2">
+                                      <Input
+                                        value={draft.editingModulePoints}
+                                        onChange={(e) => setDraftField("editingModulePoints", e.target.value)}
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            addModulePoint(moduleIndex, draft.editingModulePoints);
+                                          }
+                                        }}
+                                        placeholder="Add a learning point..."
+                                        className="text-sm"
+                                      />
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => addModulePoint(moduleIndex, draft.editingModulePoints)}
+                                        disabled={!draft.editingModulePoints.trim()}
+                                      >
+                                        <Plus className="mr-1 h-3 w-3" />
+                                        Add
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-8 text-sm text-muted-foreground">
+                              No modules added yet. Add your first module below.
                             </div>
-                          ))
-                        ) : (
-                          <span className="text-sm text-muted-foreground">No syllabus items added yet.</span>
-                        )}
+                          );
+                        })()}
                       </div>
-                      <div className="flex flex-col gap-2 sm:flex-row">
+                      
+                      {/* Add New Module */}
+                      <div className="flex flex-col gap-2 sm:flex-row border-t border-border pt-4">
                         <Input
                           id="syllabusInput"
                           value={draft.syllabusInput}
                           onChange={handleSyllabusInputChange}
                           onKeyDown={handleSyllabusKeyDown}
                           onPaste={handleSyllabusPaste}
-                          onBlur={() => addSyllabusItems(draft.syllabusInput, true)}
-                          placeholder="Add a module and press Enter"
+                          onBlur={() => addSyllabusModules(draft.syllabusInput, true)}
+                          placeholder="Add a new module and press Enter"
                         />
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={() => addSyllabusItems(draft.syllabusInput, true)}
+                          onClick={() => addSyllabusModules(draft.syllabusInput, true)}
+                          disabled={!draft.syllabusInput.trim()}
                         >
                           <Plus className="mr-2 h-4 w-4" />
-                          Add
+                          Add Module
                         </Button>
                       </div>
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Press Enter to add one item, or paste multiple items separated by commas.
+                      Add modules, then expand them to customize their learning points. Press Enter to add modules, or paste multiple items separated by commas.
                     </p>
                   </div>
                 </div>

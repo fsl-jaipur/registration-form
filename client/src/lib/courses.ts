@@ -1,5 +1,10 @@
 import { Bot, Code2, Database, Globe, Icon, Layers, Server, Smartphone } from "lucide-react";
 
+export type SyllabusModule = {
+  title: string;
+  points: string[];
+};
+
 export type Course = {
   _id?: string;
   slug?: string;
@@ -14,7 +19,8 @@ export type Course = {
   description?: string;
   overview?: string;
   fee?: string;
-  syllabus?: string[];
+  // Support both old format (string[]) and new format (SyllabusModule[])
+  syllabus?: string[] | SyllabusModule[];
   badge?: string | null;
   badgeColor?: string;
   color?: string;
@@ -33,6 +39,34 @@ export const courseIconMap: Record<string, Icon> = {
 
 export const getCourseIcon = (iconName?: string) =>
   courseIconMap[iconName?.toLowerCase?.() ?? ""] || Layers;
+
+// Helper functions for syllabus handling
+export const normalizeSyllabusModules = (syllabus?: string[] | SyllabusModule[]): SyllabusModule[] => {
+  if (!syllabus || !Array.isArray(syllabus)) return [];
+  
+  // If it's already in new format
+  if (syllabus.length > 0 && typeof syllabus[0] === 'object' && 'title' in syllabus[0]) {
+    return syllabus as SyllabusModule[];
+  }
+  
+  // Convert old format to new format
+  return (syllabus as string[]).map(title => ({
+    title,
+    points: ["Hands-on exercises", "Mini-projects", "Quizzes & assessments", "Revision and Q&A"]
+  }));
+};
+
+export const getSyllabusAsStrings = (syllabus?: string[] | SyllabusModule[]): string[] => {
+  if (!syllabus || !Array.isArray(syllabus)) return [];
+  
+  // If it's already old format
+  if (syllabus.length > 0 && typeof syllabus[0] === 'string') {
+    return syllabus as string[];
+  }
+  
+  // Convert new format to old format (just module titles)
+  return (syllabus as SyllabusModule[]).map(module => module.title);
+};
 
 export const courses: Course[] = [
   {

@@ -3,7 +3,7 @@ import { cloudinaryUpload } from "../middlewares/cloudinaryUpload.js";
 import quizAttemptSchema from "../models/QuizAttempt.js";
 import attemptQuiz from "../models/QuizAttempt.js";
 import studentModel from "../models/studentModel.js";
-import sendSendgridResults from "../services/acknowledgement.js";
+import sendResults from "../services/acknowledgement.js";
 
 export const createTest = async (req, res) => {
   try {
@@ -346,7 +346,7 @@ export const releaseResultsByMailchimp = async (req, res) => {
     });
 
     // ✅ Pass test.title instead of testId
-    await sendSendgridResults({ students: studentsWithEmail, testTitle: test.title });
+    await sendResults({ students: studentsWithEmail, testTitle: test.title });
 
     await Test.findByIdAndUpdate(testId, { result: true });
 
