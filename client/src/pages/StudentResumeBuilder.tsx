@@ -93,9 +93,19 @@ const guestActiveIdStorageKey = "resume_builder_guest_active_id";
 
 const getResponsivePreviewScale = () => {
   if (typeof window === "undefined") return 0.8;
-  const availableWidth = Math.max(280, window.innerWidth - 40);
+  const w = window.innerWidth;
   const a4WidthPx = 794;
-  return Math.min(0.8, Math.max(0.35, Number((availableWidth / a4WidthPx).toFixed(2))));
+  let availableWidth: number;
+  if (w >= 1024) {
+    // two-column layout: subtract left editor panel (360px) + page padding (64px) + gap (20px)
+    availableWidth = Math.max(400, w - 360 - 64 - 20);
+  } else {
+    // single column: subtract page padding
+    availableWidth = Math.max(280, w - 32);
+  }
+  const scale = availableWidth / a4WidthPx;
+  const max = w >= 1024 ? 1.0 : 0.8;
+  return Math.min(max, Math.max(0.35, Number(scale.toFixed(2))));
 };
 
 const arrayMove = <T,>(items: T[], from: number, to: number) => {
@@ -237,6 +247,7 @@ export default function StudentResumeBuilder() {
   const [previewScale, setPreviewScale] = useState(() => getResponsivePreviewScale());
   const [previewPan, setPreviewPan] = useState({ x: 0, y: 0 });
   const [isPreviewDragging, setIsPreviewDragging] = useState(false);
+  const [previewContentHeight, setPreviewContentHeight] = useState(1123);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const previewLastTapRef = useRef(0);
   const previewHoldTimerRef = useRef<number | null>(null);
@@ -402,6 +413,15 @@ export default function StudentResumeBuilder() {
 
   useEffect(() => {
     return () => clearPreviewHoldTimer();
+  }, []);
+
+  useEffect(() => {
+    if (!previewRef.current) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setPreviewContentHeight(entry.contentRect.height);
+    });
+    observer.observe(previewRef.current);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -832,21 +852,13 @@ export default function StudentResumeBuilder() {
     }
   };
 
-  const startLinkedInOAuth = async () => {
-    try {
-      setLinkedInLoading(true);
-      const response = await api.requestJson<{ url: string }>("/resumes/linkedin/auth-url");
-      window.location.href = response.url;
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: "LinkedIn OAuth unavailable",
-        description: "Set the LinkedIn env vars or use PDF import.",
-        variant: "destructive",
-      });
-    } finally {
-      setLinkedInLoading(false);
-    }
+  const startLinkedInOAuth = () => {
+    // Navigate the browser directly to the backend auth endpoint so the
+    // state cookie is set in a first-party (same-origin) context.
+    // Fetching the URL via XHR sets a cross-site cookie which Chrome 120+
+    // blocks, causing the callback state check to fail.
+    const apiBase = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+    window.location.href = `${apiBase}/resumes/linkedin/auth-url`;
   };
 
   const importLinkedInPdf = async () => {
@@ -1217,7 +1229,7 @@ export default function StudentResumeBuilder() {
                 </EditorCard>
 
                 <EditorCard title="Templates and Theme">
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="grid grid-cols-3 gap-2">
                     {resumeTemplates.map((template) => (
                       <button
                         type="button"
@@ -1228,11 +1240,11 @@ export default function StudentResumeBuilder() {
                             template: template.id,
                           }))
                         }
-                        className={`rounded-3xl border p-4 text-left transition ${
+                        className={`min-w-0 rounded-2xl border p-3 text-left transition ${
                           draft.template === template.id
                             ? "border-primary bg-primary/5"
                             : "border-border hover:border-primary/50"
-                        } min-w-0 flex-1 sm:min-w-[180px]`}
+                        }`}
                       >
                         <p className="font-semibold">{template.label}</p>
                         <p className="mt-2 text-xs leading-5 text-muted-foreground">
@@ -2317,7 +2329,7 @@ export default function StudentResumeBuilder() {
                 </EditorCard>
             </div>
 
-            <div className="min-w-0 lg:sticky lg:top-8">
+            <div className="min-w-0 lg:sticky lg:top-8 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto">
               <section>
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
@@ -2379,18 +2391,26 @@ export default function StudentResumeBuilder() {
                   onPointerUp={handlePreviewPointerEnd}
                   onPointerCancel={handlePreviewPointerEnd}
                   onPointerLeave={handlePreviewPointerEnd}
-                  className="max-w-full overflow-x-auto overflow-y-visible rounded-2xl pb-4 touch-pan-y lg:touch-none"
+                  className="rounded-2xl pb-4 touch-pan-y lg:touch-none overflow-hidden"
                 >
                   <div
-                    className={`mx-auto w-fit origin-top ${
-                      isPreviewDragging ? "cursor-grabbing" : "cursor-grab transition-transform"
-                    }`}
+                    className="mx-auto overflow-hidden"
                     style={{
-                      transform: `translate3d(${previewPan.x}px, ${previewPan.y}px, 0) scale(${previewScale})`,
+                      width: `${Math.round(794 * previewScale)}px`,
+                      height: `${Math.round(previewContentHeight * previewScale)}px`,
                     }}
                   >
-                    <div ref={previewRef}>
-                      <ResumePreview resume={draft} />
+                    <div
+                      className={isPreviewDragging ? "cursor-grabbing" : "cursor-grab transition-transform"}
+                      style={{
+                        width: "794px",
+                        transformOrigin: "top left",
+                        transform: `translate3d(${previewPan.x}px, ${previewPan.y}px, 0) scale(${previewScale})`,
+                      }}
+                    >
+                      <div ref={previewRef}>
+                        <ResumePreview resume={draft} />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2423,7 +2443,7 @@ export default function StudentResumeBuilder() {
           <div className="space-y-4">
             <button
               type="button"
-              onClick={() => void startLinkedInOAuth()}
+              onClick={() => startLinkedInOAuth()}
               disabled={linkedInLoading}
               className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white dark:bg-white dark:text-slate-950"
             >

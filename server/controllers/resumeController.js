@@ -562,11 +562,12 @@ export async function importLinkedInPdf(req, res) {
 export async function getLinkedInAuthUrl(req, res) {
   const clientId = process.env.LINKEDIN_CLIENT_ID;
   const redirectUri = process.env.LINKEDIN_REDIRECT_URI;
+  const frontendUrl = process.env.FRONTEND_PATH || "http://localhost:8081";
 
   if (!clientId || !redirectUri) {
-    return res.status(400).json({
-      message: "LinkedIn OAuth is not configured on the server.",
-    });
+    return res.redirect(
+      `${frontendUrl}/resume-builder?linkedin=error&message=${encodeURIComponent("LinkedIn OAuth is not configured on the server.")}`
+    );
   }
 
   const state = crypto.randomBytes(12).toString("hex");
@@ -585,9 +586,9 @@ export async function getLinkedInAuthUrl(req, res) {
     state,
   });
 
-  return res.status(200).json({
-    url: `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`,
-  });
+  return res.redirect(
+    `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`
+  );
 }
 
 export async function linkedInCallback(req, res) {
