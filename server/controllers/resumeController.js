@@ -600,8 +600,10 @@ export async function linkedInCallback(req, res) {
   const frontendUrl = process.env.FRONTEND_PATH || "http://localhost:8081";
 
   if (!code || !state || state !== storedState) {
+    const reason = !code ? "no_code" : !state ? "no_state" : !storedState ? "cookie_missing" : "state_mismatch";
+    console.error("[LinkedIn OAuth] Verification failed:", { reason, hasCode: !!code, hasState: !!state, hasStoredState: !!storedState });
     return res.redirect(
-      `${frontendUrl}/resume-builder?linkedin=error&message=${encodeURIComponent("LinkedIn verification failed.")}`
+      `${frontendUrl}/resume-builder?linkedin=error&message=${encodeURIComponent("LinkedIn verification failed.")}&reason=${reason}`
     );
   }
 
