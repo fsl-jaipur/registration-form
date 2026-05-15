@@ -967,7 +967,7 @@ export default function StudentResumeBuilder() {
     <div className={draft.themeMode === "dark" ? "dark" : ""}>
       <div className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.18),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(15,118,110,0.18),_transparent_30%),linear-gradient(180deg,_hsl(var(--background))_0%,_hsl(var(--muted))_100%)] text-foreground">
         <main className="mx-auto flex w-full max-w-[1500px] flex-col gap-5 px-3 py-5 sm:gap-8 sm:px-6 sm:py-8 lg:px-8">
-          <section className="min-w-0 rounded-3xl border border-border bg-card/80 p-4 shadow-[0_18px_70px_rgba(15,23,42,0.08)] backdrop-blur sm:p-6">
+          <section className="relative z-10 min-w-0 rounded-3xl border border-border bg-card/80 p-4 shadow-[0_18px_70px_rgba(15,23,42,0.08)] backdrop-blur sm:p-6">
             <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Student / Resume Builder</p>
@@ -1024,7 +1024,7 @@ export default function StudentResumeBuilder() {
                     <ChevronDown className="h-3.5 w-3.5" />
                   </button>
                   {showGuestInfo ? (
-                    <div className="absolute left-0 top-full z-10 mt-2 w-[min(18rem,calc(100vw-2rem))] rounded-2xl border border-border bg-card p-4 shadow-lg">
+                    <div className="absolute left-0 top-full z-50 mt-2 w-[min(18rem,calc(100vw-2rem))] rounded-2xl border border-border bg-card p-4 shadow-lg">
                       <p className="text-sm font-semibold">Guest Draft</p>
                       <p className="mt-1 text-xs leading-5 text-muted-foreground">
                         Build directly without login. This draft stays in your browser. Sign in later if you want MongoDB autosave and multi-resume management.
