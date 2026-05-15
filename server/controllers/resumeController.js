@@ -563,7 +563,7 @@ export async function importLinkedInPdf(req, res) {
 export async function getLinkedInAuthUrl(req, res) {
   const clientId = process.env.LINKEDIN_CLIENT_ID;
   const redirectUri = process.env.LINKEDIN_REDIRECT_URI;
-  const frontendUrl = process.env.FRONTEND_PATH || "http://localhost:8081";
+  const frontendUrl = (process.env.FRONTEND_PATH || "http://localhost:8081").replace(/^(https?:\/\/)www\./, "$1");
 
   if (!clientId || !redirectUri) {
     return res.redirect(
@@ -594,7 +594,7 @@ export async function linkedInCallback(req, res) {
   const clientId = process.env.LINKEDIN_CLIENT_ID;
   const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
   const redirectUri = process.env.LINKEDIN_REDIRECT_URI;
-  const frontendUrl = process.env.FRONTEND_PATH || "http://localhost:8081";
+  const frontendUrl = (process.env.FRONTEND_PATH || "http://localhost:8081").replace(/^(https?:\/\/)www\./, "$1");
 
   if (!code || !state) {
     return res.redirect(
