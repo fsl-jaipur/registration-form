@@ -635,6 +635,7 @@ export default function StudentResumeBuilder() {
     const status = searchParams.get("linkedin");
     const payload = searchParams.get("payload");
     const message = searchParams.get("message");
+    const reason = searchParams.get("reason");
 
     if (!status) return;
 
@@ -674,7 +675,7 @@ export default function StudentResumeBuilder() {
     } else if (status === "error") {
       toast({
         title: "LinkedIn import failed",
-        description: message || "Please try the PDF option instead.",
+        description: `${message || "Please try the PDF option instead."}${reason ? ` (${reason})` : ""}`,
         variant: "destructive",
       });
     }

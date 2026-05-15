@@ -2,6 +2,7 @@ import crypto from "crypto";
 import slugify from "slugify";
 import studentModel from "../models/studentModel.js";
 import resumeModel from "../models/resumeModel.js";
+import LinkedInState from "../models/linkedInStateModel.js";
 
 const DEFAULT_SECTION_ORDER = [
   "summary",
@@ -570,13 +571,10 @@ export async function getLinkedInAuthUrl(req, res) {
     );
   }
 
-  const state = crypto.randomBytes(12).toString("hex");
-  res.cookie("linkedin_oauth_state", state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 10 * 60 * 1000,
-  });
+  const state = crypto.randomBytes(16).toString("hex");
+
+  // Store state in DB (TTL 10 min) — avoids cross-site cookie issues entirely
+  await LinkedInState.create({ state });
 
   const params = new URLSearchParams({
     response_type: "code",
@@ -593,17 +591,22 @@ export async function getLinkedInAuthUrl(req, res) {
 
 export async function linkedInCallback(req, res) {
   const { code, state } = req.query;
-  const storedState = req.cookies.linkedin_oauth_state;
   const clientId = process.env.LINKEDIN_CLIENT_ID;
   const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
   const redirectUri = process.env.LINKEDIN_REDIRECT_URI;
   const frontendUrl = process.env.FRONTEND_PATH || "http://localhost:8081";
 
-  if (!code || !state || state !== storedState) {
-    const reason = !code ? "no_code" : !state ? "no_state" : !storedState ? "cookie_missing" : "state_mismatch";
-    console.error("[LinkedIn OAuth] Verification failed:", { reason, hasCode: !!code, hasState: !!state, hasStoredState: !!storedState });
+  if (!code || !state) {
     return res.redirect(
-      `${frontendUrl}/resume-builder?linkedin=error&message=${encodeURIComponent("LinkedIn verification failed.")}&reason=${reason}`
+      `${frontendUrl}/resume-builder?linkedin=error&message=${encodeURIComponent("LinkedIn verification failed.")}&reason=missing_params`
+    );
+  }
+
+  // Verify state from DB (replaces unreliable cross-site cookie approach)
+  const storedState = await LinkedInState.findOneAndDelete({ state });
+  if (!storedState) {
+    return res.redirect(
+      `${frontendUrl}/resume-builder?linkedin=error&message=${encodeURIComponent("LinkedIn verification failed.")}&reason=invalid_state`
     );
   }
 
