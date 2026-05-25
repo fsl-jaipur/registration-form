@@ -197,6 +197,31 @@ export const courses: Course[] = [
     color: "from-brand-blue to-brand-orange",
     order: 6,
   },
+  {
+    icon: Code2,
+    iconName: "Code2",
+    slug: "python-programming",
+    title: "Python Programming",
+    duration: "2 Months",
+    students: "500+",
+    rating: 4.8,
+    level: "Beginner to Intermediate",
+    tags: ["Python", "Programming", "OOP", "Scripting"],
+    description: "Learn Python from scratch: syntax, data structures, OOP, and real-world scripting.",
+    overview: "Covers Python basics, data structures, OOP, file handling, and practical scripting projects.",
+    fee: "Rs 20,000",
+    syllabus: [
+      "Python syntax & basics",
+      "Data structures & functions",
+      "Object-Oriented Programming",
+      "File handling & modules",
+      "Mini projects & scripting"
+    ],
+    badge: "New",
+    badgeColor: "bg-green-500",
+    color: "from-brand-blue to-brand-green",
+    order: 7,
+  },
 ];
 
 export function slugify(title: string) {

@@ -156,6 +156,7 @@ export const COURSE_OPTIONS = [
   "DevOps",
   "Agentic AI",
   "Database Management",
+  "Python Programming",
 ] as const;
 
 export const REFERRAL_OPTIONS = [
