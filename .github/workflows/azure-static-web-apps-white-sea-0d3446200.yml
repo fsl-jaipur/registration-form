@@ -1,3 +1,4 @@
+# Docs for the Azure Static Web Apps Deploy action:
 name: fsl-frontend-prod
 
 on:
