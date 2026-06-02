@@ -129,6 +129,8 @@ const SignupForm = () => {
   const [openTc, setOpenTc] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emailExists, setEmailExists] = useState(false);
+  const [emailChecked, setEmailChecked] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [aadharFrontFile, setAadharFrontFile] = useState<File | null>(null);
   const [aadharBackFile, setAadharBackFile] = useState<File | null>(null);
   const frontRef = useRef<HTMLInputElement>(null);
@@ -171,24 +173,48 @@ const SignupForm = () => {
     setField("localAddress", val);
   };
 
-  const handleEmailBlur = async (value: string) => {
+  const checkEmailExists = async (value: string): Promise<boolean | null> => {
     const email = value.trim().toLowerCase();
     if (!email || !apiBase) {
       setEmailExists(false);
-      return;
+      setEmailChecked(false);
+      return null;
     }
 
     try {
+      setIsCheckingEmail(true);
       const res = await fetch(
         `${apiBase}/students/email-exists?email=${encodeURIComponent(email)}`,
         { credentials: "include" },
       );
-      if (!res.ok) return;
+      if (!res.ok) {
+        toast({
+          title: "Email Verification Failed",
+          description: "Could not verify email. Please try again.",
+          variant: "destructive",
+        });
+        return null;
+      }
       const data = await res.json();
-      setEmailExists(Boolean(data?.exists));
+      const exists = Boolean(data?.exists);
+      setEmailExists(exists);
+      setEmailChecked(true);
+      return exists;
     } catch (error) {
       console.error("Email check failed", error);
+      toast({
+        title: "Email Verification Failed",
+        description: "Could not verify email. Please check your connection.",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsCheckingEmail(false);
     }
+  };
+
+  const handleEmailBlur = async (value: string) => {
+    await checkEmailExists(value);
   };
 
   const updatePreview = (
@@ -248,13 +274,30 @@ const SignupForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
+
+    // Ensure email has been verified before proceeding
+    let resolvedEmailExists = emailExists;
+    if (formState.email && !emailChecked) {
+      const result = await checkEmailExists(formState.email);
+      if (result === null) {
+        // Verification request failed
+        toast({
+          title: "Email Verification Required",
+          description: "Unable to verify email. Please check your connection and try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      resolvedEmailExists = result;
+    }
+
     const currentErrors = validate();
     setErrors(currentErrors);
 
     if (
       Object.keys(currentErrors).length > 0 ||
       !formState.tcAccepted ||
-      emailExists
+      resolvedEmailExists
     ) {
       toast({
         title: "Validation Error",
@@ -321,6 +364,7 @@ const SignupForm = () => {
       setErrors({});
       setOpenTc(false);
       setEmailExists(false);
+      setEmailChecked(false);
       navigate("/login");
     } catch (err) {
       console.error(err);
@@ -382,6 +426,7 @@ const SignupForm = () => {
                       value={formState.email}
                       onChange={(e) => {
                         setEmailExists(false);
+                        setEmailChecked(false);
                         setField("email", e.target.value);
                       }}
                       onBlur={(e) => handleEmailBlur(e.target.value)}
@@ -389,9 +434,17 @@ const SignupForm = () => {
                         (hasError("email") || emailExists) && "border-destructive",
                       )}
                     />
-                    {emailExists ? (
+                    {isCheckingEmail ? (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Verifying email...
+                      </p>
+                    ) : emailExists ? (
                       <p className="text-sm text-destructive mt-1">
-                        Email already exists
+                        This email is already registered.
+                      </p>
+                    ) : emailChecked && formState.email ? (
+                      <p className="text-sm text-green-600 mt-1">
+                        Email is available.
                       </p>
                     ) : null}
                   </Field>
@@ -953,7 +1006,7 @@ const SignupForm = () => {
             <Button
               type="submit"
               className="w-full h-11 sm:h-12 text-base sm:text-lg font-semibold"
-              disabled={isSubmitting || !formState.tcAccepted || emailExists}
+              disabled={isSubmitting || !formState.tcAccepted || emailExists || isCheckingEmail}
             >
               {isSubmitting ? "Submitting..." : "Submit Registration"}
             </Button>
