@@ -1,4 +1,5 @@
 # Docs for the Azure Static Web Apps Deploy action:
+#email service updates
 name: fsl-frontend-prod
 
 on:
