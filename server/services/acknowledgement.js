@@ -138,7 +138,11 @@ export function sendDataByEmail(newData) {
   ];
 
   const dt = new Date();
-  const timestamp = `${dt.getDate()} ${getMonthName[dt.getMonth()]} ${dt.getFullYear()} at ${dt.getHours()}:${dt.getMinutes().toString().padStart(2, "0")}`;
+  // Format timestamp in India Standard Time (IST)
+  const istOptions = { timeZone: "Asia/Kolkata", hour12: false };
+  const istDate = new Intl.DateTimeFormat("en-GB", { ...istOptions, day: "2-digit", month: "long", year: "numeric" }).format(dt);
+  const istTime = new Intl.DateTimeFormat("en-GB", { ...istOptions, hour: "2-digit", minute: "2-digit" }).format(dt);
+  const timestamp = `${istDate} at ${istTime} (IST)`;
 
   const sendEmailWithImages = async () => {
     try {
