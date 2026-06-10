@@ -1,4 +1,5 @@
 export const HOME_PAGE_TITLE = "Full Stack Learning | Become a FSD the correct way";
+export const COURSES_PAGE_TITLE = "Courses | Full Stack Learning";
 export const STUDENT_PANEL_TITLE = "Student Panel";
 export const ADMIN_PANEL_TITLE = "Admin Panel";
 export const PRIVACY_POLICY_TITLE = "Privacy Policy | Full Stack Learning";
@@ -12,6 +13,10 @@ const matchesRouteGroup = (pathname: string, prefix: string) =>
 export const getDocumentTitle = (pathname: string) => {
   if (pathname === "/") {
     return HOME_PAGE_TITLE;
+  }
+
+  if (pathname === "/courses") {
+    return COURSES_PAGE_TITLE;
   }
 
   if (pathname === "/privacy-policy") {

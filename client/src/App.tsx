@@ -71,6 +71,7 @@ import AdminResumes from "@/pages/AdminResumes";
 import WorkshopPage from "@/pages/WorkshopPage";
 import AdminWorkshops from "@/pages/AdminPages/AdminWorkshops";
 import PublicResumePage from "@/pages/PublicResumePage";
+import CoursesListPage from "@/pages/CoursesListPage";
 
 const queryClient = new QueryClient();
 
@@ -144,6 +145,7 @@ const AppRoutes = () => {
             />
             <Route path="/lifeatfsl" element={<LifeAtFSL />} />
             <Route path="/career" element={<CareerPage />} />
+            <Route path="/courses" element={<CoursesListPage />} />
             <Route
               path="/courses/full-stack-development"
               element={<FullStackDevelopment />}
