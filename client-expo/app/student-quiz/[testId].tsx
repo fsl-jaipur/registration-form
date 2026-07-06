@@ -72,6 +72,7 @@ export default function StudentQuizScreen() {
   const quizAttemptIdRef = useRef<string | null>(null);
   const responsesRef = useRef<ResponseMap>({});
   const questionsRef = useRef<Question[]>([]);
+  const loadKeyRef = useRef<string | null>(null);
 
   const api = useMemo(() => createApiClient(getApiBaseUrl()), []);
 
@@ -103,6 +104,16 @@ export default function StudentQuizScreen() {
       return;
     }
 
+    const loadKey = `${testId}:${typeof quizAttemptIdParam === "string" ? quizAttemptIdParam : "new"}`;
+
+    if (loadKeyRef.current === loadKey) {
+      return;
+    }
+
+    loadKeyRef.current = loadKey;
+
+    let isCancelled = false;
+
     async function startQuizAndFetchQuestions() {
       try {
         setLoading(true);
@@ -111,19 +122,31 @@ export default function StudentQuizScreen() {
         const existingQuizAttemptId = typeof quizAttemptIdParam === "string" ? quizAttemptIdParam : undefined;
 
         if (existingQuizAttemptId) {
-          setQuizAttemptId(existingQuizAttemptId);
+          if (!isCancelled) {
+            setQuizAttemptId(existingQuizAttemptId);
+          }
         } else {
           const startData = await requestJson<StartQuizResponse>(`/api/students/start-quiz/${testId}`, {
             method: "POST",
           });
-          setQuizAttemptId(startData.quizAttemptId);
+          if (!isCancelled) {
+            setQuizAttemptId(startData.quizAttemptId);
+          }
         }
 
         const questionData = await requestJson<QuestionsResponse>(`/api/students/get-questions/${testId}`);
+        if (isCancelled) {
+          return;
+        }
+
         const shuffledQuestions = [...questionData.questions].sort(() => Math.random() - 0.5);
         setQuestions(shuffledQuestions);
         setTimeLeft(questionData.duration * 60);
       } catch (err) {
+        if (isCancelled) {
+          return;
+        }
+
         console.error("Error starting quiz or fetching questions:", err);
         const message =
           err instanceof Error && err.message.includes("already attempted")
@@ -134,11 +157,17 @@ export default function StudentQuizScreen() {
           setTimeout(() => router.replace("/student-panel"), 2000);
         }
       } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
     }
 
-    startQuizAndFetchQuestions();
+    void startQuizAndFetchQuestions();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [quizAttemptIdParam, requestJson, testId]);
 
   const calculateScoreFromRefs = useCallback(() => {
