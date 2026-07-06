@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { createApiClient } from "@shared/api/client";
 
@@ -47,7 +47,10 @@ function QuizPage() {
   const { testId } = useParams<{ testId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const api = createApiClient(import.meta.env.VITE_API_URL || "");
+  const api = useMemo(
+    () => createApiClient(import.meta.env.VITE_API_URL || ""),
+    []
+  );
   const locationState = location.state as QuizLocationState | null;
 
   const [quizAttemptId, setQuizAttemptId] = useState<string | null>(null);
@@ -65,6 +68,7 @@ function QuizPage() {
   const quizAttemptIdRef = useRef<string | null>(null);
   const responsesRef = useRef<ResponseMap>({});
   const questionsRef = useRef<Question[]>([]);
+  const enforceSecurityRef = useRef(false);
 
   const requestJson = useCallback(
     async <T,>(path: string, init?: RequestInit): Promise<T> => {
@@ -126,6 +130,9 @@ function QuizPage() {
 
         setQuestions(shuffledQuestions);
         setTimeLeft(questionData.duration * 60);
+        setTimeout(() => {
+          enforceSecurityRef.current = true;
+        }, 3000);
       } catch (err) {
         console.error("Error starting quiz or fetching questions:", err);
         const message =
@@ -163,7 +170,7 @@ function QuizPage() {
 
   const finishQuizSilently = useCallback(
     async (reason = "Auto submission") => {
-      if (isQuizFinishedRef.current || !quizAttemptIdRef.current) {
+      if (isQuizFinishedRef.current || !quizAttemptIdRef.current || !enforceSecurityRef.current) {
         return;
       }
 

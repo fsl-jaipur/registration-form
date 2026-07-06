@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { createApiClient } from "@shared/api/client";
 
@@ -30,7 +30,10 @@ function ResultDetailPage() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { quizAttemptId } = useParams<{ quizAttemptId: string }>();
-  const api = createApiClient(import.meta.env.VITE_API_URL || "");
+  const api = useMemo(
+    () => createApiClient(import.meta.env.VITE_API_URL || ""),
+    []
+  );
 
   useEffect(() => {
     async function fetchResultDetail() {
