@@ -29,10 +29,12 @@ export async function sendForgotPasswordEmail({ to, name, otp, expiryMinutes = 6
                 <span style="display: inline-block; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #004aad; background: #f0f4ff; padding: 12px 24px; border-radius: 8px;">${otp}</span>
               </div>
               <div style="display: flex; align-items: center; justify-content: center; gap: 16px; margin: 16px 0; font-size: 16px; color: #333333;">
-                <span>Copy this OTP and</span>
+                <span>Copy this OTP and </span>
                 <a href="${resetUrl}" style="color: #004aad; font-weight: bold; text-decoration: none;">click here</a>
               </div>
-           
+              <div style="text-align: center; margin: 20px 0;">
+                <a href="${resetUrl}" style="background-color: #004aad; color: #ffffff; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-weight: bold;">Reset Password</a>
+              </div>
               <p style="font-size: 14px; color: #777777;">If you did not request a password reset, please ignore this email.</p>
               <p style="font-size: 16px; color: #333333;">Best regards,<br/><strong>Full Stack Learning Team</strong></p>
             </td>
