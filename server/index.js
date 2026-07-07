@@ -41,6 +41,7 @@ app.use(
       "https://registration-form-dev.onrender.com",
       "https://web.fullstacklearning.in",
       "https://www.fullstacklearning.com",
+      "https://fullstacklearning.com",
     ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
