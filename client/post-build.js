@@ -96,72 +96,43 @@ for (const [route, meta] of Object.entries(pages)) {
 
   let html = baseHtml;
 
-  // 1. Replace Title tag
-  html = html.replace(/<title>[^<]+<\/title>/g, `<title>${meta.title}</title>`);
+  // Remove existing title tags (both normal and commented out)
+  html = html.replace(/<!--\s*<title>.*?<\/title>\s*-->/gis, "");
+  html = html.replace(/<title>.*?<\/title>/gis, "");
 
-  // 2. Replace Open Graph (OG) Title
-  if (html.includes('property="og:title"')) {
-    html = html.replace(
-      /<meta property="og:title" content="[^"]+" \/>/g,
-      `<meta property="og:title" content="${meta.title}" />`
-    );
-  } else {
-    html = html.replace(
-      "</head>",
-      `  <meta property="og:title" content="${meta.title}" />\n</head>`
-    );
-  }
+  // Remove existing metadata (multi-line safe, property/name ordering safe)
+  html = html.replace(/<meta\s+[^>]*property=["']og:title["'][^>]*>/gis, "");
+  html = html.replace(/<meta\s+[^>]*name=["']twitter:title["'][^>]*>/gis, "");
+  html = html.replace(/<meta\s+[^>]*property=["']og:description["'][^>]*>/gis, "");
+  html = html.replace(/<meta\s+[^>]*name=["']twitter:description["'][^>]*>/gis, "");
+  html = html.replace(/<meta\s+[^>]*name=["']description["'][^>]*>/gis, "");
+  html = html.replace(/<meta\s+[^>]*property=["']og:url["'][^>]*>/gis, "");
 
-  // 3. Replace Twitter Title
-  if (html.includes('name="twitter:title"')) {
-    html = html.replace(
-      /<meta name="twitter:title" content="[^"]+">/g,
-      `<meta name="twitter:title" content="${meta.title}">`
-    );
-  } else {
-    html = html.replace(
-      "</head>",
-      `  <meta name="twitter:title" content="${meta.title}">\n</head>`
-    );
-  }
-
-  // 4. Replace Open Graph (OG) Description
-  if (html.includes('property="og:description"')) {
-    html = html.replace(
-      /<meta property="og:description" content="[^"]+" \/>/g,
-      `<meta property="og:description" content="${meta.description}" />`
-    );
-  } else {
-    html = html.replace(
-      "</head>",
-      `  <meta property="og:description" content="${meta.description}" />\n</head>`
-    );
-  }
-
-  // 5. Replace Twitter Description
-  if (html.includes('name="twitter:description"')) {
-    html = html.replace(
-      /<meta name="twitter:description" content="[^"]+">/g,
-      `<meta name="twitter:description" content="${meta.description}">`
-    );
-  } else {
-    html = html.replace(
-      "</head>",
-      `  <meta name="twitter:description" content="${meta.description}">\n</head>`
-    );
-  }
-
-  // 6. Update URL if metadata includes URL matching
+  // Inject the new clean metadata tags
   const targetUrl = `https://www.fullstacklearning.com/${route}`;
-  if (html.includes('property="og:url"')) {
-    html = html.replace(
-      /<meta property="og:url" content="[^"]+" \/>/g,
-      `<meta property="og:url" content="${targetUrl}" />`
-    );
-  }
+  const newTags = `
+    <title>${meta.title}</title>
+    <meta name="description" content="${meta.description}" />
+    <meta property="og:title" content="${meta.title}" />
+    <meta name="twitter:title" content="${meta.title}" />
+    <meta property="og:description" content="${meta.description}" />
+    <meta name="twitter:description" content="${meta.description}" />
+    <meta property="og:url" content="${targetUrl}" />`;
 
+  html = html.replace(/<head>/i, `<head>${newTags}`);
+
+  // 1. Save to dist/route/index.html (handles URLs with trailing slash like /register/)
   fs.writeFileSync(path.join(pageDir, "index.html"), html, "utf8");
   console.log(`✓ Generated static page file: dist/${route}/index.html`);
+
+  // 2. Save to dist/route.html (handles URLs without trailing slash like /register)
+  const flatFilePath = path.join(distPath, `${route}.html`);
+  const flatFileParentDir = path.dirname(flatFilePath);
+  if (!fs.existsSync(flatFileParentDir)) {
+    fs.mkdirSync(flatFileParentDir, { recursive: true });
+  }
+  fs.writeFileSync(flatFilePath, html, "utf8");
+  console.log(`✓ Generated static page file: dist/${route}.html`);
 }
 
 console.log("[Post-Build] All static previews generated successfully!\n");
