@@ -44,6 +44,10 @@ const pages = {
     title: "Resume Builder | Full Stack Learning",
     description: "Create, edit, and export your professional resume using templates and LinkedIn import.",
   },
+  "resume-builder": {
+    title: "Resume Builder | Full Stack Learning",
+    description: "Create, edit, and export your professional resume using templates and LinkedIn import.",
+  },
   "courses": {
     title: "Our Courses | Full Stack Learning",
     description: "Explore our specialized courses in Full Stack, Frontend, Backend, Database, React Native, and DevOps.",

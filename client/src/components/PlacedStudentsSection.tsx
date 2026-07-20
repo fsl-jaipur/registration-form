@@ -4,6 +4,7 @@ import Blank from "@/assets/blank.png";
 import { images } from "@/assets/images";
 
 type Student = {
+  id?: string;
   name: string;
   role: string;
   company: string;
@@ -20,6 +21,12 @@ function PlacedCard({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
+  const [imgSrc, setImgSrc] = useState(s.image);
+
+  useEffect(() => {
+    setImgSrc(s.image);
+  }, [s.image]);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -41,8 +48,9 @@ function PlacedCard({
     >
       <div className="relative h-48 overflow-hidden">
         <img
-          src={s.image}
+          src={imgSrc || images.blank}
           alt={s.name}
+          onError={() => setImgSrc(images.blank)}
           className="w-full h-full object-contain bg-white group-hover:scale-105 transition-transform duration-500"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 to-transparent" />
@@ -135,7 +143,8 @@ export default function PlacedStudentsSection() {
         if (!res.ok) throw new Error("Failed to fetch placed students");
         const data = await res.json();
         const mapped: Student[] = (data.students ?? []).map(
-          (s: { name: string; title: string; company: string; city: string; photo?: string }): Student => ({
+          (s: { _id?: string; id?: string; name: string; title: string; company: string; city: string; photo?: string }, idx: number): Student => ({
+            id: s._id || s.id || `${s.name}-${idx}`,
             name: s.name,
             role: s.title,
             company: s.company,
@@ -176,7 +185,7 @@ export default function PlacedStudentsSection() {
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
           {students.map((s, i) => (
-            <PlacedCard key={s.name} s={s} index={i} />
+            <PlacedCard key={s.id || `${s.name}-${i}`} s={s} index={i} />
           ))}
           <PlaceholderCard index={students.length} />
         </div>
