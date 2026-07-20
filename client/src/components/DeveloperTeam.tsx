@@ -1,25 +1,29 @@
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { User } from "lucide-react";
+import { useEngineeringTeam } from "@/hooks/useEngineeringTeam";
 
-const teamMembers = [
-  {
-    name: "Rohit Jain",
-    title: "Founder & CEO",
-    img: "https://stfsl.blob.core.windows.net/fslfiles/Rohit.png",
-  },
-  {
-    name: "Akshat Sharma",
-    title: "Our Frontend Lead",
-    img: "https://stfsl.blob.core.windows.net/fslfiles/Akshat.png",
-  },
-  {
-    name: "Dheeraj Jangid",
-    title: "Our DevOps Guy",
-    img: "https://stfsl.blob.core.windows.net/fslfiles/Dheeraj.png",
-  },
-];
+const getPhotoUrl = (photo?: string) => {
+  if (!photo) return "";
+  if (photo.startsWith("http://") || photo.startsWith("https://")) {
+    return photo;
+  }
+  const apiBase = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "";
+  const apiOrigin = apiBase.replace(/\/api$/, "");
+  if (photo.startsWith("/static")) {
+    return `${apiOrigin}${photo}`;
+  }
+  return photo;
+};
 
 export default function DeveloperTeam() {
+  const { data: teamMembers = [] } = useEngineeringTeam();
+
+  const visibleMembers = useMemo(
+    () => teamMembers.filter((member) => member.isVisible !== false),
+    [teamMembers],
+  );
+
   return (
     <section className="relative min-h-screen py-24 overflow-hidden">
       <div className="absolute inset-0 dot-grid opacity-40" />
@@ -42,12 +46,15 @@ export default function DeveloperTeam() {
 
         {/* Responsive Grid for Team Cards */}
         <div className="mt-8 grid w-full grid-cols-1 gap-6 overflow-visible place-items-center sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-5">
-          {teamMembers.map((member, idx) => (
-            <div key={idx} className="relative group w-full max-w-xs sm:max-w-[320px] md:max-w-[270px] lg:max-w-[280px] h-[340px] border border-border rounded-lg overflow-hidden shadow-lg bg-white dark:bg-slate-900">
+          {visibleMembers.map((member, idx) => (
+            <div
+              key={member._id || idx}
+              className="relative group w-full max-w-xs sm:max-w-[320px] md:max-w-[270px] lg:max-w-[280px] h-[340px] border border-border rounded-lg overflow-hidden shadow-lg bg-white dark:bg-slate-900"
+            >
               <img
-                src={member.img}
+                src={getPhotoUrl(member.photo)}
                 alt={member.name}
-                className="w-full object-cover"
+                className="w-full h-full object-cover"
               />
               {/* Gradient overlay — fades in on hover */}
               <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -88,3 +95,4 @@ export default function DeveloperTeam() {
     </section>
   );
 }
+
