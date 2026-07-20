@@ -29,8 +29,8 @@ export default function DeveloperTeam() {
       <div className="absolute inset-0 dot-grid opacity-40" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] rounded-full bg-primary/5 blur-[120px]" />
       <div className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full bg-accent/5 blur-[100px]" />
-      <div className="container relative mx-auto px-4 max-w-6xl">
-        <div className="text-center mb-20">
+      <div className="container relative mx-auto px-4 max-w-7xl">
+        <div className="text-center mb-16">
           <span className="inline-block px-4 py-1.5 rounded-full bg-brand-orange-light text-brand-orange text-sm font-semibold mb-4">
             Engineering Team
           </span>
@@ -44,12 +44,12 @@ export default function DeveloperTeam() {
           </p>
         </div>
 
-        {/* Responsive Grid for Team Cards */}
-        <div className="mt-8 grid w-full grid-cols-1 gap-6 overflow-visible place-items-center sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-5">
+        {/* Responsive Grid for Team Cards (5 per row on desktop) */}
+        <div className="mt-8 grid w-full grid-cols-1 gap-4 place-items-center sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           {visibleMembers.map((member, idx) => (
             <div
               key={member._id || idx}
-              className="relative group w-full max-w-xs sm:max-w-[320px] md:max-w-[270px] lg:max-w-[280px] h-[340px] border border-border rounded-lg overflow-hidden shadow-lg bg-white dark:bg-slate-900"
+              className="relative group w-full h-[340px] border border-border rounded-lg overflow-hidden shadow-lg bg-white dark:bg-slate-900"
             >
               <img
                 src={getPhotoUrl(member.photo)}
@@ -70,18 +70,18 @@ export default function DeveloperTeam() {
             </div>
           ))}
 
-          <div className="w-full max-w-xs sm:max-w-[320px] md:max-w-[270px] lg:max-w-[280px] h-[340px] border border-border rounded-lg overflow-hidden shadow-lg flex flex-col bg-white dark:bg-slate-900">
+          <div className="w-full h-[340px] border border-border rounded-lg overflow-hidden shadow-lg flex flex-col bg-white dark:bg-slate-900">
             <div className="flex-1 flex items-center justify-center bg-slate-100 dark:bg-slate-800">
-              <div className="w-24 h-24 rounded-full bg-slate-300 dark:bg-slate-600 flex items-center justify-center">
-                <User className="w-14 h-14 text-blue-400" strokeWidth={1.5} />
+              <div className="w-20 h-20 rounded-full bg-slate-300 dark:bg-slate-600 flex items-center justify-center">
+                <User className="w-12 h-12 text-blue-400" strokeWidth={1.5} />
               </div>
             </div>
-            <div className="flex flex-col items-center gap-1 px-4 py-5">
-              <h1 className="font-bold text-[1.15rem] text-foreground">This could be you</h1>
-              <p className="text-muted-foreground text-sm">Your Designation</p>
+            <div className="flex flex-col items-center text-center gap-1 px-3 py-4">
+              <h1 className="font-bold text-base text-foreground">This could be you</h1>
+              <p className="text-muted-foreground text-xs">Your Designation</p>
               <Link
                 to="/career"
-                className="mt-3 w-full text-center text-sm font-semibold text-white py-2 px-4 rounded-md"
+                className="mt-2 w-full text-center text-xs font-semibold text-white py-2 px-3 rounded-md"
                 style={{
                   background: "linear-gradient(to right, #1e3a5f, #c0522a)",
                 }}
