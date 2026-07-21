@@ -598,6 +598,7 @@ export default function StudentResumeBuilder() {
     const status = searchParams.get("linkedin");
     const payload = searchParams.get("payload");
     const message = searchParams.get("message");
+    const reason = searchParams.get("reason");
 
     if (!status) return;
 
@@ -637,7 +638,7 @@ export default function StudentResumeBuilder() {
     } else if (status === "error") {
       toast({
         title: "LinkedIn import failed",
-        description: message || "Please try the PDF option instead.",
+        description: `${message || "Please try the PDF option instead."}${reason ? ` (${reason})` : ""}`,
         variant: "destructive",
       });
     }
@@ -815,21 +816,11 @@ export default function StudentResumeBuilder() {
     }
   };
 
-  const startLinkedInOAuth = async () => {
-    try {
-      setLinkedInLoading(true);
-      const response = await api.requestJson<{ url: string }>("/resumes/linkedin/auth-url");
-      window.location.href = response.url;
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: "LinkedIn OAuth unavailable",
-        description: "Set the LinkedIn env vars or use PDF import.",
-        variant: "destructive",
-      });
-    } finally {
-      setLinkedInLoading(false);
-    }
+  const startLinkedInOAuth = () => {
+    // Navigate the browser directly to the backend auth endpoint so the
+    // state cookie / database state is initialized in a top-level context.
+    const apiBase = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+    window.location.href = `${apiBase}/resumes/linkedin/auth-url`;
   };
 
   const importLinkedInPdf = async () => {

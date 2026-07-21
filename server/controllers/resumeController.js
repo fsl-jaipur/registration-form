@@ -2,6 +2,7 @@ import crypto from "crypto";
 import slugify from "slugify";
 import studentModel from "../models/studentModel.js";
 import resumeModel from "../models/resumeModel.js";
+import LinkedInState from "../models/linkedInStateModel.js";
 
 const DEFAULT_SECTION_ORDER = [
   "summary",
@@ -562,20 +563,18 @@ export async function importLinkedInPdf(req, res) {
 export async function getLinkedInAuthUrl(req, res) {
   const clientId = process.env.LINKEDIN_CLIENT_ID;
   const redirectUri = process.env.LINKEDIN_REDIRECT_URI;
+  const frontendUrl = (process.env.FRONTEND_PATH || "http://localhost:8081").replace(/^(https?:\/\/)www\./, "$1");
 
   if (!clientId || !redirectUri) {
-    return res.status(400).json({
-      message: "LinkedIn OAuth is not configured on the server.",
-    });
+    return res.redirect(
+      `${frontendUrl}/resume-builder?linkedin=error&message=${encodeURIComponent("LinkedIn OAuth is not configured on the server.")}`
+    );
   }
 
-  const state = crypto.randomBytes(12).toString("hex");
-  res.cookie("linkedin_oauth_state", state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 10 * 60 * 1000,
-  });
+  const state = crypto.randomBytes(16).toString("hex");
+
+  // Store state in DB (TTL 10 min) — avoids cross-site cookie issues entirely
+  await LinkedInState.create({ state });
 
   const params = new URLSearchParams({
     response_type: "code",
@@ -585,22 +584,29 @@ export async function getLinkedInAuthUrl(req, res) {
     state,
   });
 
-  return res.status(200).json({
-    url: `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`,
-  });
+  return res.redirect(
+    `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`
+  );
 }
 
 export async function linkedInCallback(req, res) {
   const { code, state } = req.query;
-  const storedState = req.cookies.linkedin_oauth_state;
   const clientId = process.env.LINKEDIN_CLIENT_ID;
   const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
   const redirectUri = process.env.LINKEDIN_REDIRECT_URI;
-  const frontendUrl = process.env.FRONTEND_PATH || "http://localhost:8081";
+  const frontendUrl = (process.env.FRONTEND_PATH || "http://localhost:8081").replace(/^(https?:\/\/)www\./, "$1");
 
-  if (!code || !state || state !== storedState) {
+  if (!code || !state) {
     return res.redirect(
-      `${frontendUrl}/resume-builder?linkedin=error&message=${encodeURIComponent("LinkedIn verification failed.")}`
+      `${frontendUrl}/resume-builder?linkedin=error&message=${encodeURIComponent("LinkedIn verification failed.")}&reason=missing_params`
+    );
+  }
+
+  // Verify state from DB (replaces unreliable cross-site cookie approach)
+  const storedState = await LinkedInState.findOneAndDelete({ state });
+  if (!storedState) {
+    return res.redirect(
+      `${frontendUrl}/resume-builder?linkedin=error&message=${encodeURIComponent("LinkedIn verification failed.")}&reason=invalid_state`
     );
   }
 
@@ -646,12 +652,6 @@ export async function linkedInCallback(req, res) {
         },
       })
     ).toString("base64url");
-
-    res.clearCookie("linkedin_oauth_state", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-    });
 
     return res.redirect(`${frontendUrl}/resume-builder?linkedin=success&payload=${payload}`);
   } catch (error) {
