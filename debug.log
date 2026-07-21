@@ -1,0 +1,8 @@
+[2026-07-21T08:26:59.506Z] [Client] hello test log
+[2026-07-21T08:28:47.813Z] [authMiddleware] Path: /bootstrap, Method: GET
+[2026-07-21T08:28:47.818Z] [authMiddleware] Cookies received: {"refreshToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNGUyNTJlZTRmYWU0OTA0ODU3N2VlYiIsInR5cGUiOiJyZWZyZXNoIiwiYXBwbGljYXRpb25JZCI6InZpZGVvd29ya2Vycy1hcGkiLCJpYXQiOjE3ODQ1MzQ3OTksImV4cCI6MTc4NzEyNjc5OX0.NPMeQR31tW3c7OAfbgi0yNEwYjluoPGj6lttZ5mwbg8","studentToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY2YWI4ZTFmOTZjYTFlNDNiYWUwYzg2ZSIsInJvbGUiOiJzdHVkZW50IiwibG9naW5TdGF0dXMiOmZhbHNlLCJpYXQiOjE3ODQ2MTkzNTQsImV4cCI6MTc4NDcwNTc1NH0.E3-cL_BOiQ9YJz8DdXXxMKrS2nAbhVGE20j--ogul7M"}
+[2026-07-21T08:28:47.860Z] [authMiddleware] Token verified successfully for role: student, studentId: 66ab8e1f96ca1e43bae0c86e
+[2026-07-21T08:28:47.864Z] [getResumeBootstrap] Starting...
+[2026-07-21T08:28:47.868Z] [getResumeBootstrap] Actor parsed from request: {"role":"student","studentId":"66ab8e1f96ca1e43bae0c86e","adminId":null,"isAdmin":false}
+[2026-07-21T08:28:48.014Z] [getResumeBootstrap] Student found: Akshat Sharma
+[2026-07-21T08:28:48.051Z] [getResumeBootstrap] Found 0 resumes for student.

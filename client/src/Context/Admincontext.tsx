@@ -29,21 +29,8 @@ export const adminContext = createContext<AdminContextValue>({
 });
 
 export const AdminProvider = ({ children }: { children: ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
-
-    return localStorage.getItem(storageKeys.auth) === "true";
-  });
-  const [role, setRole] = useState<Role>(() => {
-    if (typeof window === "undefined") {
-      return null;
-    }
-
-    const storedRole = localStorage.getItem(storageKeys.role);
-    return storedRole === "student" || storedRole === "admin" ? storedRole : null;
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [role, setRole] = useState<Role>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const API_BASE = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "";
 
