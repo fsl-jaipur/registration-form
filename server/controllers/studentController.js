@@ -69,6 +69,12 @@ export async function register(req, res) {
     if (!email) {
       return res.status(400).json({ message: "Email is required." });
     }
+
+    const existingStudent = await studentModel.findOne({ email });
+    if (existingStudent) {
+      return res.status(400).json({ message: "This email address is already registered. Please login or use a different email." });
+    }
+
     const plainPassword = generatePassword();
 
     const newRegistration = new studentModel({
@@ -107,6 +113,11 @@ export async function register(req, res) {
     
   } catch (error) {
     console.error("Registration error:", error);
+    if (error.code === 11000 || (error.message && error.message.includes("E11000"))) {
+      return res.status(400).json({
+        message: "This email address is already registered. Please login or use a different email.",
+      });
+    }
     return res.status(500).send({
       message: "Error registering student",
       error: error.message,

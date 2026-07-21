@@ -273,45 +273,45 @@ const SignupForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     setSubmitted(true);
 
-    // Ensure email has been verified before proceeding
-    let resolvedEmailExists = emailExists;
-    if (formState.email && !emailChecked) {
-      const result = await checkEmailExists(formState.email);
-      if (result === null) {
-        // Verification request failed
+    try {
+      // Ensure email has been verified before proceeding
+      let resolvedEmailExists = emailExists;
+      if (formState.email && !emailChecked) {
+        const result = await checkEmailExists(formState.email);
+        if (result === null) {
+          toast({
+            title: "Email Verification Required",
+            description: "Unable to verify email. Please check your connection and try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+        resolvedEmailExists = result;
+      }
+
+      const currentErrors = validate();
+      setErrors(currentErrors);
+
+      if (
+        Object.keys(currentErrors).length > 0 ||
+        !formState.tcAccepted ||
+        resolvedEmailExists
+      ) {
         toast({
-          title: "Email Verification Required",
-          description: "Unable to verify email. Please check your connection and try again.",
+          title: "Validation Error",
+          description: "Please fix the highlighted fields.",
           variant: "destructive",
         });
         return;
       }
-      resolvedEmailExists = result;
-    }
 
-    const currentErrors = validate();
-    setErrors(currentErrors);
-
-    if (
-      Object.keys(currentErrors).length > 0 ||
-      !formState.tcAccepted ||
-      resolvedEmailExists
-    ) {
-      toast({
-        title: "Validation Error",
-        description: "Please fix the highlighted fields.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
       const formData = new FormData();
       formData.append("name", formState.name);
-      formData.append("email", formState.email);
+      formData.append("email", formState.email.trim().toLowerCase());
       formData.append("phone", formState.phone);
       formData.append("dob", formState.dob ? formState.dob.toISOString() : "");
       formData.append("gender", formState.gender);
@@ -349,8 +349,15 @@ const SignupForm = () => {
       });
 
       if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || "Failed to submit registration");
+        let errorMsg = "Failed to submit registration";
+        try {
+          const data = await res.json();
+          errorMsg = data.message || errorMsg;
+        } catch {
+          const text = await res.text();
+          errorMsg = text || errorMsg;
+        }
+        throw new Error(errorMsg);
       }
 
       toast({

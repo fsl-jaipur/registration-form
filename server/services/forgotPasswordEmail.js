@@ -1,11 +1,19 @@
 import { Resend } from "resend";
 import "dotenv/config";
 
+function encodeEmailParam(email) {
+  try {
+    return Buffer.from(email.trim().toLowerCase()).toString("base64url");
+  } catch {
+    return encodeURIComponent(email);
+  }
+}
+
 export async function sendForgotPasswordEmail({ to, name, otp, expiryMinutes = 60 }) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const from = process.env.RESEND_FROM_EMAIL || "rohit@fullstacklearning.com";
   const website = (process.env.FRONTEND_PATH || "https://your-frontend.example.com").trim();
-  const resetUrl = `${website.replace(/\/$/, "")}/reset-password?email=${encodeURIComponent(to)}`;
+  const resetUrl = `${website.replace(/\/$/, "")}/reset-password?e=${encodeEmailParam(to)}`;
   const year = new Date().getFullYear();
   const displayName = name || "User";
 
