@@ -76,6 +76,34 @@ const pages = {
     title: "DevOps & Cloud Computing Course | Full Stack Learning",
     description: "Learn CI/CD pipelines, Docker, Kubernetes, and cloud deployment on Azure & Render.",
   },
+  "reset-password": {
+    title: "Reset Password | Full Stack Learning",
+    description: "Reset your account password for Full Stack Learning.",
+  },
+  "forgot-password": {
+    title: "Forgot Password | Full Stack Learning",
+    description: "Request a password reset link for your Full Stack Learning account.",
+  },
+  "privacy-policy": {
+    title: "Privacy Policy | Full Stack Learning",
+    description: "Read the privacy policy for Full Stack Learning.",
+  },
+  "terms-of-service": {
+    title: "Terms of Service | Full Stack Learning",
+    description: "Read the terms of service for Full Stack Learning.",
+  },
+  "sitemap": {
+    title: "Sitemap | Full Stack Learning",
+    description: "Explore all pages on Full Stack Learning.",
+  },
+  "workshop": {
+    title: "Workshops | Full Stack Learning",
+    description: "Join upcoming workshops and live sessions at Full Stack Learning.",
+  },
+  "student/changepassword": {
+    title: "Change Password | Full Stack Learning",
+    description: "Change your student account password.",
+  },
   "lifeatfsl": {
     title: "Life at FSL | Full Stack Learning",
     description: "Discover our classroom learning, hackathons, presentations, and interactive culture.",
