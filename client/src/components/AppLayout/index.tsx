@@ -12,7 +12,11 @@ export default function AppLayout() {
     location.pathname.startsWith("/student/assignments") ||
     location.pathname.startsWith("/student/daily-updates") ||
     location.pathname.startsWith("/student/resumes");
-  const showFloatingButton = false; // Hidden for now
+  const showFloatingButton =
+    !location.pathname.startsWith("/admin") &&
+    !location.pathname.startsWith("/resume/shared") &&
+    !location.pathname.startsWith("/student/resumes") &&
+    location.pathname !== "/resume-builder";
 
   return (
     <div className="min-h-screen bg-background text-foreground">
