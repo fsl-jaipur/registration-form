@@ -55,12 +55,12 @@ export async function studentlogin(req, res) {
       { expiresIn: "1d" }
     );
 
-    const sameSite = (process.env.SAMESITE || "Lax").trim();
+    const isProduction = process.env.NODE_ENV === "production";
 
     res.cookie("studentToken", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.SAMESITE || "lax",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 24 * 60 * 60 * 1000, 
     });
     
@@ -137,12 +137,12 @@ export const adminLogin = async (req, res) => {
       expiresIn: "2h",
     });
 
-    const sameSite = (process.env.SAMESITE || "Lax").trim();
+    const isProduction = process.env.NODE_ENV === "production";
 
     res.cookie("adminToken", token, {
       httpOnly: true,
-      secure:process.env.NODE_ENV === "production",
-      sameSite,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 2 * 60 * 60 * 1000,
     });
 
@@ -190,12 +190,12 @@ export const logout = (req, res) => {
   }
 
   try {
-    const sameSite = (process.env.SAMESITE || "Lax").trim();
+    const isProduction = process.env.NODE_ENV === "production";
 
     res.clearCookie(`${role}Token`, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
     });
     return res.status(200).json({ message: "LogOut successful" });
   } catch (error) {

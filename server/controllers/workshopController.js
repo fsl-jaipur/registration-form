@@ -151,10 +151,12 @@ export const loginWorkshopParticipant = async (req, res) => {
       { expiresIn: "24h" },
     );
 
+    const isProduction = process.env.NODE_ENV === "production";
+
     res.cookie("workshopSession", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.SAMESITE || "lax",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 24 * 60 * 60 * 1000,
     });
 
@@ -173,10 +175,12 @@ export const loginWorkshopParticipant = async (req, res) => {
 // ─── Public: Logout workshop participant ──────────────────────────────────────
 export const logoutWorkshopParticipant = async (_req, res) => {
   try {
+    const isProduction = process.env.NODE_ENV === "production";
+
     res.clearCookie("workshopSession", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.SAMESITE || "lax",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
     });
     return res.json({ success: true });
   } catch (error) {
