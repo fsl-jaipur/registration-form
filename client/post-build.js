@@ -100,9 +100,113 @@ const pages = {
     title: "Workshops | Full Stack Learning",
     description: "Join upcoming workshops and live sessions at Full Stack Learning.",
   },
+  "student": {
+    title: "Student Area | Full Stack Learning",
+    description: "Student Portal for Full Stack Learning.",
+  },
+  "student/studentpanel": {
+    title: "Student Panel | Full Stack Learning",
+    description: "Access your active tests, assignments, daily updates, and results in your student area.",
+  },
+  "student/result": {
+    title: "My Results | Full Stack Learning",
+    description: "Check your scores and detailed question-wise analysis for attempted quizzes.",
+  },
+  "student/assignments": {
+    title: "Assignments | Full Stack Learning",
+    description: "Track and submit your course assignments and projects.",
+  },
+  "student/daily-updates": {
+    title: "Daily Updates | Full Stack Learning",
+    description: "Submit and view your daily project progress updates.",
+  },
+  "student/resumes": {
+    title: "Resume Builder | Full Stack Learning",
+    description: "Create, edit, and export your professional resume using templates and LinkedIn import.",
+  },
   "student/changepassword": {
     title: "Change Password | Full Stack Learning",
     description: "Change your student account password.",
+  },
+  "admin": {
+    title: "Admin Portal | Full Stack Learning",
+    description: "Admin portal login and management dashboard.",
+  },
+  "admin/login": {
+    title: "Admin Login | Full Stack Learning",
+    description: "Admin authentication portal.",
+  },
+  "admin/home": {
+    title: "Admin Dashboard | Full Stack Learning",
+    description: "Admin overview and test management dashboard.",
+  },
+  "admin/courses": {
+    title: "Manage Courses | Full Stack Learning",
+    description: "Admin course details and content management.",
+  },
+  "admin/students": {
+    title: "Manage Students | Full Stack Learning",
+    description: "Admin view and manage registered students.",
+  },
+  "admin/tests": {
+    title: "Manage Tests | Full Stack Learning",
+    description: "Admin test results and management.",
+  },
+  "admin/assignments": {
+    title: "Manage Assignments | Full Stack Learning",
+    description: "Admin assignment management.",
+  },
+  "admin/daily-updates": {
+    title: "Manage Daily Updates | Full Stack Learning",
+    description: "Admin view daily updates from students.",
+  },
+  "admin/placed-students": {
+    title: "Manage Placed Students | Full Stack Learning",
+    description: "Admin view placed students.",
+  },
+  "admin/success-stories": {
+    title: "Manage Success Stories | Full Stack Learning",
+    description: "Admin success stories management.",
+  },
+  "admin/universal-header": {
+    title: "Header Settings | Full Stack Learning",
+    description: "Admin universal header configuration.",
+  },
+  "admin/hero-section": {
+    title: "Hero Section Settings | Full Stack Learning",
+    description: "Admin hero section configuration.",
+  },
+  "admin/companies": {
+    title: "Companies Settings | Full Stack Learning",
+    description: "Admin hiring partners company management.",
+  },
+  "admin/career": {
+    title: "Career Settings | Full Stack Learning",
+    description: "Admin career section configuration.",
+  },
+  "admin/engineering-team": {
+    title: "Engineering Team Settings | Full Stack Learning",
+    description: "Admin engineering team management.",
+  },
+  "admin/get-in-touch": {
+    title: "Contact Messages | Full Stack Learning",
+    description: "Admin view get-in-touch messages.",
+  },
+  "admin/footer": {
+    title: "Footer Settings | Full Stack Learning",
+    description: "Admin footer content management.",
+  },
+  "admin/create/test": {
+    title: "Create Test | Full Stack Learning",
+    description: "Admin create new test form.",
+  },
+  "admin/resumes": {
+    title: "Manage Resumes | Full Stack Learning",
+    description: "Admin resume builder management.",
+  },
+  "admin/workshops": {
+    title: "Manage Workshops | Full Stack Learning",
+    description: "Admin workshop management.",
   },
   "lifeatfsl": {
     title: "Life at FSL | Full Stack Learning",
