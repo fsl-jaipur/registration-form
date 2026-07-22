@@ -33,6 +33,7 @@ const moreLinks = [
   { label: "Companies", href: "/admin/companies" },
   { label: "Career", href: "/admin/career" },
   { label: "Engineering Team", href: "/admin/engineering-team" },
+  { label: "Lifestyle", href: "/admin/life-at-fsl" },
   { label: "Get In Touch", href: "/admin/get-in-touch" },
   { label: "Footer", href: "/admin/footer" },
 ];

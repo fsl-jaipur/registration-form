@@ -46,6 +46,7 @@ import AdminHeroSection from "@/pages/AdminPages/AdminHeroSection";
 import AdminCompanies from "@/pages/AdminPages/AdminCompanies";
 import AdminCareer from "@/pages/AdminPages/AdminCareer";
 import AdminEngineeringTeam from "@/pages/AdminPages/AdminEngineeringTeam";
+import AdminLifeAtFSL from "@/pages/AdminPages/AdminLifeAtFSL";
 import AdminGetInTouch from "@/pages/AdminPages/AdminGetInTouch";
 import AdminFooter from "@/pages/AdminPages/AdminFooter";
 // import StudentChangePassword from "@/pages/StudentPages/StudentPanel";
@@ -342,6 +343,17 @@ const AppRoutes = () => {
                   redirectTo="/admin/login"
                 >
                   <AdminPlacedStudents />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="life-at-fsl"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["admin"]}
+                  redirectTo="/admin/login"
+                >
+                  <AdminLifeAtFSL />
                 </ProtectedRoute>
               }
             />

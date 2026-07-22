@@ -24,6 +24,8 @@ import careerSectionRoutes from "./routes/careerSectionRoutes.js";
 import jobApplicationRoutes from "./routes/jobApplicationRoutes.js";
 import resumeRoutes from "./routes/resumeRoutes.js";
 import workshopRoutes from "./routes/workshopRoutes.js";
+import lifeAtFslRoutes from "./routes/lifeAtFslRoutes.js";
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -82,6 +84,7 @@ app.use("/api/get-in-touch", getInTouchRoutes);
 app.use("/api/footer", footerRoutes);
 app.use("/api/career-section", careerSectionRoutes);
 app.use("/api/resumes", resumeRoutes);
+app.use("/api/life-at-fsl", lifeAtFslRoutes);
 app.use("/api", workshopRoutes);
 app.use("/", jobApplicationRoutes);
 app.use("/api", jobApplicationRoutes);
