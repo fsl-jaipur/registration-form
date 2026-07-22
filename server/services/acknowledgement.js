@@ -26,6 +26,9 @@ const uploadBase64ToCloudinary = async (base64Data, filename) => {
 
 
 export function sendResultEmail(student, testTitle) {
+  const website = (process.env.FRONTEND_PATH || "https://www.fullstacklearning.com").trim().replace(/\/$/, "");
+  const resultLink = `${website}/student/result`;
+
   return `
     <html>
       <body style="font-family: Arial, sans-serif; background-color: #f5f7fa; margin: 0; padding: 0;">
@@ -43,21 +46,21 @@ export function sendResultEmail(student, testTitle) {
               </p>
               <p style="font-size: 16px; color: #333333;"><strong>Test:</strong> ${testTitle}</p>
               <div style="margin: 20px 0;">
-                <a href="https://registration-form-1-mbw5.onrender.com/student/result" style="background-color: #004aad; color: #ffffff; padding: 10px 20px; border-radius: 4px; text-decoration: none; font-weight: bold;">View Result</a>
+                <a href="${resultLink}" style="background-color: #004aad; color: #ffffff; padding: 10px 20px; border-radius: 4px; text-decoration: none; font-weight: bold;">View Result</a>
               </div>
               <p style="font-size: 14px; color: #777777;">
                 If you have any questions or concerns, feel free to reach out to us.
               </p>
               <p style="font-size: 16px; color: #333333;">
                 Best regards,<br/>
-                <strong>Admin Team</strong>
+                <strong>Admin Team</strong><br/>
                 <strong>Full Stack Learning</strong>
               </p>
             </td>
           </tr>
           <tr>
             <td style="padding: 15px; text-align: center; font-size: 12px; color: #999999; background-color: #f0f0f0; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
-              © ${new Date().getFullYear()} Your Institute Name. All rights reserved.
+              © ${new Date().getFullYear()} Full Stack Learning. All rights reserved.
             </td>
           </tr>
         </table>
@@ -72,9 +75,10 @@ export function sendResultEmail(student, testTitle) {
 export function sendAckEmail(newData) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const from = process.env.RESEND_FROM_EMAIL || "rohit@fullstacklearning.com";
+  const website = (process.env.FRONTEND_PATH || "https://www.fullstacklearning.com").trim().replace(/\/$/, "");
   const dashboardLink =
     process.env.STUDENT_DASHBOARD_URL ||
-    "https://registration-form-1-mbw5.onrender.com/student";
+    `${website}/student/studentpanel`;
 
   const html = `
     <html>

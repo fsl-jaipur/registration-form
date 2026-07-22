@@ -2,6 +2,28 @@ import { useState, type FormEvent, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
+function decodeEmailParam(param: string): string {
+  if (!param) return "";
+  if (param.includes("@")) return param;
+  try {
+    const base64 = param.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = atob(base64);
+    if (decoded.includes("@")) return decoded;
+  } catch {
+    // fallback if decoding fails
+  }
+  return param;
+}
+
+function maskEmail(email: string): string {
+  if (!email || !email.includes("@")) return "";
+  const [name, domain] = email.split("@");
+  if (name.length <= 2) {
+    return `${name[0]}*@${domain}`;
+  }
+  return `${name[0]}${"*".repeat(name.length - 2)}${name[name.length - 1]}@${domain}`;
+}
+
 export default function ResetStudentPassword(): JSX.Element {
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -11,13 +33,16 @@ export default function ResetStudentPassword(): JSX.Element {
   const [searchParams] = useSearchParams();
 
   const token = searchParams.get("token") || "";
-  const emailFromQuery = searchParams.get("email") || "";
-  const [email, setEmail] = useState(emailFromQuery);
+  const rawEmailParam = searchParams.get("e") || searchParams.get("email") || "";
+  const [email, setEmail] = useState(() => decodeEmailParam(rawEmailParam));
   const [otp, setOtp] = useState(token);
 
   useEffect(() => {
-    // if email missing, nothing to do — user can still enter email manually (but we rely on query param)
-  }, [email]);
+    // Clean URL query params immediately so plain/encoded email is stripped from address bar
+    if (window.location.search) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -63,7 +88,9 @@ export default function ResetStudentPassword(): JSX.Element {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-lg">
         <h1 className="text-2xl font-bold mb-2 text-foreground text-center">Reset Password</h1>
-        <p className="text-sm text-muted-foreground mb-6 text-center">Set a new password for your account.</p>
+        <p className="text-sm text-muted-foreground mb-6 text-center">
+          {email ? `Set a new password for ${maskEmail(email)}` : "Set a new password for your account."}
+        </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

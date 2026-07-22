@@ -5,7 +5,14 @@ import bcrypt from "bcrypt";
 const studentSchema = new Schema(
   {
     name: String,
-    email: { type: String, trim: true, lowercase: true },
+    email: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+      unique: true,
+      index: true,
+    },
     phone: String,
     dob: String,
     gender: String,
