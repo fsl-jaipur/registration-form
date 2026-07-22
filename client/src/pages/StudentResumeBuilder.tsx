@@ -14,10 +14,12 @@ import {
   Share2,
   Trash2,
   Upload,
+  X,
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useAdminContext } from "@/Context/Admincontext";
 import LinkedInPromptDialog from "@/components/LinkedInPromptDialog";
+import LoginPage from "@/pages/Login";
 import ResumePreview from "@/components/ResumePreview";
 import { useToast } from "@/hooks/use-toast";
 import { createApiClient } from "@shared/api/client";
@@ -194,6 +196,8 @@ export default function StudentResumeBuilder() {
   const [initialLoaded, setInitialLoaded] = useState(false);
   const [showLinkedInPrompt, setShowLinkedInPrompt] = useState(false);
   const [showLinkedInImport, setShowLinkedInImport] = useState(false);
+  const [showLinkedInLoginPendingModal, setShowLinkedInLoginPendingModal] = useState(false);
+  const [showSiteLogin, setShowSiteLogin] = useState(false);
   const [linkedInLoading, setLinkedInLoading] = useState(false);
   const [linkedInForm, setLinkedInForm] = useState(initialLinkedInForm);
   const [creatingResume, setCreatingResume] = useState(false);
@@ -229,6 +233,19 @@ export default function StudentResumeBuilder() {
   const [dragOverCustomSectionIndex, setDragOverCustomSectionIndex] = useState<number | null>(null);
   const [previewScale, setPreviewScale] = useState(0.8);
   const [previewPan, setPreviewPan] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const updateInitialScale = () => {
+      const screenWidth = window.innerWidth;
+      if (screenWidth < 640) {
+        const mobileScale = Math.max(0.35, Math.min(0.55, (screenWidth - 32) / 800));
+        setPreviewScale(mobileScale);
+      } else if (screenWidth < 1024) {
+        setPreviewScale(0.65);
+      }
+    };
+    updateInitialScale();
+  }, []);
   const [isPreviewDragging, setIsPreviewDragging] = useState(false);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const previewLastTapRef = useRef(0);
@@ -594,6 +611,37 @@ export default function StudentResumeBuilder() {
     void bootstrap();
   }, [authChecked, isStudentAuthenticated]);
 
+  const applyLinkedInPayloadToDraft = (payloadStr: string) => {
+    const decoded = decodeLinkedInPayload(payloadStr);
+    if (decoded && typeof decoded === "object") {
+      setDraft((current) =>
+        withResumeDefaults({
+          ...current,
+          name: typeof decoded.name === "string" && decoded.name.trim() ? decoded.name : current.name,
+          email: typeof decoded.email === "string" && decoded.email.trim() ? decoded.email : current.email,
+          profilePhoto:
+            typeof decoded.profilePhoto === "string" && decoded.profilePhoto.trim()
+              ? decoded.profilePhoto
+              : current.profilePhoto,
+          linkedInImport:
+            decoded.linkedInImport && typeof decoded.linkedInImport === "object"
+              ? {
+                  profileUrl:
+                    typeof decoded.linkedInImport.profileUrl === "string"
+                      ? decoded.linkedInImport.profileUrl
+                      : current.linkedInImport.profileUrl,
+                  importSource:
+                    typeof decoded.linkedInImport.importSource === "string"
+                      ? decoded.linkedInImport.importSource
+                      : "linkedin-oauth",
+                  lastImportedAt: new Date().toISOString(),
+                }
+              : current.linkedInImport,
+        })
+      );
+    }
+  };
+
   useEffect(() => {
     const status = searchParams.get("linkedin");
     const payload = searchParams.get("payload");
@@ -603,33 +651,12 @@ export default function StudentResumeBuilder() {
     if (!status) return;
 
     if (status === "success" && payload) {
-      const decoded = decodeLinkedInPayload(payload);
-      if (decoded && typeof decoded === "object") {
-        setDraft((current) =>
-          withResumeDefaults({
-            ...current,
-            name: typeof decoded.name === "string" ? decoded.name : current.name,
-            email: typeof decoded.email === "string" ? decoded.email : current.email,
-            profilePhoto:
-              typeof decoded.profilePhoto === "string"
-                ? decoded.profilePhoto
-                : current.profilePhoto,
-            linkedInImport:
-              decoded.linkedInImport && typeof decoded.linkedInImport === "object"
-                ? {
-                    profileUrl:
-                      typeof decoded.linkedInImport.profileUrl === "string"
-                        ? decoded.linkedInImport.profileUrl
-                        : current.linkedInImport.profileUrl,
-                    importSource:
-                      typeof decoded.linkedInImport.importSource === "string"
-                        ? decoded.linkedInImport.importSource
-                        : "linkedin-oauth",
-                    lastImportedAt: new Date().toISOString(),
-                  }
-                : current.linkedInImport,
-          })
-        );
+      if (!isStudentAuthenticated) {
+        sessionStorage.setItem("pending_linkedin_oauth_payload", payload);
+        setShowLinkedInLoginPendingModal(true);
+      } else {
+        applyLinkedInPayloadToDraft(payload);
+        sessionStorage.removeItem("pending_linkedin_oauth_payload");
         toast({
           title: "LinkedIn import ready",
           description: "Basic profile data has been added to your draft.",
@@ -644,7 +671,21 @@ export default function StudentResumeBuilder() {
     }
 
     setSearchParams({});
-  }, [searchParams, setSearchParams, toast]);
+  }, [searchParams, setSearchParams, toast, isStudentAuthenticated]);
+
+  useEffect(() => {
+    if (!isStudentAuthenticated) return;
+    const pendingPayload = sessionStorage.getItem("pending_linkedin_oauth_payload");
+    if (!pendingPayload) return;
+
+    applyLinkedInPayloadToDraft(pendingPayload);
+    sessionStorage.removeItem("pending_linkedin_oauth_payload");
+    setShowLinkedInLoginPendingModal(false);
+    toast({
+      title: "LinkedIn data imported successfully",
+      description: "Your LinkedIn profile data has been automatically added to your resume draft.",
+    });
+  }, [isStudentAuthenticated, toast]);
 
   useEffect(() => {
     if (!authChecked || isStudentAuthenticated || !initialLoaded || !guestActiveId) return;
@@ -928,7 +969,7 @@ export default function StudentResumeBuilder() {
     <div className={draft.themeMode === "dark" ? "dark" : ""}>
       <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.18),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(15,118,110,0.18),_transparent_30%),linear-gradient(180deg,_hsl(var(--background))_0%,_hsl(var(--muted))_100%)] text-foreground">
         <main className="mx-auto flex w-full max-w-[1500px] flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
-          <section className="rounded-[32px] border border-border bg-card/80 p-6 shadow-[0_18px_70px_rgba(15,23,42,0.08)] backdrop-blur">
+          <section className="relative z-20 rounded-[32px] border border-border bg-card/80 p-6 shadow-[0_18px_70px_rgba(15,23,42,0.08)] backdrop-blur">
             <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Student / Resume Builder</p>
@@ -985,7 +1026,7 @@ export default function StudentResumeBuilder() {
                     <ChevronDown className="h-3.5 w-3.5" />
                   </button>
                   {showGuestInfo ? (
-                    <div className="absolute left-0 top-full z-10 mt-2 w-72 rounded-2xl border border-border bg-card p-4 shadow-lg">
+                    <div className="absolute left-0 top-full z-50 mt-2 w-72 rounded-2xl border border-border bg-card p-4 shadow-xl">
                       <p className="text-sm font-semibold">Guest Draft</p>
                       <p className="mt-1 text-xs leading-5 text-muted-foreground">
                         Build directly without login. This draft stays in your browser. Sign in later if you want MongoDB autosave and multi-resume management.
@@ -1124,8 +1165,8 @@ export default function StudentResumeBuilder() {
             </div>
           </section>
 
-          <section className="grid gap-4 items-start lg:grid-cols-[320px_minmax(0,1fr)]">
-            <div className="resume-editor-scroll max-h-[calc(100vh-2rem)] space-y-5 overflow-y-auto pr-2 lg:sticky lg:top-8 lg:max-h-[calc(100vh-4rem)]">
+          <section className="grid gap-6 items-start lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[360px_minmax(0,1fr)]">
+            <div className="resume-editor-scroll space-y-5 pr-1 sm:pr-2 lg:sticky lg:top-8 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto">
                 <EditorCard title="Essentials">
                   <TextInput
                     label="Resume Title"
@@ -2291,7 +2332,7 @@ export default function StudentResumeBuilder() {
                 </EditorCard>
             </div>
 
-            <div className="sticky top-8">
+            <div className="lg:sticky lg:top-8">
               <section>
                 <div className="mb-4 flex items-center justify-between">
                   <div>
@@ -2424,6 +2465,66 @@ export default function StudentResumeBuilder() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* LinkedIn Login Required Pending Modal */}
+      {showLinkedInLoginPendingModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+            onClick={() => setShowLinkedInLoginPendingModal(false)}
+          />
+          <div className="relative w-full max-w-md rounded-[28px] border border-border bg-card p-6 shadow-2xl z-10 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-blue/10 text-brand-blue font-bold text-sm">
+                  ✓
+                </span>
+                LinkedIn Connected
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowLinkedInLoginPendingModal(false)}
+                className="rounded-full p-1.5 text-muted-foreground hover:bg-muted transition"
+                aria-label="Close modal"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-sm text-foreground">
+              <p className="font-semibold text-base text-brand-blue">
+                LinkedIn account connected successfully.
+              </p>
+              <p className="text-muted-foreground leading-relaxed">
+                To import your LinkedIn resume data, please log in to your Full Stack Learning account first. Once you log in, your LinkedIn data will be imported automatically.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
+              <button
+                type="button"
+                onClick={() => setShowLinkedInLoginPendingModal(false)}
+                className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-muted-foreground hover:bg-muted transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLinkedInLoginPendingModal(false);
+                  setShowSiteLogin(true);
+                }}
+                className="rounded-xl bg-brand-blue px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition shadow-md shadow-brand-blue/20"
+              >
+                Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Website Login Modal */}
+      {showSiteLogin && <LoginPage onClose={() => setShowSiteLogin(false)} />}
     </div>
   );
 }

@@ -20,7 +20,7 @@ export default function LinkedInPromptDialog({
 }: LinkedInPromptDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl rounded-[28px] border-0 p-0">
+      <DialogContent className="w-[92vw] sm:max-w-xl rounded-[28px] border-0 p-0 overflow-hidden">
         <div className="rounded-[28px] bg-gradient-to-br from-slate-950 via-slate-900 to-teal-950 p-8 text-white">
           <DialogHeader className="text-left">
             <DialogTitle className="text-2xl font-bold">
