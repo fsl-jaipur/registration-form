@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useMemo } from "react";
-import { Briefcase, MapPin } from "lucide-react";
+import { Briefcase, MapPin, User } from "lucide-react";
 import Blank from "@/assets/blank.png";
 import { images } from "@/assets/images";
 
@@ -46,14 +46,20 @@ function PlacedCard({
       }`}
       style={{ transitionDelay: `${index * 100}ms` }}
     >
-      <div className="relative h-48 overflow-hidden">
-        <img
-          src={imgSrc || images.blank}
-          alt={s.name}
-          onError={() => setImgSrc(images.blank)}
-          className="w-full h-full object-contain bg-white group-hover:scale-105 transition-transform duration-500"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 to-transparent" />
+      <div className="relative h-48 overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-slate-800">
+        {imgSrc ? (
+          <img
+            src={imgSrc}
+            alt={s.name}
+            onError={() => setImgSrc("")}
+            className="w-full h-full object-contain bg-white group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <div className="w-20 h-20 rounded-full bg-slate-300/80 dark:bg-slate-600/80 flex items-center justify-center">
+            <User className="w-12 h-12 text-blue-400" strokeWidth={1.5} />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 to-transparent pointer-events-none" />
         <div className="absolute bottom-3 left-3 right-3">
           <span className="inline-block px-3 py-1 rounded-full bg-brand-orange text-primary-foreground text-xs font-bold">
             {s.company}
@@ -99,13 +105,10 @@ function PlaceholderCard({ index }: { index: number }) {
       }`}
       style={{ transitionDelay: `${index * 100}ms` }}
     >
-      <div className="relative h-48 overflow-hidden bg-muted">
-        <img
-          src={images.blank}
-          alt="Future student"
-          className="w-full h-full object-cover opacity-70"
-        />
-        <div className="absolute inset-0 m-2 pointer-events-none" />
+      <div className="relative h-48 overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-slate-800">
+        <div className="w-20 h-20 rounded-full bg-slate-300/80 dark:bg-slate-600/80 flex items-center justify-center">
+          <User className="w-12 h-12 text-blue-400" strokeWidth={1.5} />
+        </div>
       </div>
       <div className="p-5 flex flex-col items-center text-center space-y-3">
         <h3 className="font-bold text-lg text-foreground">
