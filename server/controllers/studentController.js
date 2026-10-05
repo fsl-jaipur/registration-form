@@ -6,11 +6,17 @@ import attemptQuiz from "../models/QuizAttempt.js";
 import careerApplicationModel from "../models/careerApplicationModel.js";
 import mongoose from "mongoose";
 import { generatePassword } from "../services/passwordGenerator.js";
+import { verifyRecaptcha } from "../services/recaptchaService.js";
 
 
 
 export async function register(req, res) {
   try {
+    const captchaToken = req.body.captchaToken;
+    const captchaResult = await verifyRecaptcha(captchaToken, "register");
+    if (!captchaResult.success) {
+      return res.status(400).json({ message: captchaResult.message || "CAPTCHA verification failed." });
+    }
 
     let aadharFront = "", aadharBack = "";
     const toBool = (value) => value === true || value === "true";
@@ -128,6 +134,12 @@ export async function register(req, res) {
 // ─── NEW: Quick Account Registration (Name + Email only) ───────────────────
 export async function quickRegister(req, res) {
   try {
+    const captchaToken = req.body.captchaToken;
+    const captchaResult = await verifyRecaptcha(captchaToken, "quick_register");
+    if (!captchaResult.success) {
+      return res.status(400).json({ message: captchaResult.message || "CAPTCHA verification failed." });
+    }
+
     const rawName = typeof req.body.name === "string" ? req.body.name.trim() : "";
     const rawEmail = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
 

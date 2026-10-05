@@ -161,7 +161,7 @@ export default function CreateAccountForm({ onBack }: CreateAccountFormProps) {
         </div>
 
         {siteKey ? (
-          <div className="flex justify-center my-2">
+          <div className="flex justify-center my-3">
             <ReCAPTCHA
               ref={recaptchaRef}
               sitekey={siteKey}
