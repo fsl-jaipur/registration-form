@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createApiClient } from "@shared/api/client";
+import ProfileCompletionBar from "@/components/ProfileCompletionBar";
 
 type Test = {
   _id: string;
@@ -70,6 +71,9 @@ function StudentPanel() {
   };
   return (
     <div className="mx-auto w-full max-w-5xl px-4 pb-10 pt-28 sm:px-6 lg:px-8">
+      {/* Profile Completion Banner — visible only when profile is incomplete */}
+      <ProfileCompletionBar />
+
       <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 shadow-sm">
         <p className="text-sm font-semibold">Quiz Security Notice</p>
         <p className="mt-1 text-sm">

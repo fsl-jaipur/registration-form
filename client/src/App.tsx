@@ -73,6 +73,7 @@ import WorkshopPage from "@/pages/WorkshopPage";
 import AdminWorkshops from "@/pages/AdminPages/AdminWorkshops";
 import PublicResumePage from "@/pages/PublicResumePage";
 import CoursesListPage from "@/pages/CoursesListPage";
+import CompleteProfilePage from "@/pages/StudentPages/CompleteProfilePage";
 
 const queryClient = new QueryClient();
 
@@ -197,6 +198,14 @@ const AppRoutes = () => {
               element={<Navigate to="/student/studentpanel" replace />}
             />
             <Route path="/student/changepassword" element={<ResetPassword />} />
+            <Route
+              path="/student/complete-profile"
+              element={
+                <ProtectedRoute allowedRoles={["student"]} redirectTo="/login">
+                  <CompleteProfilePage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/student/studentpanel"
               element={

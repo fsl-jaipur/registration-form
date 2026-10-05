@@ -80,16 +80,43 @@ export async function changePassword(req, res) {
   const { email: rawEmail, password, newPassword } = req.body;
   
   try {
-    const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
+    let email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
+
+    // Fallback if email wasn't provided in body but user is logged in via studentToken cookie
+    if (!email && req.cookies?.studentToken) {
+      try {
+        const decoded = jwt.verify(req.cookies.studentToken, process.env.JWT_SECRET);
+        if (decoded?.id) {
+          const userById = await studentModel.findById(decoded.id);
+          if (userById?.email) {
+            email = userById.email.trim().toLowerCase();
+          }
+        }
+      } catch (err) {}
+    }
 
     if (!email || !password || !newPassword) {
       return res.status(400).json({ message: "Email, old password, and new password are required." });
     }
 
-    const user = await studentModel.findOne({ email });
+    let user = await studentModel.findOne({ email });
+    if (!user && email) {
+      user = await studentModel.findOne({
+        email: { $regex: new RegExp(`^${escapeRegExp(email)}$`, "i") },
+      });
+    }
+
+    if (!user && req.cookies?.studentToken) {
+      try {
+        const decoded = jwt.verify(req.cookies.studentToken, process.env.JWT_SECRET);
+        if (decoded?.id) {
+          user = await studentModel.findById(decoded.id);
+        }
+      } catch (err) {}
+    }
     
     if (!user) {
-      return res.status(400).json({ message: "Old password is incorrect." });
+      return res.status(404).json({ message: "User account not found. Please log in again." });
     }
 
     const storedPassword = typeof user.password === "string" ? user.password : "";
@@ -110,7 +137,7 @@ export async function changePassword(req, res) {
     user.firstTimesignin = false;
     await user.save();
     
-    return res.status(200).json({ message: "Password updated successfully.",user });
+    return res.status(200).json({ message: "Password updated successfully.", user });
   } catch (error) {
     return res
     .status(500)

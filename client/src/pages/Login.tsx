@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { X, Eye, EyeOff } from "lucide-react";
 import { adminContext } from "@/Context/Admincontext";
 import { createApiClient } from "@shared/api/client";
+import CreateAccountForm from "@/components/CreateAccountForm";
 
 type StudentLoginResponse = {
   message?: string;
@@ -26,6 +27,7 @@ export default function LoginPage({ onClose }: LoginPageProps) {
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showCreateAccount, setShowCreateAccount] = useState(false);
   const closeTimerRef = useRef<number | null>(null);
 
   const close = useMemo(
@@ -95,11 +97,12 @@ export default function LoginPage({ onClose }: LoginPageProps) {
         setSuccess(message ?? "Login successful");
         setIsAuthenticated(true);
         setRole("student");
+        localStorage.setItem("studentEmail", email);
 
         const needsPasswordChange = firstTimeSignin ?? loginStatus ?? false;
 
         if (needsPasswordChange) {
-          navigate("/student/changepassword");
+          navigate("/student/changepassword", { state: { email } });
         } else {
           navigate("/student/studentpanel");
         }
@@ -137,7 +140,9 @@ export default function LoginPage({ onClose }: LoginPageProps) {
         }`}
       >
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h1 className="text-2xl font-bold text-foreground">Login</h1>
+          <h1 className="text-2xl font-bold text-foreground">
+            {showCreateAccount ? "Sign Up" : "Login"}
+          </h1>
           <button
             type="button"
             onClick={handleRequestClose}
@@ -148,94 +153,107 @@ export default function LoginPage({ onClose }: LoginPageProps) {
           </button>
         </div>
 
-        <div className="p-6">
-          <p className="text-sm text-muted-foreground mb-6">
-            Enter your email and password to continue.
-          </p>
+        <div className="p-6 overflow-y-auto h-[calc(100%-73px)]">
+          {showCreateAccount ? (
+            <CreateAccountForm onBack={() => setShowCreateAccount(false)} />
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground mb-6">
+                Enter your email and password to continue.
+              </p>
 
-          {error && <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
-          {success && <div className="mb-4 rounded-lg border border-green-300 bg-green-50 p-3 text-sm text-green-700">{success}</div>}
+              {error && (
+                <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div className="mb-4 rounded-lg border border-green-300 bg-green-50 p-3 text-sm text-green-700">
+                  {success}
+                </div>
+              )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1" htmlFor="email">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                className="w-full rounded-lg border border-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-blue"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                required
-              />
-            </div>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1" htmlFor="email">
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    className="w-full rounded-lg border border-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    required
+                  />
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1" htmlFor="password">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  className="w-full rounded-lg border border-border px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-brand-blue"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="*********"
-                  required
-                />
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1" htmlFor="password">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      className="w-full rounded-lg border border-border px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="*********"
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-lg bg-brand-blue px-4 py-2.5 text-white text-sm font-semibold hover:opacity-90 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {loading ? "Logging in…" : "Login"}
+                </button>
+              </form>
+
+              <div className="mt-4 flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Don't have an account?{" "}
+                  <button
+                    type="button"
+                    id="create-account-btn"
+                    className="text-brand-blue underline ml-1 hover:opacity-80 transition"
+                    onClick={() => {
+                      setError("");
+                      setSuccess("");
+                      setShowCreateAccount(true);
+                    }}
+                  >
+                    Create an account
+                  </button>
+                </p>
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="text-sm text-brand-blue underline hover:opacity-80 transition"
+                  onClick={() => {
+                    handleRequestClose();
+                    window.setTimeout(() => navigate("/forgot-password"), 260);
+                  }}
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  Forgot password?
                 </button>
               </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-lg bg-brand-blue px-4 py-2.5 text-white text-sm font-semibold hover:opacity-90 transition disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {loading ? "Logining" : "Login"}
-            </button>
-          </form>
-
-          <div className="mt-4 flex items-center justify-between">
-       
-
-            <p className="text-sm text-muted-foreground">
-              Don't have an account?
-              <button
-                type="button"
-                className="text-brand-blue underline ml-1"
-                onClick={() => {
-                  handleRequestClose();
-                  window.setTimeout(() => navigate("/register"), 260);
-                }}
-              >
-                Create an account
-              </button>
-            </p>
-            <button
-              type="button"
-              className="text-sm text-brand-blue underline hover:opacity-80 transition"
-              onClick={() => {
-                handleRequestClose();
-                window.setTimeout(() => navigate("/forgot-password"), 260);
-              }}
-            >
-              Forgot password?
-            </button>
-              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
   );
 }
-

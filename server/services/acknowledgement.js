@@ -135,6 +135,72 @@ export function sendAckEmail(newData) {
     });
 }
 
+export function sendQuickAccountEmail({ name, email, plainPassword }) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const from = process.env.RESEND_FROM_EMAIL || "rohit@fullstacklearning.com";
+  const website = (process.env.FRONTEND_PATH || "https://www.fullstacklearning.com").trim().replace(/\/$/, "");
+  const dashboardLink = process.env.STUDENT_DASHBOARD_URL || `${website}/student/studentpanel`;
+  const completeProfileLink = `${website}/student/complete-profile`;
+
+  const html = `
+    <html>
+      <body style="font-family: Arial, sans-serif; background-color: #f5f7fa; margin: 0; padding: 0;">
+        <table align="center" width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05); margin-top: 40px;">
+          <tr>
+            <td style="padding: 20px 30px; text-align: center; background-color: #004aad; color: #ffffff; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+              <h2 style="margin: 0;">Welcome to Full Stack Learning!</h2>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 30px;">
+              <p style="font-size: 16px; color: #333333;">Dear <strong>${name || "Student"}</strong>,</p>
+              <p style="font-size: 16px; color: #333333;">
+                Your account has been created successfully. Here are your login credentials:
+              </p>
+              <table cellpadding="8" cellspacing="0" style="background:#f0f4ff; border-radius:6px; margin: 16px 0;">
+                <tr><td style="font-size:14px; color:#555;"><strong>Email:</strong></td><td style="font-size:14px; color:#333;">${email}</td></tr>
+                <tr><td style="font-size:14px; color:#555;"><strong>Password:</strong></td><td style="font-size:14px; color:#333;">${plainPassword}</td></tr>
+              </table>
+              <p style="font-size: 14px; color: #e05a00; font-weight: bold;">
+                ⚠️ Your profile is incomplete. Please log in and complete your profile to access all student features.
+              </p>
+              <div style="margin: 20px 0; display: flex; gap: 12px;">
+                <a href="${dashboardLink}" style="background-color: #004aad; color: #ffffff; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-weight: bold; margin-right: 12px;">Go to Dashboard</a>
+                <a href="${completeProfileLink}" style="background-color: #e05a00; color: #ffffff; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-weight: bold;">Complete Profile</a>
+              </div>
+              <p style="font-size: 14px; color: #777777;">Please keep your credentials safe and do not share them with anyone.</p>
+              <p style="font-size: 16px; color: #333333;">Best regards,<br/><strong>Full Stack Learning Team</strong></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 15px; text-align: center; font-size: 12px; color: #999999; background-color: #f0f0f0; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
+              © ${new Date().getFullYear()} Full Stack Learning. All rights reserved.
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+  `;
+
+  resend.emails
+    .send({
+      from,
+      to: email,
+      subject: "Account Created – Welcome to Full Stack Learning",
+      html,
+    })
+    .then(({ error }) => {
+      if (error) {
+        console.error("Error sending quick account email:", error);
+      } else {
+        console.log("Quick account email sent successfully");
+      }
+    })
+    .catch((error) => {
+      console.error("Error sending quick account email:", error);
+    });
+}
+
 export function sendDataByEmail(newData) {
   const getMonthName = [
     "January", "February", "March", "April", "May", "June",

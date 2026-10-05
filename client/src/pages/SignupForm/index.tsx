@@ -121,15 +121,26 @@ const Field = ({
   </div>
 );
 
-const SignupForm = () => {
+type SignupFormProps = {
+  /** 'register' = existing Enroll Now flow (default). 'complete-profile' = update existing account. */
+  mode?: "register" | "complete-profile";
+  /** Pre-filled values injected when mode === 'complete-profile' */
+  prefillData?: Partial<RegistrationFormValues & { email: string }>;
+};
+
+const SignupForm = ({ mode = "register", prefillData }: SignupFormProps = {}) => {
+  const isProfileMode = mode === "complete-profile";
   const { toast } = useToast();
   const [errors, setErrors] = useState<Errors>({});
   const [submitted, setSubmitted] = useState(false);
-  const [formState, dispatch] = useReducer(formReducer, initialFormState);
+  const [formState, dispatch] = useReducer(
+    formReducer,
+    prefillData ? { ...initialFormState, ...prefillData } : initialFormState
+  );
   const [openTc, setOpenTc] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emailExists, setEmailExists] = useState(false);
-  const [emailChecked, setEmailChecked] = useState(false);
+  const [emailChecked, setEmailChecked] = useState(isProfileMode);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [aadharFrontFile, setAadharFrontFile] = useState<File | null>(null);
   const [aadharBackFile, setAadharBackFile] = useState<File | null>(null);
@@ -138,6 +149,7 @@ const SignupForm = () => {
   const navigate = useNavigate();
 
   const apiBase = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+  const endpoint = isProfileMode ? `${apiBase}/students/complete-profile` : `${apiBase}/students/register`;
 
   const setField = <K extends keyof RegistrationFormValues>(
     field: K,
@@ -342,14 +354,14 @@ const SignupForm = () => {
         formData.append("aadharBack", formState.aadharBack);
       }
 
-      const res = await fetch(`${apiBase}/students/register`, {
+      const res = await fetch(endpoint, {
         method: "POST",
         credentials: "include",
         body: formData,
       });
 
       if (!res.ok) {
-        let errorMsg = "Failed to submit registration";
+        let errorMsg = isProfileMode ? "Failed to update profile" : "Failed to submit registration";
         try {
           const data = await res.json();
           errorMsg = data.message || errorMsg;
@@ -360,19 +372,27 @@ const SignupForm = () => {
         throw new Error(errorMsg);
       }
 
-      toast({
-        title: "Registration Submitted!",
-        description: "Your registration has been received successfully.",
-      });
-      dispatch({ type: "setMany", payload: initialFormState });
-      setAadharFrontFile(null);
-      setAadharBackFile(null);
-      setSubmitted(false);
-      setErrors({});
-      setOpenTc(false);
-      setEmailExists(false);
-      setEmailChecked(false);
-      navigate("/login");
+      if (isProfileMode) {
+        toast({
+          title: "Profile Updated!",
+          description: "Your profile has been completed successfully.",
+        });
+        navigate("/student/studentpanel");
+      } else {
+        toast({
+          title: "Registration Submitted!",
+          description: "Your registration has been received successfully.",
+        });
+        dispatch({ type: "setMany", payload: initialFormState });
+        setAadharFrontFile(null);
+        setAadharBackFile(null);
+        setSubmitted(false);
+        setErrors({});
+        setOpenTc(false);
+        setEmailExists(false);
+        setEmailChecked(false);
+        navigate("/login");
+      }
     } catch (err) {
       console.error(err);
       toast({
@@ -431,27 +451,34 @@ const SignupForm = () => {
                       type="email"
                       placeholder="Email Address"
                       value={formState.email}
+                      readOnly={isProfileMode}
                       onChange={(e) => {
+                        if (isProfileMode) return;
                         setEmailExists(false);
                         setEmailChecked(false);
                         setField("email", e.target.value);
                       }}
-                      onBlur={(e) => handleEmailBlur(e.target.value)}
+                      onBlur={(e) => { if (!isProfileMode) handleEmailBlur(e.target.value); }}
                       className={cn(
-                        (hasError("email") || emailExists) && "border-destructive",
+                        (hasError("email") || (!isProfileMode && emailExists)) && "border-destructive",
+                        isProfileMode && "bg-muted cursor-not-allowed opacity-70",
                       )}
                     />
-                    {isCheckingEmail ? (
+                    {!isProfileMode && isCheckingEmail ? (
                       <p className="text-sm text-muted-foreground mt-1">
                         Verifying email...
                       </p>
-                    ) : emailExists ? (
+                    ) : !isProfileMode && emailExists ? (
                       <p className="text-sm text-destructive mt-1">
                         This email is already registered.
                       </p>
-                    ) : emailChecked && formState.email ? (
+                    ) : !isProfileMode && emailChecked && formState.email ? (
                       <p className="text-sm text-green-600 mt-1">
                         Email is available.
+                      </p>
+                    ) : isProfileMode ? (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Email cannot be changed.
                       </p>
                     ) : null}
                   </Field>
@@ -1013,9 +1040,11 @@ const SignupForm = () => {
             <Button
               type="submit"
               className="w-full h-11 sm:h-12 text-base sm:text-lg font-semibold"
-              disabled={isSubmitting || !formState.tcAccepted || emailExists || isCheckingEmail}
+              disabled={isSubmitting || !formState.tcAccepted || (!isProfileMode && (emailExists || isCheckingEmail))}
             >
-              {isSubmitting ? "Submitting..." : "Submit Registration"}
+              {isSubmitting
+                ? isProfileMode ? "Updating..." : "Submitting..."
+                : isProfileMode ? "Update Profile" : "Submit Registration"}
             </Button>
           </form>
         </div>

@@ -1,6 +1,6 @@
 import studentModel from "../models/studentModel.js";
 import { cloudinaryUpload } from "../middlewares/cloudinaryUpload.js";
-import { sendAckEmail, sendDataByEmail } from "../services/acknowledgement.js";
+import { sendAckEmail, sendDataByEmail, sendQuickAccountEmail } from "../services/acknowledgement.js";
 import Test from "../models/testModel.js";
 import attemptQuiz from "../models/QuizAttempt.js";
 import careerApplicationModel from "../models/careerApplicationModel.js";
@@ -120,6 +120,195 @@ export async function register(req, res) {
     }
     return res.status(500).send({
       message: "Error registering student",
+      error: error.message,
+    });
+  }
+}
+
+// ─── NEW: Quick Account Registration (Name + Email only) ───────────────────
+export async function quickRegister(req, res) {
+  try {
+    const rawName = typeof req.body.name === "string" ? req.body.name.trim() : "";
+    const rawEmail = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+
+    if (!rawName) return res.status(400).json({ message: "Name is required." });
+    if (!rawEmail) return res.status(400).json({ message: "Email is required." });
+
+    // Check for existing account
+    const existing = await studentModel.findOne({ email: rawEmail });
+    if (existing) {
+      return res.status(400).json({
+        message: "An account with this email already exists. Please login instead.",
+      });
+    }
+
+    const plainPassword = generatePassword();
+
+    const newStudent = new studentModel({
+      name: rawName,
+      email: rawEmail,
+      password: plainPassword,
+      role: "student",
+      firstTimesignin: true,
+    });
+
+    await newStudent.save();
+
+    // Send credentials via email (non-blocking)
+    sendQuickAccountEmail({ name: rawName, email: rawEmail, plainPassword });
+
+    return res.status(201).json({
+      message: "Account created successfully. Your login credentials have been sent to your email.",
+    });
+  } catch (error) {
+    console.error("Quick register error:", error);
+    if (error.code === 11000 || (error.message && error.message.includes("E11000"))) {
+      return res.status(400).json({
+        message: "An account with this email already exists. Please login instead.",
+      });
+    }
+    return res.status(500).json({
+      message: "Error creating account",
+      error: error.message,
+    });
+  }
+}
+
+// Profile completion fields and their weights
+const PROFILE_FIELDS = [
+  "name", "email", "phone", "dob", "gender",
+  "fname", "fphone", "laddress", "paddress",
+  "qualification", "qualificationYear", "college",
+  "course", "referral", "aadharFront", "aadharBack",
+  "termsAccepted",
+];
+
+export function calculateProfileCompletion(student) {
+  let filled = 0;
+  for (const field of PROFILE_FIELDS) {
+    const val = student[field];
+    if (val !== undefined && val !== null && val !== "" && val !== false) {
+      filled++;
+    }
+  }
+  return Math.round((filled / PROFILE_FIELDS.length) * 100);
+}
+
+// ─── NEW: Get Current Logged-in Student Profile ────────────────────────────
+export async function getStudentProfile(req, res) {
+  try {
+    const token = req.firstTimeSignin;
+    const student = await studentModel.findById(token.id).select("-password -resetPasswordToken -resetPasswordExpires");
+
+    if (!student) {
+      return res.status(404).json({ message: "Student not found." });
+    }
+
+    const profileCompletion = calculateProfileCompletion(student);
+
+    return res.status(200).json({
+      ...student.toObject(),
+      profileCompletion,
+    });
+  } catch (error) {
+    console.error("Error fetching student profile:", error);
+    return res.status(500).json({ message: "Failed to fetch profile.", error: error.message });
+  }
+}
+
+// ─── NEW: Complete Profile (update existing account with enrollment data) ──
+export async function completeProfile(req, res) {
+  try {
+    const token = req.firstTimeSignin;
+    const studentId = token.id;
+
+    let aadharFront = "", aadharBack = "";
+    const toBool = (value) => value === true || value === "true";
+
+    const {
+      name,
+      phone,
+      dob,
+      gender,
+      fname,
+      fphone,
+      laddress,
+      paddress,
+      qualification,
+      qualificationYear,
+      college,
+      designation,
+      company,
+      course,
+      otherCourse,
+      referral,
+      friendName,
+      termsAccepted,
+      aadharFront: aadharFrontBody,
+      aadharBack: aadharBackBody,
+      fatherName,
+      fatherPhone,
+      localAddress,
+      permanentAddress,
+      qualYear,
+      tcAccepted,
+    } = req.body;
+
+    const files = Array.isArray(req.files) ? req.files : [];
+    const aadharFiles = files.filter(
+      (file) => file.fieldname === "aadharFront" || file.fieldname === "aadharBack"
+    );
+
+    if (aadharFiles.length > 0) {
+      const cloudinaryObject = await cloudinaryUpload(aadharFiles);
+      cloudinaryObject.forEach((uploaded) => {
+        if (uploaded.fieldname === "aadharFront") aadharFront = uploaded.secure_url;
+        else if (uploaded.fieldname === "aadharBack") aadharBack = uploaded.secure_url;
+      });
+    } else {
+      aadharFront = aadharFrontBody || "";
+      aadharBack = aadharBackBody || "";
+    }
+
+    const student = await studentModel.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ message: "Student not found." });
+    }
+
+    // Update fields — do NOT change email (it is the unique identifier)
+    if (name) student.name = name;
+    if (phone) student.phone = phone;
+    if (dob) student.dob = dob;
+    if (gender) student.gender = gender;
+    student.fname = fname || fatherName || student.fname;
+    student.fphone = fphone || fatherPhone || student.fphone;
+    student.laddress = laddress || localAddress || student.laddress;
+    student.paddress = paddress || permanentAddress || student.paddress;
+    if (qualification) student.qualification = qualification;
+    if (qualificationYear || qualYear) student.qualificationYear = qualificationYear || qualYear;
+    if (college) student.college = college;
+    if (designation) student.designation = designation;
+    if (company) student.company = company;
+    if (course) student.course = course;
+    if (otherCourse) student.otherCourse = otherCourse;
+    if (referral) student.referral = referral;
+    if (friendName) student.friendName = friendName;
+    if (aadharFront) student.aadharFront = aadharFront;
+    if (aadharBack) student.aadharBack = aadharBack;
+    student.termsAccepted = toBool(termsAccepted) || toBool(tcAccepted) || student.termsAccepted || false;
+
+    await student.save();
+
+    const profileCompletion = calculateProfileCompletion(student);
+
+    return res.status(200).json({
+      message: "Profile updated successfully.",
+      profileCompletion,
+    });
+  } catch (error) {
+    console.error("Complete profile error:", error);
+    return res.status(500).json({
+      message: "Error updating profile",
       error: error.message,
     });
   }

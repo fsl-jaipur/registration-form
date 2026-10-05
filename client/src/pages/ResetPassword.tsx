@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { createApiClient } from "@shared/api/client";
 
@@ -10,17 +10,22 @@ type ChangePasswordResponse = {
 };
 
 const ChangePassword = (): JSX.Element => {
-  const [email, setEmail] = useState<string>("");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const api = createApiClient(import.meta.env.VITE_API_URL || "");
+
+  const [email, setEmail] = useState<string>(() => {
+    const stateEmail = (location.state as { email?: string } | null)?.email;
+    if (stateEmail) return stateEmail;
+    return localStorage.getItem("studentEmail") || localStorage.getItem("userEmail") || "";
+  });
   const [oldPassword, setOldPassword] = useState<string>("");
   const [newPassword, setNewPassword] = useState<string>("");
   const [message, setMessage] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [showOld, setShowOld] = useState(false);
   const [showNew, setShowNew] = useState(false);
-
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const api = createApiClient(import.meta.env.VITE_API_URL || "");
 
   const handleChangePassword = async (
     e: FormEvent<HTMLFormElement>

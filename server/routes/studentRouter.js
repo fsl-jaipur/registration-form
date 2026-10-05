@@ -16,8 +16,10 @@ import {
   StudenAnswer,
   getStudentQuizAttempts,
   getStudentQuizAttemptDetail,
-  getAttemptedTestIds
-
+  getAttemptedTestIds,
+  quickRegister,
+  getStudentProfile,
+  completeProfile,
 } from "../controllers/studentController.js";
 import { careerResumeUpload, fileArr } from "../middlewares/multer.js";
 import authMiddleware from "../middlewares/authJWT.js";
@@ -25,6 +27,9 @@ import authMiddleware from "../middlewares/authJWT.js";
 const studentRouter = Router();
 
 studentRouter.post("/register", fileArr, register);
+studentRouter.post("/quick-register", quickRegister);
+studentRouter.get("/profile", authMiddleware("studentToken"), getStudentProfile);
+studentRouter.post("/complete-profile", authMiddleware("studentToken"), fileArr, completeProfile);
 studentRouter.post("/career-apply", careerResumeUpload, createCareerApplication);
 studentRouter.get("/email-exists", checkEmailExists);
 studentRouter.get("/getStudents", authMiddleware("adminToken"), fetchStudent);
