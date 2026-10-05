@@ -167,6 +167,22 @@ export function sendDataByEmail(newData) {
         ? `${newData.course} (${newData.otherCourse})`
         : newData.course;
 
+      // Format DOB as DD/MM/YYYY, handling both ISO and DD/MM/YYYY formats
+      const formatDob = (dob) => {
+        if (!dob) return "-";
+        // If already in DD/MM/YYYY format, return as-is
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dob)) return dob;
+        // If ISO date string, parse and format
+        const d = new Date(dob);
+        if (!isNaN(d.getTime())) {
+          const day = String(d.getDate()).padStart(2, '0');
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const year = d.getFullYear();
+          return `${day}/${month}/${year}`;
+        }
+        return dob;
+      };
+
       const html = `
         <html>
           <body style="font-family: Arial, sans-serif; background-color: #f5f7fa; margin: 0; padding: 0;">
@@ -183,7 +199,7 @@ export function sendDataByEmail(newData) {
                     <tr><td><strong>Email:</strong></td><td>${newData.email}</td></tr>
                     <tr><td><strong>Phone:</strong></td><td>${newData.phone}</td></tr>
                     <tr><td><strong>Course:</strong></td><td>${courseName}</td></tr>
-                    <tr><td><strong>Date of Birth:</strong></td><td>${newData.dob}</td></tr>
+                    <tr><td><strong>Date of Birth:</strong></td><td>${formatDob(newData.dob)}</td></tr>
                     <tr><td><strong>Father's Name:</strong></td><td>${newData.fname}</td></tr>
                     <tr><td><strong>Father's Phone:</strong></td><td>${newData.fphone}</td></tr>
                     <tr><td><strong>Local Address:</strong></td><td>${newData.laddress}</td></tr>

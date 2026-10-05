@@ -313,7 +313,7 @@ const SignupForm = () => {
       formData.append("name", formState.name);
       formData.append("email", formState.email.trim().toLowerCase());
       formData.append("phone", formState.phone);
-      formData.append("dob", formState.dob ? formState.dob.toISOString() : "");
+      formData.append("dob", formState.dob ? format(formState.dob, "dd/MM/yyyy") : "");
       formData.append("gender", formState.gender);
       formData.append("fatherName", formState.fatherName);
       formData.append("fatherPhone", formState.fatherPhone);

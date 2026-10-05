@@ -245,7 +245,23 @@ export const StudentDetailPanel = ({
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">DOB</p>
-                  <p className="text-sm font-medium">{student.dob || "-"}</p>
+                  <p className="text-sm font-medium">{
+                    student.dob
+                      ? (() => {
+                          // If it's already in DD/MM/YYYY format, show as-is
+                          if (/^\d{2}\/\d{2}\/\d{4}$/.test(student.dob)) return student.dob;
+                          // If it's an ISO date string, parse and format as DD/MM/YYYY
+                          const d = new Date(student.dob);
+                          if (!isNaN(d.getTime())) {
+                            const day = String(d.getDate()).padStart(2, '0');
+                            const month = String(d.getMonth() + 1).padStart(2, '0');
+                            const year = d.getFullYear();
+                            return `${day}/${month}/${year}`;
+                          }
+                          return student.dob;
+                        })()
+                      : "-"
+                  }</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Gender</p>

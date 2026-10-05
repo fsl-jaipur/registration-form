@@ -12,13 +12,14 @@ export default function ResumeFloatingButton() {
   return (
     <motion.button
       type="button"
+      style={{ display: "none" }}
       onClick={handleClick}
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
       aria-label="Resume Builder"
       title="Resume Builder"
-      className="group fixed bottom-6 right-6 z-40 inline-flex h-14 w-14 items-center overflow-hidden rounded-full border border-white/30 bg-slate-950 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(15,23,42,0.35)] backdrop-blur transition-all duration-300 hover:w-52 hover:-translate-y-1 hover:pr-5"
+      className="hidden group fixed bottom-6 right-6 z-40 inline-flex h-14 w-14 items-center overflow-hidden rounded-full border border-white/30 bg-slate-950 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(15,23,42,0.35)] backdrop-blur transition-all duration-300 hover:w-52 hover:-translate-y-1 hover:pr-5"
     >
       <motion.span
         animate={{ scale: [1, 1.08, 1] }}

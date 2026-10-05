@@ -1,0 +1,159 @@
+{
+  "title": "C++ Vector Coding Test",
+  "subject": "C++ STL",
+  "topic": "Vector",
+  "totalQuestions": 20,
+  "totalMarks": 20,
+  "duration": 20,
+  "difficulty": "Beginner",
+  "questions": [
+    {
+      "id": 1,
+      "type": "coding",
+      "question": "Write the statement to declare an integer vector.",
+      "answer": "vector<int> v;",
+      "marks": 1
+    },
+    {
+      "id": 2,
+      "type": "coding",
+      "question": "Write the statement to insert the value 10 into vector v.",
+      "answer": "v.push_back(10);",
+      "marks": 1
+    },
+    {
+      "id": 3,
+      "type": "coding",
+      "question": "Write the statement to remove the last element from vector v.",
+      "answer": "v.pop_back();",
+      "marks": 1
+    },
+    {
+      "id": 4,
+      "type": "output",
+      "question": "What will be the output?",
+      "code": "vector<int> v = {10,20,30};\ncout << v[1];",
+      "answer": "20",
+      "marks": 1
+    },
+    {
+      "id": 5,
+      "type": "output",
+      "question": "What will be the output?",
+      "code": "vector<int> v;\nv.push_back(5);\nv.push_back(10);\ncout << v.size();",
+      "answer": "2",
+      "marks": 1
+    },
+    {
+      "id": 6,
+      "type": "coding",
+      "question": "Write the statement to print the first element of vector v.",
+      "answer": "cout << v.front();",
+      "marks": 1
+    },
+    {
+      "id": 7,
+      "type": "coding",
+      "question": "Write the statement to print the last element of vector v.",
+      "answer": "cout << v.back();",
+      "marks": 1
+    },
+    {
+      "id": 8,
+      "type": "output",
+      "question": "What will be the output?",
+      "code": "vector<int> v = {2,4,6,8};\ncout << v.back();",
+      "answer": "8",
+      "marks": 1
+    },
+    {
+      "id": 9,
+      "type": "coding",
+      "question": "Write the statement to check whether vector v is empty.",
+      "answer": "v.empty()",
+      "marks": 1
+    },
+    {
+      "id": 10,
+      "type": "output",
+      "question": "What will be the output?",
+      "code": "vector<int> v;\ncout << v.empty();",
+      "answer": "1",
+      "marks": 1
+    },
+    {
+      "id": 11,
+      "type": "coding",
+      "question": "Write the statement to print the number of elements in vector v.",
+      "answer": "cout << v.size();",
+      "marks": 1
+    },
+    {
+      "id": 12,
+      "type": "output",
+      "question": "What will be the output?",
+      "code": "vector<int> v = {1,2,3};\nv.pop_back();\ncout << v.size();",
+      "answer": "2",
+      "marks": 1
+    },
+    {
+      "id": 13,
+      "type": "coding",
+      "question": "Write a for loop to print all elements of vector v.",
+      "answer": "for(int i=0;i<v.size();i++) cout<<v[i]<<\" \";",
+      "marks": 1
+    },
+    {
+      "id": 14,
+      "type": "output",
+      "question": "What will be the output?",
+      "code": "vector<char> v={'A','B','C'};\ncout<<v[2];",
+      "answer": "C",
+      "marks": 1
+    },
+    {
+      "id": 15,
+      "type": "coding",
+      "question": "Write the statement to clear all elements of vector v.",
+      "answer": "v.clear();",
+      "marks": 1
+    },
+    {
+      "id": 16,
+      "type": "output",
+      "question": "What will be the output?",
+      "code": "vector<int> v={10,20};\nv.push_back(30);\ncout<<v.size();",
+      "answer": "3",
+      "marks": 1
+    },
+    {
+      "id": 17,
+      "type": "coding",
+      "question": "Write the statement to declare a string vector.",
+      "answer": "vector<string> v;",
+      "marks": 1
+    },
+    {
+      "id": 18,
+      "type": "output",
+      "question": "What will be the output?",
+      "code": "vector<int> v={5,10,15};\ncout<<v.front();",
+      "answer": "5",
+      "marks": 1
+    },
+    {
+      "id": 19,
+      "type": "coding",
+      "question": "Write the statement to access the third element of vector v.",
+      "answer": "v[2]",
+      "marks": 1
+    },
+    {
+      "id": 20,
+      "type": "coding",
+      "question": "Write the statement to insert 100 at the end of vector v.",
+      "answer": "v.push_back(100);",
+      "marks": 1
+    }
+  ]
+}
