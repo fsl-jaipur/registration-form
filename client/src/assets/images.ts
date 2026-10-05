@@ -42,6 +42,6 @@ export const images = {
   gallmg8: 'https://stfsl.blob.core.windows.net/fslfiles/gallmg8.jpg',
   hero_bg: 'https://stfsl.blob.core.windows.net/fslfiles/hero-bg.jpg',
   jatin: 'https://stfsl.blob.core.windows.net/fslfiles/jatin.jpeg',
-  logo: 'https://stfsl.blob.core.windows.net/fslfiles/logo.png',
+  logo: 'https://res.cloudinary.com/ddadanczt/image/upload/v1757241319/bgejuqbqucd1hpkrbtdv.png',
   placed1: 'https://stfsl.blob.core.windows.net/fslfiles/placed1.jpg',
 };
