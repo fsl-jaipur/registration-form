@@ -110,7 +110,7 @@ export async function register(req, res) {
     sendDataByEmail(newRegistration);
 
     return res.status(201).send({ message: "Registration Successful" });
-    
+
   } catch (error) {
     console.error("Registration error:", error);
     if (error.code === 11000 || (error.message && error.message.includes("E11000"))) {
@@ -365,7 +365,7 @@ export async function fetchStudent(req, res) {
   try {
     const students = await studentModel
       .find()
-      .select('-email_check -password -salt') 
+      .select('-email_check -password -salt')
       .sort({ createdAt: -1 });
 
     return res.status(200).json(students);
@@ -533,7 +533,7 @@ export async function submitAnswer(req, res) {
     if (!question) return res.status(404).json({ message: "Question not found" });
 
     const correctAnswer = question.correct_answer;
-    
+
 
     const quizAttemptDoc = await attemptQuiz.findOne({
       "attempts._id": quizAttemptId,
@@ -579,7 +579,7 @@ export async function submitAnswer(req, res) {
 export async function finishQuiz(req, res) {
   try {
     const { quizAttemptId } = req.params;
-    const { score, reason } = req.body; 
+    const { score, reason } = req.body;
 
     if (typeof score !== "number") {
       return res.status(400).json({ message: "Score must be a number" });
@@ -605,7 +605,7 @@ export async function finishQuiz(req, res) {
 
     attempt.endTime = new Date();
     attempt.score = score;
-    attempt.finishReason = reason || "Manual submission"; 
+    attempt.finishReason = reason || "Manual submission";
 
     await quizAttemptDoc.save();
 
@@ -686,16 +686,16 @@ export async function getScoresByTest(req, res) {
         }
       },
       {
-        $sort: { score: -1 } 
+        $sort: { score: -1 }
       }
     ]);
-    
-    
+
+
     if (students.length === 0) {
       return res.status(404).json({ message: "No students found for this test!" });
     }
-    
-    
+
+
     return res.status(200).json(students);
   } catch (error) {
     console.error("Error fetching test scores:", error);
@@ -741,7 +741,7 @@ export const StudenAnswer = async (req, res) => {
         options: question?.options || [],
         correctAnswer: question?.correct_answer || "",
         selectedOption: r.selectedOption || "",
-        selectedAnswer: r.selectedAnswer || "", 
+        selectedAnswer: r.selectedAnswer || "",
       };
     });
 
@@ -764,27 +764,27 @@ export const StudenAnswer = async (req, res) => {
 
 export async function getStudentQuizAttempts(req, res) {
   try {
-    const token = req.firstTimeSignin; 
+    const token = req.firstTimeSignin;
     const studentId = token.id;
 
 
     const studentAttempts = await attemptQuiz.findOne({ studentId });
-    
+
     if (!studentAttempts || !studentAttempts.attempts.length) {
-      return res.status(200).json([]); 
+      return res.status(200).json([]);
     }
     const testIds = studentAttempts.attempts.map(attempt => attempt.testId);
 
-    const tests = await Test.find({ 
+    const tests = await Test.find({
       _id: { $in: testIds },
       result: true // Only get tests where results have been released
-    });  
+    });
 
     // Create a map of test IDs for quick lookup
     const releasedTestIds = new Set(tests.map(test => test._id.toString()));
 
     // Filter attempts to only include those with released results
-    const releasedAttempts = studentAttempts.attempts.filter(attempt => 
+    const releasedAttempts = studentAttempts.attempts.filter(attempt =>
       releasedTestIds.has(attempt.testId.toString())
     );
 
@@ -839,12 +839,12 @@ export async function getStudentQuizAttemptDetail(req, res) {
     }
 
     const test = await Test.findById(attempt.testId);
-    
+
     if (!test) {
       return res.status(404).json({ message: "Test not found" });
     }
 
-    if (test.result===false) {
+    if (test.result === false) {
       return res.status(403).json({ message: "Results not yet released for this test" });
     }
 

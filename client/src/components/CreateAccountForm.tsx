@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from "react";
+import { useState, useRef, type FormEvent } from "react";
 import { ArrowLeft, CheckCircle2, Loader2, User, Mail } from "lucide-react";
 import { createApiClient } from "@shared/api/client";
+import ReCAPTCHA from "react-google-recaptcha";
 
 type CreateAccountFormProps = {
   onBack: () => void;
@@ -10,9 +11,13 @@ export default function CreateAccountForm({ onBack }: CreateAccountFormProps) {
   const api = createApiClient(import.meta.env.VITE_API_URL || "");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const recaptchaRef = useRef<ReCAPTCHA | null>(null);
+
+  const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || "";
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -31,11 +36,16 @@ export default function CreateAccountForm({ onBack }: CreateAccountFormProps) {
       return;
     }
 
+    if (siteKey && !captchaToken) {
+      setError("Please complete the CAPTCHA verification.");
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await api.request("/students/quick-register", {
         method: "POST",
-        body: JSON.stringify({ name: trimmedName, email: trimmedEmail }),
+        body: JSON.stringify({ name: trimmedName, email: trimmedEmail, captchaToken }),
       });
 
       const data = (await response.json()) as { message?: string };
@@ -44,11 +54,15 @@ export default function CreateAccountForm({ onBack }: CreateAccountFormProps) {
         setSuccess(true);
       } else {
         setError(data?.message ?? "Unable to create account. Please try again.");
+        recaptchaRef.current?.reset();
+        setCaptchaToken(null);
       }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Something went wrong. Please try again."
       );
+      recaptchaRef.current?.reset();
+      setCaptchaToken(null);
     } finally {
       setLoading(false);
     }
@@ -145,6 +159,17 @@ export default function CreateAccountForm({ onBack }: CreateAccountFormProps) {
             />
           </div>
         </div>
+
+        {siteKey ? (
+          <div className="flex justify-center my-2">
+            <ReCAPTCHA
+              ref={recaptchaRef}
+              sitekey={siteKey}
+              onChange={(token) => setCaptchaToken(token)}
+              onExpired={() => setCaptchaToken(null)}
+            />
+          </div>
+        ) : null}
 
         <button
           type="submit"

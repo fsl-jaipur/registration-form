@@ -46,6 +46,7 @@ import type {
   RegistrationFormValues,
 } from "./interfaces";
 import { useNavigate } from "react-router-dom";
+import ReCAPTCHA from "react-google-recaptcha";
 
 const initialFormState: RegistrationFormValues = {
   name: "",
@@ -147,6 +148,9 @@ const SignupForm = ({ mode = "register", prefillData }: SignupFormProps = {}) =>
   const frontRef = useRef<HTMLInputElement>(null);
   const backRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = useRef<ReCAPTCHA | null>(null);
+  const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || "";
 
   const apiBase = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
   const endpoint = isProfileMode ? `${apiBase}/students/complete-profile` : `${apiBase}/students/register`;
@@ -321,7 +325,19 @@ const SignupForm = ({ mode = "register", prefillData }: SignupFormProps = {}) =>
         return;
       }
 
+      if (!isProfileMode && siteKey && !captchaToken) {
+        toast({
+          title: "CAPTCHA Required",
+          description: "Please complete the CAPTCHA verification before submitting.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const formData = new FormData();
+      if (captchaToken) {
+        formData.append("captchaToken", captchaToken);
+      }
       formData.append("name", formState.name);
       formData.append("email", formState.email.trim().toLowerCase());
       formData.append("phone", formState.phone);
@@ -409,646 +425,655 @@ const SignupForm = ({ mode = "register", prefillData }: SignupFormProps = {}) =>
   const getError = (field: string) => (submitted ? errors[field] : undefined);
   const hasError = (field: string) => Boolean(getError(field));
   return (
-      <div className="min-h-screen bg-background py-8 sm:py-12 px-1 sm:px-4">
-        <div className="mx-auto p-4 sm:p-14">
-          <h1 className="mb-2 text-center text-3xl sm:text-4xl font-bold text-foreground">
-            Registration <span className="text-gradient-brand">Form</span>
-          </h1>
-          <p className="mb-6 sm:mb-8 text-center text-sm sm:text-base text-muted-foreground">
-            Fill in your details to register
-          </p>
+    <div className="min-h-screen bg-background py-8 sm:py-12 px-1 sm:px-4">
+      <div className="mx-auto p-4 sm:p-14">
+        <h1 className="mb-2 text-center text-3xl sm:text-4xl font-bold text-foreground">
+          Registration <span className="text-gradient-brand">Form</span>
+        </h1>
+        <p className="mb-6 sm:mb-8 text-center text-sm sm:text-base text-muted-foreground">
+          Fill in your details to register
+        </p>
 
-          <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
-            {/* Card 1 — Personal Details */}
-            <Card className="shadow-lg ">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base sm:text-lg font-semibold text-card-foreground">
-                  Personal Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field
-                    label="Name"
-                    required
-                    error={getError("name")}
-                  >
-                    <Input
-                      name="name"
-                      placeholder="Full Name"
-                      value={formState.name}
-                      onChange={(e) => setField("name", e.target.value)}
-                      className={cn(hasError("name") && "border-destructive")}
-                    />
-                  </Field>
-                  <Field
-                    label="Email"
-                    required
-                    error={getError("email")}
-                  >
-                    <Input
-                      name="email"
-                      type="email"
-                      placeholder="Email Address"
-                      value={formState.email}
-                      readOnly={isProfileMode}
-                      onChange={(e) => {
-                        if (isProfileMode) return;
-                        setEmailExists(false);
-                        setEmailChecked(false);
-                        setField("email", e.target.value);
-                      }}
-                      onBlur={(e) => { if (!isProfileMode) handleEmailBlur(e.target.value); }}
-                      className={cn(
-                        (hasError("email") || (!isProfileMode && emailExists)) && "border-destructive",
-                        isProfileMode && "bg-muted cursor-not-allowed opacity-70",
-                      )}
-                    />
-                    {!isProfileMode && isCheckingEmail ? (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Verifying email...
-                      </p>
-                    ) : !isProfileMode && emailExists ? (
-                      <p className="text-sm text-destructive mt-1">
-                        This email is already registered.
-                      </p>
-                    ) : !isProfileMode && emailChecked && formState.email ? (
-                      <p className="text-sm text-green-600 mt-1">
-                        Email is available.
-                      </p>
-                    ) : isProfileMode ? (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Email cannot be changed.
-                      </p>
-                    ) : null}
-                  </Field>
-                  <Field
-                    label="Phone"
-                    required
-                    error={getError("phone")}
-                  >
-                    <Input
-                      name="phone"
-                      type="tel"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={10}
-                      placeholder="Phone Number"
-                      value={formState.phone}
-                      onChange={(e) =>
-                        setField("phone", sanitizePhone(e.target.value))
-                      }
-                      className={cn(hasError("phone") && "border-destructive")}
-                    />
-                  </Field>
-                  <Field
-                    label="Date of Birth"
-                    required
-                    error={getError("dob")}
-                  >
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          name="dob"
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !formState.dob && "text-muted-foreground",
-                            hasError("dob") && "border-destructive",
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {formState.dob
-                            ? format(formState.dob, "PPP")
-                            : "Pick a date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <DatePicker
-                          selected={formState.dob}
-                          onChange={(date) => setField("dob", date)}
-                          maxDate={new Date()}
-                          showYearDropdown
-                          showMonthDropdown
-                          dropdownMode="select"
-                          dateFormat="MM/dd/yyyy"
-                          className="w-full border rounded-md p-2"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </Field>
-                  <Field
-                    label="Gender"
-                    required
-                    error={getError("gender")}
-                    className="sm:col-span-2"
-                  >
-                    <RadioGroup
-                      name="gender"
-                      value={formState.gender}
-                      onValueChange={(val) => setField("gender", val)}
-                      className="flex flex-wrap gap-4 sm:gap-6"
-                    >
-                      {GENDER_OPTIONS.map((g) => (
-                        <div key={g} className="flex items-center space-x-2">
-                          <RadioGroupItem
-                            value={g.toLowerCase()}
-                            id={`gender-${g}`}
-                          />
-                          <Label
-                            htmlFor={`gender-${g}`}
-                            className="text-card-foreground font-normal cursor-pointer"
-                          >
-                            {g}
-                          </Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  </Field>
-                  <Field
-                    label="Father's Name"
-                    required
-                    error={getError("fatherName")}
-                  >
-                    <Input
-                      placeholder="Father's Name"
-                      value={formState.fatherName}
-                      onChange={(e) =>
-                        setField("fatherName", e.target.value)
-                      }
-                      className={cn(
-                        hasError("fatherName") && "border-destructive",
-                      )}
-                    />
-                  </Field>
-                  <Field
-                    label="Father's Phone"
-                    required
-                    error={getError("fatherPhone")}
-                  >
-                    <Input
-                      name="phone"
-                      type="tel"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={10}
-                      placeholder="Father's Phone"
-                      value={formState.fatherPhone}
-                      onChange={(e) =>
-                        setField(
-                          "fatherPhone",
-                          sanitizePhone(e.target.value),
-                        )
-                      }
-                      className={cn(
-                        hasError("fatherPhone") && "border-destructive",
-                      )}
-                    />
-                  </Field>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Card 2 — Address Details */}
-            <Card className="shadow-lg">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base sm:text-lg font-semibold text-card-foreground">
-                  Address Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
+          {/* Card 1 — Personal Details */}
+          <Card className="shadow-lg ">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base sm:text-lg font-semibold text-card-foreground">
+                Personal Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field
-                  label="Local Address"
+                  label="Name"
                   required
-                  error={getError("localAddress")}
+                  error={getError("name")}
                 >
-                  <Textarea
-                    name="localAddress"
-                    placeholder="Enter local address"
-                    value={formState.localAddress}
-                    onChange={(e) => handleLocalChange(e.target.value)}
-                    className={cn(
-                      hasError("localAddress") && "border-destructive",
-                    )}
+                  <Input
+                    name="name"
+                    placeholder="Full Name"
+                    value={formState.name}
+                    onChange={(e) => setField("name", e.target.value)}
+                    className={cn(hasError("name") && "border-destructive")}
                   />
                 </Field>
-                <div className="flex items-center space-x-3">
-                  <Switch
-                    checked={formState.sameAsLocal}
-                    onCheckedChange={handleSameAsLocal}
-                  />
-                  <Label className="text-card-foreground font-normal cursor-pointer">
-                    Same as Local Address
-                  </Label>
-                </div>
                 <Field
-                  label="Permanent Address"
+                  label="Email"
                   required
-                  error={getError("permanentAddress")}
+                  error={getError("email")}
                 >
-                  <Textarea
-                    name="permanentAddress"
-                    placeholder="Enter permanent address"
-                    value={formState.permanentAddress}
+                  <Input
+                    name="email"
+                    type="email"
+                    placeholder="Email Address"
+                    value={formState.email}
+                    readOnly={isProfileMode}
+                    onChange={(e) => {
+                      if (isProfileMode) return;
+                      setEmailExists(false);
+                      setEmailChecked(false);
+                      setField("email", e.target.value);
+                    }}
+                    onBlur={(e) => { if (!isProfileMode) handleEmailBlur(e.target.value); }}
+                    className={cn(
+                      (hasError("email") || (!isProfileMode && emailExists)) && "border-destructive",
+                      isProfileMode && "bg-muted cursor-not-allowed opacity-70",
+                    )}
+                  />
+                  {!isProfileMode && isCheckingEmail ? (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Verifying email...
+                    </p>
+                  ) : !isProfileMode && emailExists ? (
+                    <p className="text-sm text-destructive mt-1">
+                      This email is already registered.
+                    </p>
+                  ) : !isProfileMode && emailChecked && formState.email ? (
+                    <p className="text-sm text-green-600 mt-1">
+                      Email is available.
+                    </p>
+                  ) : isProfileMode ? (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Email cannot be changed.
+                    </p>
+                  ) : null}
+                </Field>
+                <Field
+                  label="Phone"
+                  required
+                  error={getError("phone")}
+                >
+                  <Input
+                    name="phone"
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={10}
+                    placeholder="Phone Number"
+                    value={formState.phone}
                     onChange={(e) =>
-                      setField("permanentAddress", e.target.value)
+                      setField("phone", sanitizePhone(e.target.value))
                     }
-                    disabled={formState.sameAsLocal}
-                    className={cn(
-                      formState.sameAsLocal ? "opacity-60" : "",
-                      hasError("permanentAddress") && "border-destructive",
-                    )}
+                    className={cn(hasError("phone") && "border-destructive")}
                   />
                 </Field>
-              </CardContent>
-            </Card>
-
-            {/* Card 3 — Aadhar Card Upload */}
-            <Card className="shadow-lg">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base sm:text-lg font-semibold text-card-foreground">
-                  Aadhar Card Upload
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {[
-                    {
-                      label: "Aadhar Card (Front)",
-                      value: formState.aadharFront,
-                      field: "aadharFront" as const,
-                      ref: frontRef,
-                      key: "aadharFront",
-                      name: "aadharFront",
-                    },
-                    {
-                      label: "Aadhar Card (Back)",
-                      value: formState.aadharBack,
-                      name: "aadharBack",
-                      field: "aadharBack" as const,
-                      ref: backRef,
-                      key: "aadharBack",
-                    },
-                  ].map((item) => (
-                    <Field
-                      key={item.label}
-                      label={item.label}
-                      required
-                      error={getError(item.key)}
-                    >
-                      <input
-                        // name="aadharFront"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        ref={item.ref}
-                        onChange={(e) =>
-                          handleImageUpload(e, item.field)
-                        }
-                      />
-                      {item.value ? (
-                        <div className="relative rounded-lg border border-border overflow-hidden">
-                          <img
-                            src={item.value}
-                            alt={item.label}
-                            className="w-full h-36 sm:h-40 object-contain bg-white"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const current = formState[item.field];
-                              if (current && current.startsWith("blob:")) {
-                                URL.revokeObjectURL(current);
-                              }
-                              setField(item.field, null);
-                              if (item.field === "aadharFront") {
-                                setAadharFrontFile(null);
-                              } else {
-                                setAadharBackFile(null);
-                              }
-                            }}
-                            className="absolute top-2 right-2 rounded-full bg-destructive p-1 text-destructive-foreground hover:opacity-80"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div
-                          onClick={() => item.ref.current?.click()}
-                          className={cn(
-                            "flex h-36 sm:h-40 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors hover:border-primary hover:bg-accent/50",
-                            hasError(item.key)
-                              ? "border-destructive bg-destructive/5"
-                              : "border-border bg-accent/30",
-                          )}
-                        >
-                          <Upload className="mb-2 h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">
-                            Click to upload
-                          </span>
-                        </div>
-                      )}
-                    </Field>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Card 4 — Professional Details */}
-            <Card className="shadow-lg">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base sm:text-lg font-semibold text-card-foreground">
-                  Professional Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <RadioGroup
-                  value={formState.profession ?? "student"}
-                  onValueChange={(val) =>
-                    setField("profession", val as "student" | "professional")
-                  }
-                  className="flex flex-wrap gap-4 sm:gap-6"
-                >
-                  {PROFESSION_OPTIONS.map((opt) => (
-                    <div
-                      key={opt.value}
-                      className="flex items-center space-x-2"
-                    >
-                      <RadioGroupItem
-                        value={opt.value}
-                        id={`prof-${opt.value}`}
-                      />
-                      <Label
-                        htmlFor={`prof-${opt.value}`}
-                        className="text-card-foreground font-normal cursor-pointer"
-                      >
-                        {opt.label}
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-
-                {formState.profession === "student" && (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 rounded-lg border border-border p-3 sm:p-4">
-                    <Field
-                      label="Qualification"
-                      required
-                      error={getError("qualification")}
-                    >
-                      <Input
-                        name="qualification"
-                        placeholder="e.g. B.Tech"
-                        value={formState.qualification}
-                        onChange={(e) =>
-                          setField("qualification", e.target.value)
-                        }
-                        className={cn(
-                          hasError("qualification") && "border-destructive",
-                        )}
-                      />
-                    </Field>
-                    <Field
-                      label="Year"
-                      required
-                      error={getError("qualYear")}
-                    >
-                      <Input
-                        name="qualYear"
-                        placeholder="e.g. 2024"
-                        value={formState.qualYear}
-                        onChange={(e) => setField("qualYear", e.target.value)}
-                        className={cn(
-                          hasError("qualYear") && "border-destructive",
-                        )}
-                      />
-                    </Field>
-                    <Field
-                      label="College"
-                      required
-                      error={getError("college")}
-                    >
-                      <Input
-                        name="college"
-                        placeholder="College Name"
-                        value={formState.college}
-                        onChange={(e) => setField("college", e.target.value)}
-                        className={cn(
-                          hasError("college") && "border-destructive",
-                        )}
-                      />
-                    </Field>
-                  </div>
-                )}
-
-                {formState.profession === "professional" && (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 rounded-lg border border-border p-3 sm:p-4">
-                    <Field
-                      label="Designation"
-                      required
-                      error={getError("designation")}
-                    >
-                      <Input
-                        name="designation"
-                        placeholder="Your Designation"
-                        value={formState.designation}
-                        onChange={(e) =>
-                          setField("designation", e.target.value)
-                        }
-                        className={cn(
-                          hasError("designation") && "border-destructive",
-                        )}
-                      />
-                    </Field>
-                    <Field
-                      label="Company"
-                      required
-                      error={getError("company")}
-                    >
-                      <Input
-                        name="company"
-                        placeholder="Company Name"
-                        value={formState.company}
-                        onChange={(e) => setField("company", e.target.value)}
-                        className={cn(
-                          hasError("company") && "border-destructive",
-                        )}
-                      />
-                    </Field>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Card 5 — Course & Referral */}
-            <Card className="shadow-lg">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base sm:text-lg font-semibold text-card-foreground">
-                  Course & Referral
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
                 <Field
-                  label="Course"
+                  label="Date of Birth"
                   required
-                  error={getError("course")}
+                  error={getError("dob")}
                 >
-                  <Select
-                    name="course"
-                    value={formState.course}
-                    onValueChange={(val) => setField("course", val)}
-                  >
-                    <SelectTrigger
-                      className={cn(hasError("course") && "border-destructive")}
-                    >
-                      <SelectValue placeholder="Select a course" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {COURSE_OPTIONS.map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {c}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        name="dob"
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !formState.dob && "text-muted-foreground",
+                          hasError("dob") && "border-destructive",
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formState.dob
+                          ? format(formState.dob, "PPP")
+                          : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <DatePicker
+                        selected={formState.dob}
+                        onChange={(date) => setField("dob", date)}
+                        maxDate={new Date()}
+                        showYearDropdown
+                        showMonthDropdown
+                        dropdownMode="select"
+                        dateFormat="MM/dd/yyyy"
+                        className="w-full border rounded-md p-2"
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </Field>
                 <Field
-                  label="How did you hear about us?"
+                  label="Gender"
                   required
-                  error={getError("referral")}
+                  error={getError("gender")}
+                  className="sm:col-span-2"
                 >
                   <RadioGroup
-                    name="referral"
-                    value={formState.referral}
-                    onValueChange={(val) => setField("referral", val)}
-                    className="flex flex-wrap gap-3 sm:gap-4"
+                    name="gender"
+                    value={formState.gender}
+                    onValueChange={(val) => setField("gender", val)}
+                    className="flex flex-wrap gap-4 sm:gap-6"
                   >
-                    {REFERRAL_OPTIONS.map((r) => (
-                      <div key={r} className="flex items-center space-x-2">
+                    {GENDER_OPTIONS.map((g) => (
+                      <div key={g} className="flex items-center space-x-2">
                         <RadioGroupItem
-                          value={r.toLowerCase()}
-                          id={`ref-${r}`}
+                          value={g.toLowerCase()}
+                          id={`gender-${g}`}
                         />
                         <Label
-                          htmlFor={`ref-${r}`}
-                          className="text-card-foreground font-normal cursor-pointer text-sm sm:text-base"
+                          htmlFor={`gender-${g}`}
+                          className="text-card-foreground font-normal cursor-pointer"
                         >
-                          {r}
+                          {g}
                         </Label>
                       </div>
                     ))}
                   </RadioGroup>
                 </Field>
-                {formState.referral === "friend" && (
+                <Field
+                  label="Father's Name"
+                  required
+                  error={getError("fatherName")}
+                >
+                  <Input
+                    placeholder="Father's Name"
+                    value={formState.fatherName}
+                    onChange={(e) =>
+                      setField("fatherName", e.target.value)
+                    }
+                    className={cn(
+                      hasError("fatherName") && "border-destructive",
+                    )}
+                  />
+                </Field>
+                <Field
+                  label="Father's Phone"
+                  required
+                  error={getError("fatherPhone")}
+                >
+                  <Input
+                    name="phone"
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={10}
+                    placeholder="Father's Phone"
+                    value={formState.fatherPhone}
+                    onChange={(e) =>
+                      setField(
+                        "fatherPhone",
+                        sanitizePhone(e.target.value),
+                      )
+                    }
+                    className={cn(
+                      hasError("fatherPhone") && "border-destructive",
+                    )}
+                  />
+                </Field>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Card 2 — Address Details */}
+          <Card className="shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base sm:text-lg font-semibold text-card-foreground">
+                Address Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Field
+                label="Local Address"
+                required
+                error={getError("localAddress")}
+              >
+                <Textarea
+                  name="localAddress"
+                  placeholder="Enter local address"
+                  value={formState.localAddress}
+                  onChange={(e) => handleLocalChange(e.target.value)}
+                  className={cn(
+                    hasError("localAddress") && "border-destructive",
+                  )}
+                />
+              </Field>
+              <div className="flex items-center space-x-3">
+                <Switch
+                  checked={formState.sameAsLocal}
+                  onCheckedChange={handleSameAsLocal}
+                />
+                <Label className="text-card-foreground font-normal cursor-pointer">
+                  Same as Local Address
+                </Label>
+              </div>
+              <Field
+                label="Permanent Address"
+                required
+                error={getError("permanentAddress")}
+              >
+                <Textarea
+                  name="permanentAddress"
+                  placeholder="Enter permanent address"
+                  value={formState.permanentAddress}
+                  onChange={(e) =>
+                    setField("permanentAddress", e.target.value)
+                  }
+                  disabled={formState.sameAsLocal}
+                  className={cn(
+                    formState.sameAsLocal ? "opacity-60" : "",
+                    hasError("permanentAddress") && "border-destructive",
+                  )}
+                />
+              </Field>
+            </CardContent>
+          </Card>
+
+          {/* Card 3 — Aadhar Card Upload */}
+          <Card className="shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base sm:text-lg font-semibold text-card-foreground">
+                Aadhar Card Upload
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {[
+                  {
+                    label: "Aadhar Card (Front)",
+                    value: formState.aadharFront,
+                    field: "aadharFront" as const,
+                    ref: frontRef,
+                    key: "aadharFront",
+                    name: "aadharFront",
+                  },
+                  {
+                    label: "Aadhar Card (Back)",
+                    value: formState.aadharBack,
+                    name: "aadharBack",
+                    field: "aadharBack" as const,
+                    ref: backRef,
+                    key: "aadharBack",
+                  },
+                ].map((item) => (
                   <Field
-                    label="Friend Name"
+                    key={item.label}
+                    label={item.label}
                     required
-                    error={getError("friendName")}
+                    error={getError(item.key)}
+                  >
+                    <input
+                      // name="aadharFront"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      ref={item.ref}
+                      onChange={(e) =>
+                        handleImageUpload(e, item.field)
+                      }
+                    />
+                    {item.value ? (
+                      <div className="relative rounded-lg border border-border overflow-hidden">
+                        <img
+                          src={item.value}
+                          alt={item.label}
+                          className="w-full h-36 sm:h-40 object-contain bg-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const current = formState[item.field];
+                            if (current && current.startsWith("blob:")) {
+                              URL.revokeObjectURL(current);
+                            }
+                            setField(item.field, null);
+                            if (item.field === "aadharFront") {
+                              setAadharFrontFile(null);
+                            } else {
+                              setAadharBackFile(null);
+                            }
+                          }}
+                          className="absolute top-2 right-2 rounded-full bg-destructive p-1 text-destructive-foreground hover:opacity-80"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => item.ref.current?.click()}
+                        className={cn(
+                          "flex h-36 sm:h-40 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors hover:border-primary hover:bg-accent/50",
+                          hasError(item.key)
+                            ? "border-destructive bg-destructive/5"
+                            : "border-border bg-accent/30",
+                        )}
+                      >
+                        <Upload className="mb-2 h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          Click to upload
+                        </span>
+                      </div>
+                    )}
+                  </Field>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Card 4 — Professional Details */}
+          <Card className="shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base sm:text-lg font-semibold text-card-foreground">
+                Professional Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <RadioGroup
+                value={formState.profession ?? "student"}
+                onValueChange={(val) =>
+                  setField("profession", val as "student" | "professional")
+                }
+                className="flex flex-wrap gap-4 sm:gap-6"
+              >
+                {PROFESSION_OPTIONS.map((opt) => (
+                  <div
+                    key={opt.value}
+                    className="flex items-center space-x-2"
+                  >
+                    <RadioGroupItem
+                      value={opt.value}
+                      id={`prof-${opt.value}`}
+                    />
+                    <Label
+                      htmlFor={`prof-${opt.value}`}
+                      className="text-card-foreground font-normal cursor-pointer"
+                    >
+                      {opt.label}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+
+              {formState.profession === "student" && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 rounded-lg border border-border p-3 sm:p-4">
+                  <Field
+                    label="Qualification"
+                    required
+                    error={getError("qualification")}
                   >
                     <Input
-                      name="friendName"
-                      placeholder="Friend Name"
-                      value={formState.friendName}
-                      onChange={(e) => setField("friendName", e.target.value)}
+                      name="qualification"
+                      placeholder="e.g. B.Tech"
+                      value={formState.qualification}
+                      onChange={(e) =>
+                        setField("qualification", e.target.value)
+                      }
                       className={cn(
-                        hasError("friendName") && "border-destructive",
+                        hasError("qualification") && "border-destructive",
                       )}
                     />
                   </Field>
-                )}
+                  <Field
+                    label="Year"
+                    required
+                    error={getError("qualYear")}
+                  >
+                    <Input
+                      name="qualYear"
+                      placeholder="e.g. 2024"
+                      value={formState.qualYear}
+                      onChange={(e) => setField("qualYear", e.target.value)}
+                      className={cn(
+                        hasError("qualYear") && "border-destructive",
+                      )}
+                    />
+                  </Field>
+                  <Field
+                    label="College"
+                    required
+                    error={getError("college")}
+                  >
+                    <Input
+                      name="college"
+                      placeholder="College Name"
+                      value={formState.college}
+                      onChange={(e) => setField("college", e.target.value)}
+                      className={cn(
+                        hasError("college") && "border-destructive",
+                      )}
+                    />
+                  </Field>
+                </div>
+              )}
 
+              {formState.profession === "professional" && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 rounded-lg border border-border p-3 sm:p-4">
+                  <Field
+                    label="Designation"
+                    required
+                    error={getError("designation")}
+                  >
+                    <Input
+                      name="designation"
+                      placeholder="Your Designation"
+                      value={formState.designation}
+                      onChange={(e) =>
+                        setField("designation", e.target.value)
+                      }
+                      className={cn(
+                        hasError("designation") && "border-destructive",
+                      )}
+                    />
+                  </Field>
+                  <Field
+                    label="Company"
+                    required
+                    error={getError("company")}
+                  >
+                    <Input
+                      name="company"
+                      placeholder="Company Name"
+                      value={formState.company}
+                      onChange={(e) => setField("company", e.target.value)}
+                      className={cn(
+                        hasError("company") && "border-destructive",
+                      )}
+                    />
+                  </Field>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-              </CardContent>
-            </Card>
-
-            <div className="pt-2">
-              <div className="rounded-lg border border-border p-4 sm:p-5 space-y-3">
-                <p className="text-sm font-semibold text-card-foreground">
-                  Terms & Conditions
-                </p>
-                <div className="flex items-start space-x-3">
-                  <Checkbox
-                    checked={formState.tcAccepted}
-                    onCheckedChange={(val) => {
-                      setField("tcAccepted", Boolean(val));
-                      setOpenTc(true);
-                    }}
-                  />
-                  <div className="text-sm text-card-foreground leading-snug">
-                    <label htmlFor="tc-checkbox" className="cursor-pointer">
-                      I agree to the{" "}
-                      <a
-                        href="#terms"
-                        className="text-primary font-medium underline underline-offset-4 hover:opacity-90"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setOpenTc(true);
-                        }}
+          {/* Card 5 — Course & Referral */}
+          <Card className="shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base sm:text-lg font-semibold text-card-foreground">
+                Course & Referral
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Field
+                label="Course"
+                required
+                error={getError("course")}
+              >
+                <Select
+                  name="course"
+                  value={formState.course}
+                  onValueChange={(val) => setField("course", val)}
+                >
+                  <SelectTrigger
+                    className={cn(hasError("course") && "border-destructive")}
+                  >
+                    <SelectValue placeholder="Select a course" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COURSE_OPTIONS.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field
+                label="How did you hear about us?"
+                required
+                error={getError("referral")}
+              >
+                <RadioGroup
+                  name="referral"
+                  value={formState.referral}
+                  onValueChange={(val) => setField("referral", val)}
+                  className="flex flex-wrap gap-3 sm:gap-4"
+                >
+                  {REFERRAL_OPTIONS.map((r) => (
+                    <div key={r} className="flex items-center space-x-2">
+                      <RadioGroupItem
+                        value={r.toLowerCase()}
+                        id={`ref-${r}`}
+                      />
+                      <Label
+                        htmlFor={`ref-${r}`}
+                        className="text-card-foreground font-normal cursor-pointer text-sm sm:text-base"
                       >
-                        Terms and Conditions
-                      </a>
-                    </label>
-                  </div>
+                        {r}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </Field>
+              {formState.referral === "friend" && (
+                <Field
+                  label="Friend Name"
+                  required
+                  error={getError("friendName")}
+                >
+                  <Input
+                    name="friendName"
+                    placeholder="Friend Name"
+                    value={formState.friendName}
+                    onChange={(e) => setField("friendName", e.target.value)}
+                    className={cn(
+                      hasError("friendName") && "border-destructive",
+                    )}
+                  />
+                </Field>
+              )}
+
+
+            </CardContent>
+          </Card>
+
+          <div className="pt-2">
+            <div className="rounded-lg border border-border p-4 sm:p-5 space-y-3">
+              <p className="text-sm font-semibold text-card-foreground">
+                Terms & Conditions
+              </p>
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  checked={formState.tcAccepted}
+                  onCheckedChange={(val) => {
+                    setField("tcAccepted", Boolean(val));
+                    setOpenTc(true);
+                  }}
+                />
+                <div className="text-sm text-card-foreground leading-snug">
+                  <label htmlFor="tc-checkbox" className="cursor-pointer">
+                    I agree to the{" "}
+                    <a
+                      href="#terms"
+                      className="text-primary font-medium underline underline-offset-4 hover:opacity-90"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setOpenTc(true);
+                      }}
+                    >
+                      Terms and Conditions
+                    </a>
+                  </label>
                 </div>
               </div>
-
-              <Dialog open={openTc} onOpenChange={setOpenTc}>
-                <DialogContent className="sm:max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle>Terms & Conditions</DialogTitle>
-                    <DialogDescription>
-                      Please read and accept our terms to proceed with registration.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="max-h-[60vh] overflow-y-auto text-sm text-muted-foreground space-y-4 pt-2">
-                    <p>
-                      By registering you agree to abide by the rules and policies of the institute. You confirm that
-                      the information provided is true and accurate to the best of your knowledge.
-                    </p>
-                    <p>
-                      Fee, refund and attendance policies apply as per the course specific guidelines. Any
-                      fraudulent activity may lead to cancellation of registration.
-                    </p>
-                    <p>
-                      Personal data will be processed in accordance with our privacy practices.
-                    </p>
-                  </div>
-                  <DialogFooter className="gap-2 sm:gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setField("tcAccepted", false);
-                        setOpenTc(false);
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setField("tcAccepted", true);
-                        setOpenTc(false);
-                      }}
-                    >
-                      Agree
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
             </div>
 
+            <Dialog open={openTc} onOpenChange={setOpenTc}>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Terms & Conditions</DialogTitle>
+                  <DialogDescription>
+                    Please read and accept our terms to proceed with registration.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="max-h-[60vh] overflow-y-auto text-sm text-muted-foreground space-y-4 pt-2">
+                  <p>
+                    By registering you agree to abide by the rules and policies of the institute. You confirm that
+                    the information provided is true and accurate to the best of your knowledge.
+                  </p>
+                  <p>
+                    Fee, refund and attendance policies apply as per the course specific guidelines. Any
+                    fraudulent activity may lead to cancellation of registration.
+                  </p>
+                  <p>
+                    Personal data will be processed in accordance with our privacy practices.
+                  </p>
+                </div>
+                <DialogFooter className="gap-2 sm:gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setField("tcAccepted", false);
+                      setOpenTc(false);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setField("tcAccepted", true);
+                      setOpenTc(false);
+                    }}
+                  >
+                    Agree
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
 
+          {!isProfileMode && siteKey ? (
+            <div className="flex justify-center my-4">
+              <ReCAPTCHA
+                ref={recaptchaRef}
+                sitekey={siteKey}
+                onChange={(token) => setCaptchaToken(token)}
+                onExpired={() => setCaptchaToken(null)}
+              />
+            </div>
+          ) : null}
 
-            <Button
-              type="submit"
-              className="w-full h-11 sm:h-12 text-base sm:text-lg font-semibold"
-              disabled={isSubmitting || !formState.tcAccepted || (!isProfileMode && (emailExists || isCheckingEmail))}
-            >
-              {isSubmitting
-                ? isProfileMode ? "Updating..." : "Submitting..."
-                : isProfileMode ? "Update Profile" : "Submit Registration"}
-            </Button>
-          </form>
-        </div>
+          <Button
+            type="submit"
+            className="w-full h-11 sm:h-12 text-base sm:text-lg font-semibold"
+            disabled={isSubmitting || !formState.tcAccepted || (!isProfileMode && (emailExists || isCheckingEmail))}
+          >
+            {isSubmitting
+              ? isProfileMode ? "Updating..." : "Submitting..."
+              : isProfileMode ? "Update Profile" : "Submit Registration"}
+          </Button>
+        </form>
       </div>
+    </div>
   );
 };
 
