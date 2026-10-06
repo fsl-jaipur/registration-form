@@ -12,7 +12,10 @@ function encodeEmailParam(email) {
 export async function sendForgotPasswordEmail({ to, name, otp, expiryMinutes = 60 }) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const from = process.env.RESEND_FROM_EMAIL || "rohit@fullstacklearning.com";
-  const website = (process.env.FRONTEND_PATH || "https://your-frontend.example.com").trim();
+  let website = (process.env.FRONTEND_PATH || "https://www.fullstacklearning.com").trim();
+  if (!/^https?:\/\//i.test(website)) {
+    website = `https://${website}`;
+  }
   const resetUrl = `${website.replace(/\/$/, "")}/reset-password?e=${encodeEmailParam(to)}`;
   const year = new Date().getFullYear();
   const displayName = name || "User";

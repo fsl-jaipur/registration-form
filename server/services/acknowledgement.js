@@ -26,7 +26,7 @@ const uploadBase64ToCloudinary = async (base64Data, filename) => {
 
 
 export function sendResultEmail(student, testTitle) {
-  const website = (process.env.FRONTEND_PATH || "https://www.fullstacklearning.com").trim().replace(/\/$/, "");
+  const website = getWebsiteUrl();
   const resultLink = `${website}/student/result`;
 
   return `
@@ -72,13 +72,29 @@ export function sendResultEmail(student, testTitle) {
 
 
 
+const getWebsiteUrl = () => {
+  let site = (process.env.FRONTEND_PATH || "https://www.fullstacklearning.com").trim().replace(/\/$/, "");
+  if (!/^https?:\/\//i.test(site)) {
+    site = `https://${site}`;
+  }
+  return site;
+};
+
+const getDashboardLink = () => {
+  let link = process.env.STUDENT_DASHBOARD_URL ? process.env.STUDENT_DASHBOARD_URL.trim() : "";
+  if (link) {
+    if (!/^https?:\/\//i.test(link)) {
+      link = `https://${link}`;
+    }
+    return link;
+  }
+  return `${getWebsiteUrl()}/student/studentpanel`;
+};
+
 export function sendAckEmail(newData) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const from = process.env.RESEND_FROM_EMAIL || "rohit@fullstacklearning.com";
-  const website = (process.env.FRONTEND_PATH || "https://www.fullstacklearning.com").trim().replace(/\/$/, "");
-  const dashboardLink =
-    process.env.STUDENT_DASHBOARD_URL ||
-    `${website}/student/studentpanel`;
+  const dashboardLink = getDashboardLink();
 
   const html = `
     <html>
@@ -138,8 +154,8 @@ export function sendAckEmail(newData) {
 export function sendQuickAccountEmail({ name, email, plainPassword }) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const from = process.env.RESEND_FROM_EMAIL || "rohit@fullstacklearning.com";
-  const website = (process.env.FRONTEND_PATH || "https://www.fullstacklearning.com").trim().replace(/\/$/, "");
-  const dashboardLink = process.env.STUDENT_DASHBOARD_URL || `${website}/student/studentpanel`;
+  const website = getWebsiteUrl();
+  const dashboardLink = getDashboardLink();
   const completeProfileLink = `${website}/student/complete-profile`;
 
   const html = `
